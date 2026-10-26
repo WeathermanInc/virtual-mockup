@@ -32,8 +32,18 @@ def fabric_record(name: str) -> dict[str, Any]:
     return dict(load_catalog()["fabrics"].get(name) or {})
 
 
-def logo_color_names() -> list[str]:
-    return [item["name"] for item in load_catalog()["logo_colors"]]
+def logo_color_names(family: str | None = None) -> list[str]:
+    """Logo / graphic color options; optionally scoped to a product family."""
+    out: list[str] = []
+    for item in load_catalog()["logo_colors"]:
+        fams = item.get("families")
+        if fams is None:
+            # Shared (e.g. Match uploaded art) — always available.
+            out.append(str(item["name"]))
+            continue
+        if family is None or family in fams:
+            out.append(str(item["name"]))
+    return out
 
 
 def logo_knockout_mode(name: str) -> str:
@@ -53,7 +63,7 @@ def style_labels(family: str | None = None) -> dict[str, str]:
     for key, spec in product_specs().items():
         if family and style_family(key) != family:
             continue
-        if style_family(key) == "backpack":
+        if style_family(key) in {"backpack", "hat"}:
             labels[key] = f"{spec['display_name']} · Style #: {spec.get('style_number')}"
             continue
         cov = spec.get("frame_coverage_in")
@@ -86,6 +96,8 @@ def fabric_caption(name: str) -> str:
         bits.append(str(rec["pantone"]))
     if rec.get("nrf") and f"(NRF {rec['nrf']})" not in name:
         bits.append(f"NRF {rec['nrf']}")
+    if rec.get("inner_color"):
+        bits.append(f"inner {rec['inner_color']}")
     if rec.get("kind") == "pattern":
         bits.append("pattern")
     return " · ".join(bits)
@@ -116,10 +128,16 @@ def fabric_sheet_label(name: str) -> str:
 
 
 def logo_sheet_label(name: str) -> str:
-    """Logo/Graphic Colors label — Pantone White C / Black C / Match art."""
+    """Logo/Graphic Colors label — Pantone White/Black C, hat inks, or Match art."""
     token = " ".join(str(name or "").lower().replace("-", " ").split())
     if "match uploaded" in token:
         return "Match uploaded art"
+    if "2767" in token:
+        return "Pantone 2767 C"
+    if "1795" in token:
+        return "Pantone 1795 C"
+    if token == "white":
+        return "White"
     if "white" in token:
         return "Pantone White C"
     if "black" in token:
@@ -255,3 +273,109 @@ def backpack_option_label(placement_key: str, fabric_name: str | None = None) ->
         "center": "#4",
         "lower_right_center": "#7",
     }.get(str(placement_key or ""), "#1")
+
+
+def hat_placements(product_key: str = "trek_all_weather_hat") -> dict[str, dict[str, Any]]:
+    """Placement modes for Trek All-Weather Hat (Style #: 40001)."""
+    spec = product_specs().get(product_key) or {}
+    raw = spec.get("placements") or {}
+    out: dict[str, dict[str, Any]] = {}
+    for key, rec in raw.items():
+        out[str(key)] = dict(rec)
+    return out
+
+
+def hat_placement_labels(product_key: str = "trek_all_weather_hat") -> dict[str, str]:
+    """Map hat placement key → UI label."""
+    return {
+        key: str(rec.get("label") or key.replace("_", " ").title())
+        for key, rec in hat_placements(product_key).items()
+    }
+
+
+def resolve_hat_placement(
+    panel_config: str | None,
+    product_key: str = "trek_all_weather_hat",
+) -> dict[str, Any]:
+    """Resolve a panel_config label/key to Trek hat placement dims."""
+    placements = hat_placements(product_key)
+    default_key = str(
+        (product_specs().get(product_key) or {}).get("default_placement") or "side_view"
+    )
+    token = " ".join(str(panel_config or "").lower().replace("-", " ").split())
+    key = default_key
+    if token in placements:
+        key = token
+    else:
+        for cand, rec in placements.items():
+            label = " ".join(str(rec.get("label") or "").lower().split())
+            callout = " ".join(str(rec.get("callout") or "").lower().split())
+            if token and (token == label or token == callout):
+                key = cand
+                break
+        else:
+            if "front" in token:
+                key = "front_view" if "front_view" in placements else key
+            elif "side" in token:
+                key = "side_view" if "side_view" in placements else key
+    rec = dict(placements.get(key) or placements.get(default_key) or {})
+    if not rec:
+        rec = {"label": "Side view", "width_cm": 2.4, "height_cm": 2.4}
+    rec["key"] = key if key in placements else default_key
+    rec.setdefault("label", key.replace("_", " ").title())
+    rec.setdefault(
+        "callout",
+        str(rec.get("label") or key.replace("_", " ")).lower(),
+    )
+    rec.setdefault("width_cm", 2.4)
+    rec.setdefault("height_cm", 2.4)
+    return rec
+
+
+def fabric_inner_label(name: str) -> str | None:
+    """Optional inner-color caption for dual-layer products (e.g. hats)."""
+    rec = fabric_record(name)
+    inner = rec.get("inner_color")
+    return str(inner) if inner else None
+
+
+def is_light_fabric(name: str | None = None, rgb: tuple[int, int, int] | None = None) -> bool:
+    """True when canopy/fabric needs a dark print ink for contrast."""
+    token = " ".join(str(name or "").lower().replace("-", " ").split())
+    if any(
+        k in token
+        for k in (
+            "white",
+            "bone",
+            "butter",
+            "cream",
+            "ivory",
+            "canyon glow",
+            "sunlit",
+            "blush",
+            "yellow",
+            "neon yellow",
+        )
+    ):
+        return True
+    if rgb is None and name:
+        rgb = fabric_rgb_map().get(str(name))
+    if rgb is None:
+        return False
+    return logo_luminance(rgb) >= 170.0
+
+
+def default_logo_color_for_fabric(
+    fabric_name: str | None,
+    family: str | None = "umbrella",
+) -> str:
+    """Suggested Logo / graphic color for a fabric colorway.
+
+    Umbrella / backpack / poncho: light canopies → Pantone Black C, else White C.
+    Hats: light outers → Pantone 2767 C, else White.
+    """
+    fam = str(family or "umbrella")
+    light = is_light_fabric(fabric_name)
+    if fam == "hat":
+        return "Pantone 2767 C" if light else "White"
+    return "Pantone Black C" if light else "Pantone White C"

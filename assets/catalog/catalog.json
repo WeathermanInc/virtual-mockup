@@ -7,48 +7,649 @@
     "Production worksheet: Proper Brands x WM Umbrella 2026 Mockup Designs.pdf",
     "Production worksheet: Proper Brands x WM Umbrella 2026 Mockup Designs v2.pdf (Venture Dry Pack 40002 placements)",
     "Production worksheet: M13-Backpack-custom-mockup-options.pdf (Venture Dry Pack 40002)",
-    "Shopify Admin: Venture Dry Pack (Accessories), Trail Hound Rain Vest (Apparel / poncho tag)"
+    "Production worksheet: Hats-Mockups.pdf (Trek All-Weather Hat 40001)",
+    "Shopify Admin: Venture Dry Pack (Accessories), Trail Hound Rain Vest (Apparel / poncho tag)",
+    "Google Drive: NEW Weatherman NRF Color Reference (Oct 16, 2026) — Skyline Stripe 641 / Colorstorm 840"
   ],
-  "artwork_bounds_cm": {"width": 21.6, "height": 10.0},
+  "artwork_bounds_cm": {
+    "width": 21.6,
+    "height": 10.0
+  },
   "logo_colors": [
-    {"name": "Pantone White C", "rgb": [255, 255, 255], "pantone": "White C", "knockout": "white"},
-    {"name": "Pantone Black C", "rgb": [45, 41, 38], "pantone": "Black C", "knockout": "black"},
-    {"name": "Match uploaded art", "rgb": [128, 128, 128], "pantone": null, "knockout": "none"}
+    {
+      "name": "Pantone White C",
+      "rgb": [
+        255,
+        255,
+        255
+      ],
+      "pantone": "White C",
+      "knockout": "white",
+      "families": [
+        "umbrella",
+        "backpack",
+        "poncho"
+      ]
+    },
+    {
+      "name": "Pantone Black C",
+      "rgb": [
+        45,
+        41,
+        38
+      ],
+      "pantone": "Black C",
+      "knockout": "black",
+      "families": [
+        "umbrella",
+        "backpack",
+        "poncho"
+      ]
+    },
+    {
+      "name": "Pantone 2767 C",
+      "rgb": [
+        0,
+        32,
+        91
+      ],
+      "pantone": "2767 C",
+      "knockout": "black",
+      "families": [
+        "hat"
+      ]
+    },
+    {
+      "name": "Pantone 1795 C",
+      "rgb": [
+        213,
+        0,
+        50
+      ],
+      "pantone": "1795 C",
+      "knockout": "none",
+      "families": [
+        "hat"
+      ]
+    },
+    {
+      "name": "White",
+      "rgb": [
+        255,
+        255,
+        255
+      ],
+      "pantone": "White",
+      "knockout": "white",
+      "families": [
+        "hat"
+      ]
+    },
+    {
+      "name": "Match uploaded art",
+      "rgb": [
+        128,
+        128,
+        128
+      ],
+      "pantone": null,
+      "knockout": "none"
+    }
   ],
   "fabrics": {
-    "Black (NRF 001)": {"rgb": [30, 30, 30], "nrf": "001", "pantone": "19-0303 TCX", "family": "Black", "category": "Core", "kind": "solid", "hex": "#1E1E1E"},
-    "Navy Blue (NRF 600)": {"rgb": [26, 39, 68], "nrf": "600", "pantone": "19-4010 TCX", "family": "Blue", "category": "Core", "kind": "solid"},
-    "White (NRF 100)": {"rgb": [242, 242, 240], "nrf": "100", "pantone": "White", "family": "White", "category": "Core", "kind": "solid"},
-    "Red (NRF 200)": {"rgb": [186, 12, 47], "nrf": "200", "pantone": "200 C / 18-1653 TCX", "family": "Red", "category": "Core", "kind": "solid"},
-    "Sage": {"rgb": [143, 160, 132], "nrf": "310", "pantone": "16-5808 TCX", "family": "Green", "category": "Core", "kind": "solid", "hex": "#8FA084"},
-    "Charcoal": {"rgb": [54, 54, 54], "nrf": null, "pantone": "19-0303 TCX", "family": "Black", "category": "Core", "kind": "solid"},
-    "Neon Yellow": {"rgb": [223, 255, 0], "nrf": null, "pantone": null, "family": "Yellow", "category": "Core", "kind": "solid", "notes": "No official Pantone — review sample"},
-    "Sunlit Butter": {"rgb": [243, 224, 168], "nrf": null, "pantone": "11-0710 TCX", "family": "Yellow", "category": "Fashion", "kind": "solid"},
-    "Rusty Orange": {"rgb": [166, 67, 30], "nrf": null, "pantone": "1675 C", "family": "Orange", "category": "Fashion", "kind": "solid"},
-    "Blush (NRF 680)": {"rgb": [206, 140, 146], "nrf": "680", "pantone": "7430 C", "family": "Blush", "category": "Fashion", "kind": "solid"},
-    "Steel Blue": {"rgb": [90, 122, 144], "nrf": "421", "pantone": "2374 C / 18-3921 TCX", "family": "Steel Blue", "category": "Fashion", "kind": "solid", "hex": "#5A7A90"},
-    "Dusty Lavender": {"rgb": [139, 125, 155], "nrf": null, "pantone": "17-3924 TCX", "family": "Purple", "category": "Fashion", "kind": "solid"},
-    "Lavender Crystal": {"rgb": [155, 107, 158], "nrf": null, "pantone": "18-3530 TCX", "family": "Purple", "category": "Fashion", "kind": "solid"},
-    "Heron": {"rgb": [110, 106, 138], "nrf": null, "pantone": "18-3817 TCX", "family": "Purple", "category": "Fashion", "kind": "solid"},
-    "Cadet": {"rgb": [106, 109, 129], "nrf": null, "pantone": "18-3812 TCX", "family": "Purple", "category": "Fashion", "kind": "solid"},
-    "Whispy Blue": {"rgb": [168, 196, 212], "nrf": null, "pantone": null, "family": "Blue", "category": "Fashion", "kind": "solid"},
-    "Shaved Chocolate": {"rgb": [92, 64, 51], "nrf": null, "pantone": null, "family": "Brown", "category": "Fashion", "kind": "solid"},
-    "Deep Ocean": {"rgb": [18, 52, 77], "nrf": null, "pantone": null, "family": "Blue", "category": "Fashion", "kind": "solid"},
-    "Lilac": {"rgb": [200, 162, 200], "nrf": null, "pantone": null, "family": "Purple", "category": "Fashion", "kind": "solid"},
-    "Neon Pink": {"rgb": [255, 79, 163], "nrf": "690", "pantone": null, "family": "Pink", "category": "Fashion", "kind": "solid"},
-    "Gray": {"rgb": [107, 107, 107], "nrf": null, "pantone": null, "family": "Gray", "category": "Fashion", "kind": "solid"},
-    "FOH Blue 2025": {"rgb": [30, 58, 138], "nrf": null, "pantone": null, "family": "Blue", "category": "FOH 2025", "kind": "solid"},
-    "Mint Lemonade": {"rgb": [213, 232, 106], "nrf": null, "pantone": null, "family": "Green", "category": "Arnold Palmer", "kind": "solid"},
-    "Arnie's Army": {"rgb": [47, 93, 58], "nrf": null, "pantone": null, "family": "Green", "category": "Arnold Palmer", "kind": "solid"},
-    "Skyline Stripe": {"rgb": [75, 85, 99], "nrf": null, "pantone": null, "family": "Pattern", "category": "Fashion", "kind": "pattern"},
-    "Twilight Plaid": {"rgb": [61, 76, 95], "nrf": null, "pantone": null, "family": "Pattern", "category": "Fashion", "kind": "pattern"},
-    "Color Storm": {"rgb": [74, 111, 165], "nrf": null, "pantone": null, "family": "Pattern", "category": "Fashion", "kind": "pattern"},
-    "Cosmic Rainbow": {"rgb": [123, 94, 167], "nrf": null, "pantone": null, "family": "Pattern", "category": "Fashion", "kind": "pattern"},
-    "Kaleidoscope": {"rgb": [196, 92, 154], "nrf": null, "pantone": null, "family": "Pattern", "category": "Fashion", "kind": "pattern"},
-    "TrueTimber Viper": {"rgb": [74, 92, 58], "nrf": null, "pantone": null, "family": "Camo", "category": "VGA", "kind": "pattern"},
-    "AP Fairway Camo": {"rgb": [92, 107, 61], "nrf": null, "pantone": null, "family": "Camo", "category": "Arnold Palmer", "kind": "pattern"},
-    "AP Classic": {"rgb": [45, 70, 55], "nrf": null, "pantone": null, "family": "Pattern", "category": "Arnold Palmer", "kind": "pattern"},
-    "2026 America 250": {"rgb": [10, 49, 97], "nrf": null, "pantone": null, "family": "Special", "category": "America 250", "kind": "pattern"}
+    "Black (NRF 001)": {
+      "rgb": [
+        30,
+        30,
+        30
+      ],
+      "nrf": "001",
+      "pantone": "19-0303 TCX",
+      "family": "Black",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#000000"
+    },
+    "Navy (NRF 411)": {
+      "rgb": [
+        26,
+        39,
+        68
+      ],
+      "nrf": "411",
+      "pantone": "19-4010 TCX",
+      "family": "Blue",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#1A2744",
+      "inner_color": "Steel Blue",
+      "notes": "Trek All-Weather Hat outer; Steel Blue inner"
+    },
+    "Sage (NRF 311)": {
+      "rgb": [
+        143,
+        160,
+        132
+      ],
+      "nrf": "311",
+      "pantone": "16-5808 TCX",
+      "family": "Green",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#8FA084",
+      "inner_color": "Sedona Sage",
+      "notes": "Trek All-Weather Hat outer; Sedona Sage inner"
+    },
+    "Bone (NRF 202)": {
+      "rgb": [
+        225,
+        214,
+        196
+      ],
+      "nrf": "202",
+      "pantone": "12-0713 TCX",
+      "family": "Neutral",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#E1D6C4",
+      "inner_color": "Chocolate",
+      "notes": "Trek All-Weather Hat outer; Chocolate inner"
+    },
+    "Navy Blue (NRF 600)": {
+      "rgb": [
+        57,
+        63,
+        72
+      ],
+      "nrf": "600",
+      "pantone": "19-4010 TPG",
+      "family": "Blue",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#393F48",
+      "notes": "Legacy SKU NRF 600 (Shopify); wholesale Navy solid maps to NRF 411 on line sheets"
+    },
+    "White (NRF 100)": {
+      "rgb": [
+        242,
+        242,
+        240
+      ],
+      "nrf": "100",
+      "pantone": "11-0601 TCX",
+      "family": "White",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#FFFFFF"
+    },
+    "Red (NRF 200)": {
+      "rgb": [
+        186,
+        12,
+        47
+      ],
+      "nrf": "200",
+      "pantone": "18-1653 TCX",
+      "family": "Red",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#BA0C2F",
+      "notes": "Legacy SKU NRF 200 (Shopify); wholesale Red solid maps to NRF 600 on line sheets"
+    },
+    "Sage": {
+      "rgb": [
+        143,
+        160,
+        132
+      ],
+      "nrf": "310",
+      "pantone": "16-5808 TCX",
+      "family": "Green",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#7D9A79"
+    },
+    "Charcoal": {
+      "rgb": [
+        59,
+        59,
+        59
+      ],
+      "nrf": "010",
+      "pantone": "19-0303 TCX",
+      "family": "Black",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#3B3B3B"
+    },
+    "Neon Yellow": {
+      "rgb": [
+        230,
+        255,
+        0
+      ],
+      "nrf": "790",
+      "pantone": null,
+      "family": "Yellow",
+      "category": "Core",
+      "kind": "solid",
+      "notes": "NRF 790 — Pantone TBD per line sheet",
+      "hex": "#E6FF00"
+    },
+    "Sunlit Butter": {
+      "rgb": [
+        255,
+        249,
+        196
+      ],
+      "nrf": "740",
+      "pantone": "11-0710 TCX",
+      "family": "Yellow",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#FFF9C4"
+    },
+    "Rusty Orange": {
+      "rgb": [
+        169,
+        67,
+        30
+      ],
+      "nrf": "801",
+      "pantone": "1675 C",
+      "family": "Orange",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#A9431E"
+    },
+    "Blush (NRF 680)": {
+      "rgb": [
+        206,
+        140,
+        146
+      ],
+      "nrf": "680",
+      "pantone": "7430 C",
+      "family": "Blush",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#FFC0CB"
+    },
+    "Steel Blue": {
+      "rgb": [
+        90,
+        122,
+        144
+      ],
+      "nrf": "421",
+      "pantone": "2374 C / 18-3921 TCX",
+      "family": "Steel Blue",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#4F6C9F"
+    },
+    "Dusty Lavender": {
+      "rgb": [
+        145,
+        131,
+        155
+      ],
+      "nrf": "511",
+      "pantone": "17-3812 TCX",
+      "family": "Purple",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#91839B"
+    },
+    "Lavender Crystal": {
+      "rgb": [
+        155,
+        107,
+        158
+      ],
+      "nrf": null,
+      "pantone": "18-3530 TCX",
+      "family": "Purple",
+      "category": "Fashion",
+      "kind": "solid"
+    },
+    "Heron": {
+      "rgb": [
+        110,
+        106,
+        138
+      ],
+      "nrf": null,
+      "pantone": "18-3817 TCX",
+      "family": "Purple",
+      "category": "Fashion",
+      "kind": "solid"
+    },
+    "Cadet": {
+      "rgb": [
+        106,
+        109,
+        129
+      ],
+      "nrf": null,
+      "pantone": "18-3812 TCX",
+      "family": "Purple",
+      "category": "Fashion",
+      "kind": "solid"
+    },
+    "Whispy Blue": {
+      "rgb": [
+        190,
+        202,
+        233
+      ],
+      "nrf": "453",
+      "pantone": "2120 C",
+      "family": "Blue",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#BECAE9"
+    },
+    "Shaved Chocolate": {
+      "rgb": [
+        80,
+        63,
+        56
+      ],
+      "nrf": "201",
+      "pantone": "19-1215 TCX",
+      "family": "Brown",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#503F38"
+    },
+    "Deep Ocean": {
+      "rgb": [
+        18,
+        52,
+        77
+      ],
+      "nrf": null,
+      "pantone": null,
+      "family": "Blue",
+      "category": "Discontinued",
+      "kind": "solid",
+      "notes": "Discontinued / OLD per NRF reference"
+    },
+    "Lilac": {
+      "rgb": [
+        182,
+        157,
+        207
+      ],
+      "nrf": "510",
+      "pantone": null,
+      "family": "Purple",
+      "category": "Discontinued",
+      "kind": "solid",
+      "hex": "#B69DCF",
+      "notes": "Discontinued per NRF reference — kept for legacy proofs"
+    },
+    "Neon Pink": {
+      "rgb": [
+        253,
+        98,
+        218
+      ],
+      "nrf": null,
+      "pantone": null,
+      "family": "Pink",
+      "category": "Discontinued",
+      "kind": "solid",
+      "hex": "#FD62DA",
+      "notes": "Discontinued — no active NRF"
+    },
+    "Gray": {
+      "rgb": [
+        128,
+        128,
+        128
+      ],
+      "nrf": "002",
+      "pantone": null,
+      "family": "Gray",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#808080"
+    },
+    "FOH Blue 2025": {
+      "rgb": [
+        36,
+        48,
+        73
+      ],
+      "nrf": "462",
+      "pantone": "282 C",
+      "family": "Blue",
+      "category": "FOH 2025",
+      "kind": "solid",
+      "hex": "#243049"
+    },
+    "Mint Lemonade": {
+      "rgb": [
+        213,
+        232,
+        106
+      ],
+      "nrf": "465",
+      "pantone": null,
+      "family": "Green",
+      "category": "Arnold Palmer",
+      "kind": "solid",
+      "notes": "AP Lemonade dominant blue → NRF 465"
+    },
+    "Arnie's Army": {
+      "rgb": [
+        47,
+        93,
+        58
+      ],
+      "nrf": "340",
+      "pantone": null,
+      "family": "Green",
+      "category": "Arnold Palmer",
+      "kind": "solid"
+    },
+    "Skyline Stripe": {
+      "rgb": [
+        75,
+        85,
+        99
+      ],
+      "nrf": "641",
+      "pantone": null,
+      "family": "Pattern",
+      "category": "Fashion",
+      "kind": "pattern",
+      "hex": "#4B5563",
+      "notes": "Christine NRF update Oct 2026 — Skyline Stripe → 641"
+    },
+    "Twilight Plaid": {
+      "rgb": [
+        61,
+        76,
+        95
+      ],
+      "nrf": "461",
+      "pantone": null,
+      "family": "Pattern",
+      "category": "Fashion",
+      "kind": "pattern",
+      "hex": "#3D4C5F"
+    },
+    "Cosmic Rainbow": {
+      "rgb": [
+        123,
+        94,
+        167
+      ],
+      "nrf": "690",
+      "pantone": null,
+      "family": "Pattern",
+      "category": "Fashion",
+      "kind": "pattern",
+      "hex": "#7B5EA7"
+    },
+    "Kaleidoscope": {
+      "rgb": [
+        196,
+        92,
+        154
+      ],
+      "nrf": "460",
+      "pantone": null,
+      "family": "Pattern",
+      "category": "Fashion",
+      "kind": "pattern",
+      "hex": "#C45C9A"
+    },
+    "TrueTimber Viper": {
+      "rgb": [
+        74,
+        92,
+        58
+      ],
+      "nrf": null,
+      "pantone": null,
+      "family": "Camo",
+      "category": "VGA",
+      "kind": "pattern"
+    },
+    "AP Fairway Camo": {
+      "rgb": [
+        92,
+        107,
+        61
+      ],
+      "nrf": null,
+      "pantone": null,
+      "family": "Camo",
+      "category": "Arnold Palmer",
+      "kind": "pattern"
+    },
+    "AP Classic": {
+      "rgb": [
+        45,
+        70,
+        55
+      ],
+      "nrf": "640",
+      "pantone": null,
+      "family": "Pattern",
+      "category": "Arnold Palmer",
+      "kind": "pattern"
+    },
+    "2026 America 250": {
+      "rgb": [
+        10,
+        49,
+        97
+      ],
+      "nrf": "464",
+      "pantone": null,
+      "family": "Special",
+      "category": "America 250",
+      "kind": "pattern"
+    },
+    "Colorstorm": {
+      "rgb": [
+        74,
+        111,
+        165
+      ],
+      "nrf": "840",
+      "pantone": null,
+      "family": "Pattern",
+      "category": "Fashion",
+      "kind": "pattern",
+      "notes": "Christine NRF update Oct 2026 — Colorstorm → 840",
+      "hex": "#4A6FA5"
+    },
+    "River Mist (NRF 452)": {
+      "rgb": [
+        186,
+        197,
+        212
+      ],
+      "nrf": "452",
+      "pantone": "14-4112 TCX",
+      "family": "Blue",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#BAC5D4"
+    },
+    "Canyon Glow (NRF 711)": {
+      "rgb": [
+        220,
+        191,
+        148
+      ],
+      "nrf": "711",
+      "pantone": "14-1231 TCX",
+      "family": "Yellow",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#DCBF94"
+    },
+    "Dappled Plum (NRF 540)": {
+      "rgb": [
+        120,
+        90,
+        130
+      ],
+      "nrf": "540",
+      "pantone": null,
+      "family": "Purple",
+      "category": "Upcoming",
+      "kind": "solid",
+      "hex": "#785A82",
+      "notes": "UPCOMING/NEW per NRF Color Reference Oct 2026"
+    },
+    "River Mist": {
+      "rgb": [
+        186,
+        197,
+        212
+      ],
+      "nrf": "452",
+      "pantone": "14-4112 TCX",
+      "family": "Blue",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#BAC5D4"
+    },
+    "Canyon Glow": {
+      "rgb": [
+        220,
+        191,
+        148
+      ],
+      "nrf": "711",
+      "pantone": "14-1231 TCX",
+      "family": "Yellow",
+      "category": "Fashion",
+      "kind": "solid",
+      "hex": "#DCBF94"
+    },
+    "Dappled Plum": {
+      "rgb": [
+        120,
+        90,
+        130
+      ],
+      "nrf": "540",
+      "pantone": null,
+      "family": "Purple",
+      "category": "Upcoming",
+      "kind": "solid",
+      "hex": "#785A82",
+      "notes": "UPCOMING/NEW per NRF Color Reference Oct 2026"
+    }
   },
   "styles": {
     "walk": {
@@ -61,12 +662,59 @@
       "frame_coverage_in": 43,
       "packed_length_in": 36.81,
       "opening": "Automatic",
-      "page_size_pts": [2125.98, 3259.84],
-      "panel": {"shape": "trapezoid", "height_cm": 26.5, "top_cm": 21.6, "bottom_cm": 43.5, "artwork_width_cm": 21.6, "artwork_height_cm": 10.0, "logo_height_cm": 6.0, "logo_bottom_offset_cm": 10.0},
-      "sleeve": {"logo_height_cm": 11.0, "logo_bottom_offset_cm": 9.0, "wm_mark": true, "client_logo_on_sleeve": false},
-      "features": ["Single Canopy", "Automatic Opening", "43\" frame coverage", "WM Walk Handle", "Generic Sleeve"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Sage", "Red (NRF 200)", "White (NRF 100)"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Sage", "Red (NRF 200)", "White (NRF 100)", "Rusty Orange", "Sunlit Butter", "Shaved Chocolate", "FOH Blue 2025", "Steel Blue", "Gray"]
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "panel": {
+        "shape": "trapezoid",
+        "height_cm": 26.5,
+        "top_cm": 21.6,
+        "bottom_cm": 43.5,
+        "artwork_width_cm": 21.6,
+        "artwork_height_cm": 10.0,
+        "logo_height_cm": 6.0,
+        "logo_bottom_offset_cm": 10.0
+      },
+      "sleeve": {
+        "logo_height_cm": 11.0,
+        "logo_bottom_offset_cm": 9.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": false
+      },
+      "features": [
+        "Single Canopy",
+        "Automatic Opening",
+        "43\" frame coverage",
+        "WM Walk Handle",
+        "Generic Sleeve"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Sage",
+        "Red (NRF 200)",
+        "White (NRF 100)"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Sage",
+        "Red (NRF 200)",
+        "White (NRF 100)",
+        "Rusty Orange",
+        "Sunlit Butter",
+        "Shaved Chocolate",
+        "FOH Blue 2025",
+        "Steel Blue",
+        "Gray",
+        "Skyline Stripe",
+        "Colorstorm",
+        "River Mist",
+        "Canyon Glow",
+        "Dusty Lavender",
+        "Blush (NRF 680)"
+      ]
     },
     "stick": {
       "display_name": "Stick",
@@ -78,12 +726,60 @@
       "frame_coverage_in": 43,
       "packed_length_in": 36.93,
       "opening": "Manual",
-      "page_size_pts": [2125.98, 3259.84],
-      "panel": {"shape": "trapezoid", "height_cm": 26.5, "top_cm": 21.6, "bottom_cm": 43.5, "artwork_width_cm": 21.6, "artwork_height_cm": 10.0, "logo_height_cm": 6.0, "logo_bottom_offset_cm": 10.0},
-      "sleeve": {"logo_height_cm": 11.0, "logo_bottom_offset_cm": 9.0, "wm_mark": true, "client_logo_on_sleeve": false},
-      "features": ["Single Canopy", "Manual Opening", "43\" frame coverage", "WM Stick Handle", "Generic Sleeve"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Red (NRF 200)", "White (NRF 100)", "Sage"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Red (NRF 200)", "White (NRF 100)", "Sage", "Neon Pink", "Rusty Orange"]
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "panel": {
+        "shape": "trapezoid",
+        "height_cm": 26.5,
+        "top_cm": 21.6,
+        "bottom_cm": 43.5,
+        "artwork_width_cm": 21.6,
+        "artwork_height_cm": 10.0,
+        "logo_height_cm": 6.0,
+        "logo_bottom_offset_cm": 10.0
+      },
+      "sleeve": {
+        "logo_height_cm": 11.0,
+        "logo_bottom_offset_cm": 9.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": false
+      },
+      "features": [
+        "Single Canopy",
+        "Manual Opening",
+        "43\" frame coverage",
+        "WM Stick Handle",
+        "Generic Sleeve"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Red (NRF 200)",
+        "White (NRF 100)",
+        "Sage"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Red (NRF 200)",
+        "White (NRF 100)",
+        "Sage",
+        "Neon Pink",
+        "Rusty Orange",
+        "Steel Blue",
+        "Blush (NRF 680)",
+        "Skyline Stripe",
+        "Dusty Lavender",
+        "Whispy Blue",
+        "Sunlit Butter",
+        "Canyon Glow",
+        "River Mist",
+        "Twilight Plaid",
+        "Colorstorm",
+        "Gray"
+      ]
     },
     "golf_essential": {
       "display_name": "Golf Essential",
@@ -95,12 +791,60 @@
       "frame_coverage_in": 66,
       "packed_length_in": 40.75,
       "opening": "Manual",
-      "page_size_pts": [2125.98, 3543.84],
-      "panel": {"shape": "triangle", "height_cm": 83.0, "top_cm": 0.0, "bottom_cm": 59.54, "artwork_width_cm": 21.6, "artwork_height_cm": 10.0, "logo_height_cm": 6.0, "logo_bottom_offset_cm": 10.5},
-      "sleeve": {"logo_height_cm": 11.0, "logo_bottom_offset_cm": 9.0, "wm_mark": true, "client_logo_on_sleeve": true},
-      "features": ["Single Canopy", "Manual Opening", "66\" frame coverage", "WM Essentials Handle", "WM Runner", "Generic Tips", "Generic Ferrule", "Generic Sleeve", "No Mesh Pocket", "No Silicon Rib"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)", "Red (NRF 200)", "Neon Yellow"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)", "Red (NRF 200)", "Neon Yellow", "Sage", "Steel Blue", "Mint Lemonade", "Arnie's Army", "AP Classic", "FOH Blue 2025", "TrueTimber Viper"]
+      "page_size_pts": [
+        2125.98,
+        3543.84
+      ],
+      "panel": {
+        "shape": "triangle",
+        "height_cm": 83.0,
+        "top_cm": 0.0,
+        "bottom_cm": 59.54,
+        "artwork_width_cm": 21.6,
+        "artwork_height_cm": 10.0,
+        "logo_height_cm": 6.0,
+        "logo_bottom_offset_cm": 10.5
+      },
+      "sleeve": {
+        "logo_height_cm": 11.0,
+        "logo_bottom_offset_cm": 9.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": true
+      },
+      "features": [
+        "Single Canopy",
+        "Manual Opening",
+        "66\" frame coverage",
+        "WM Essentials Handle",
+        "WM Runner",
+        "Generic Tips",
+        "Generic Ferrule",
+        "Generic Sleeve",
+        "No Mesh Pocket",
+        "No Silicon Rib"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)",
+        "Red (NRF 200)",
+        "Neon Yellow"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)",
+        "Red (NRF 200)",
+        "Neon Yellow",
+        "Sage",
+        "Steel Blue",
+        "Mint Lemonade",
+        "Arnie's Army",
+        "AP Classic",
+        "FOH Blue 2025",
+        "TrueTimber Viper",
+        "Canyon Glow"
+      ]
     },
     "golf_62": {
       "display_name": "Golf 62",
@@ -112,12 +856,46 @@
       "frame_coverage_in": 62,
       "packed_length_in": 40.16,
       "opening": "Manual",
-      "page_size_pts": [2125.98, 3543.84],
-      "panel": {"shape": "triangle", "height_cm": 78.0, "top_cm": 0.0, "bottom_cm": 56.0, "artwork_width_cm": 21.6, "artwork_height_cm": 10.0, "logo_height_cm": 6.0, "logo_bottom_offset_cm": 10.5},
-      "sleeve": {"logo_height_cm": 11.0, "logo_bottom_offset_cm": 9.0, "wm_mark": true, "client_logo_on_sleeve": true},
-      "features": ["Single Canopy", "Manual Opening", "62\" frame coverage", "WM Golf Handle"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)", "Red (NRF 200)"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)", "Red (NRF 200)", "Neon Yellow", "Sage"]
+      "page_size_pts": [
+        2125.98,
+        3543.84
+      ],
+      "panel": {
+        "shape": "triangle",
+        "height_cm": 78.0,
+        "top_cm": 0.0,
+        "bottom_cm": 56.0,
+        "artwork_width_cm": 21.6,
+        "artwork_height_cm": 10.0,
+        "logo_height_cm": 6.0,
+        "logo_bottom_offset_cm": 10.5
+      },
+      "sleeve": {
+        "logo_height_cm": 11.0,
+        "logo_bottom_offset_cm": 9.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": true
+      },
+      "features": [
+        "Single Canopy",
+        "Manual Opening",
+        "62\" frame coverage",
+        "WM Golf Handle"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)",
+        "Red (NRF 200)"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)",
+        "Red (NRF 200)",
+        "Neon Yellow",
+        "Sage"
+      ]
     },
     "golf_68": {
       "display_name": "Golf 68",
@@ -129,12 +907,44 @@
       "frame_coverage_in": 68,
       "packed_length_in": 43.03,
       "opening": "Manual",
-      "page_size_pts": [2125.98, 3543.84],
-      "panel": {"shape": "triangle", "height_cm": 85.5, "top_cm": 0.0, "bottom_cm": 61.4, "artwork_width_cm": 21.6, "artwork_height_cm": 10.0, "logo_height_cm": 6.0, "logo_bottom_offset_cm": 10.5},
-      "sleeve": {"logo_height_cm": 11.0, "logo_bottom_offset_cm": 9.0, "wm_mark": true, "client_logo_on_sleeve": true},
-      "features": ["Single Canopy", "Manual Opening", "68\" frame coverage", "WM Golf Handle"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)", "AP Classic", "TrueTimber Viper"]
+      "page_size_pts": [
+        2125.98,
+        3543.84
+      ],
+      "panel": {
+        "shape": "triangle",
+        "height_cm": 85.5,
+        "top_cm": 0.0,
+        "bottom_cm": 61.4,
+        "artwork_width_cm": 21.6,
+        "artwork_height_cm": 10.0,
+        "logo_height_cm": 6.0,
+        "logo_bottom_offset_cm": 10.5
+      },
+      "sleeve": {
+        "logo_height_cm": 11.0,
+        "logo_bottom_offset_cm": 9.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": true
+      },
+      "features": [
+        "Single Canopy",
+        "Manual Opening",
+        "68\" frame coverage",
+        "WM Golf Handle"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)",
+        "AP Classic",
+        "TrueTimber Viper"
+      ]
     },
     "trek": {
       "display_name": "Trek",
@@ -146,12 +956,60 @@
       "frame_coverage_in": 42,
       "packed_length_in": 19.49,
       "opening": "Manual collapsible",
-      "page_size_pts": [2125.98, 3259.84],
-      "panel": {"shape": "trapezoid", "height_cm": 22.0, "top_cm": 18.0, "bottom_cm": 36.0, "artwork_width_cm": 18.0, "artwork_height_cm": 9.0, "logo_height_cm": 5.5, "logo_bottom_offset_cm": 8.5},
-      "sleeve": {"logo_height_cm": 9.0, "logo_bottom_offset_cm": 7.0, "wm_mark": true, "client_logo_on_sleeve": true},
-      "features": ["Collapsible canopy", "42\" frame coverage", "Compact 19.5\" packed length"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Sage", "Red (NRF 200)", "White (NRF 100)"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Sage", "Red (NRF 200)", "White (NRF 100)", "Rusty Orange", "Steel Blue", "Blush (NRF 680)", "Whispy Blue", "2026 America 250", "AP Classic", "AP Fairway Camo", "TrueTimber Viper", "FOH Blue 2025"]
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "panel": {
+        "shape": "trapezoid",
+        "height_cm": 22.0,
+        "top_cm": 18.0,
+        "bottom_cm": 36.0,
+        "artwork_width_cm": 18.0,
+        "artwork_height_cm": 9.0,
+        "logo_height_cm": 5.5,
+        "logo_bottom_offset_cm": 8.5
+      },
+      "sleeve": {
+        "logo_height_cm": 9.0,
+        "logo_bottom_offset_cm": 7.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": true
+      },
+      "features": [
+        "Collapsible canopy",
+        "42\" frame coverage",
+        "Compact 19.5\" packed length"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Sage",
+        "Red (NRF 200)",
+        "White (NRF 100)"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Sage",
+        "Red (NRF 200)",
+        "White (NRF 100)",
+        "Rusty Orange",
+        "Steel Blue",
+        "Blush (NRF 680)",
+        "Whispy Blue",
+        "2026 America 250",
+        "AP Classic",
+        "AP Fairway Camo",
+        "TrueTimber Viper",
+        "FOH Blue 2025",
+        "Skyline Stripe",
+        "Colorstorm",
+        "River Mist",
+        "Canyon Glow",
+        "Dusty Lavender",
+        "Sunlit Butter"
+      ]
     },
     "travel": {
       "display_name": "Travel",
@@ -163,12 +1021,61 @@
       "frame_coverage_in": 38,
       "packed_length_in": 11.81,
       "opening": "Manual collapsible",
-      "page_size_pts": [2125.98, 3259.84],
-      "panel": {"shape": "trapezoid", "height_cm": 20.0, "top_cm": 16.5, "bottom_cm": 33.0, "artwork_width_cm": 16.5, "artwork_height_cm": 8.0, "logo_height_cm": 5.0, "logo_bottom_offset_cm": 8.0},
-      "sleeve": {"logo_height_cm": 8.0, "logo_bottom_offset_cm": 6.0, "wm_mark": true, "client_logo_on_sleeve": true},
-      "features": ["Collapsible canopy", "38\" frame coverage", "Compact 11.8\" packed length"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)", "Sage", "Red (NRF 200)", "Neon Yellow"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "White (NRF 100)", "Sage", "Red (NRF 200)", "Neon Yellow", "Skyline Stripe", "Dusty Lavender", "Blush (NRF 680)", "Whispy Blue", "Steel Blue", "Rusty Orange", "Lilac", "Neon Pink", "Twilight Plaid", "Deep Ocean"]
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "panel": {
+        "shape": "trapezoid",
+        "height_cm": 20.0,
+        "top_cm": 16.5,
+        "bottom_cm": 33.0,
+        "artwork_width_cm": 16.5,
+        "artwork_height_cm": 8.0,
+        "logo_height_cm": 5.0,
+        "logo_bottom_offset_cm": 8.0
+      },
+      "sleeve": {
+        "logo_height_cm": 8.0,
+        "logo_bottom_offset_cm": 6.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": true
+      },
+      "features": [
+        "Collapsible canopy",
+        "38\" frame coverage",
+        "Compact 11.8\" packed length"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)",
+        "Sage",
+        "Red (NRF 200)",
+        "Neon Yellow"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "White (NRF 100)",
+        "Sage",
+        "Red (NRF 200)",
+        "Neon Yellow",
+        "Skyline Stripe",
+        "Colorstorm",
+        "Dusty Lavender",
+        "Blush (NRF 680)",
+        "Whispy Blue",
+        "Steel Blue",
+        "Rusty Orange",
+        "Lilac",
+        "Neon Pink",
+        "Twilight Plaid",
+        "Deep Ocean",
+        "River Mist",
+        "Canyon Glow",
+        "Sunlit Butter"
+      ]
     },
     "collapsible": {
       "display_name": "Collapsible",
@@ -180,12 +1087,48 @@
       "frame_coverage_in": 38,
       "packed_length_in": 18.31,
       "opening": "Manual collapsible",
-      "page_size_pts": [2125.98, 3259.84],
-      "panel": {"shape": "trapezoid", "height_cm": 20.0, "top_cm": 16.5, "bottom_cm": 33.0, "artwork_width_cm": 16.5, "artwork_height_cm": 8.0, "logo_height_cm": 5.0, "logo_bottom_offset_cm": 8.0},
-      "sleeve": {"logo_height_cm": 8.0, "logo_bottom_offset_cm": 6.0, "wm_mark": true, "client_logo_on_sleeve": true},
-      "features": ["Collapsible canopy", "Compact 18.3\" packed length"],
-      "core_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Sage", "White (NRF 100)", "Red (NRF 200)"],
-      "all_colors": ["Black (NRF 001)", "Navy Blue (NRF 600)", "Sage", "White (NRF 100)", "Red (NRF 200)", "Deep Ocean"]
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "panel": {
+        "shape": "trapezoid",
+        "height_cm": 20.0,
+        "top_cm": 16.5,
+        "bottom_cm": 33.0,
+        "artwork_width_cm": 16.5,
+        "artwork_height_cm": 8.0,
+        "logo_height_cm": 5.0,
+        "logo_bottom_offset_cm": 8.0
+      },
+      "sleeve": {
+        "logo_height_cm": 8.0,
+        "logo_bottom_offset_cm": 6.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": true
+      },
+      "features": [
+        "Collapsible canopy",
+        "Compact 18.3\" packed length"
+      ],
+      "core_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Sage",
+        "White (NRF 100)",
+        "Red (NRF 200)"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Navy Blue (NRF 600)",
+        "Sage",
+        "White (NRF 100)",
+        "Red (NRF 200)",
+        "Deep Ocean",
+        "Steel Blue",
+        "Skyline Stripe",
+        "River Mist"
+      ]
     },
     "kids": {
       "display_name": "Kids",
@@ -197,12 +1140,52 @@
       "frame_coverage_in": 32,
       "packed_length_in": 24.53,
       "opening": "Manual",
-      "page_size_pts": [2125.98, 3259.84],
-      "panel": {"shape": "trapezoid", "height_cm": 18.0, "top_cm": 14.5, "bottom_cm": 28.0, "artwork_width_cm": 14.5, "artwork_height_cm": 8.0, "logo_height_cm": 5.0, "logo_bottom_offset_cm": 7.0},
-      "sleeve": {"logo_height_cm": 8.0, "logo_bottom_offset_cm": 6.0, "wm_mark": true, "client_logo_on_sleeve": true},
-      "features": ["Youth canopy", "32\" frame coverage"],
-      "core_colors": ["Red (NRF 200)", "Neon Yellow", "Cosmic Rainbow"],
-      "all_colors": ["Red (NRF 200)", "Neon Yellow", "Cosmic Rainbow", "Color Storm", "Sage", "Rusty Orange", "Whispy Blue", "Kaleidoscope", "FOH Blue 2025", "Steel Blue", "Lilac", "Neon Pink", "Blush (NRF 680)"]
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "panel": {
+        "shape": "trapezoid",
+        "height_cm": 18.0,
+        "top_cm": 14.5,
+        "bottom_cm": 28.0,
+        "artwork_width_cm": 14.5,
+        "artwork_height_cm": 8.0,
+        "logo_height_cm": 5.0,
+        "logo_bottom_offset_cm": 7.0
+      },
+      "sleeve": {
+        "logo_height_cm": 8.0,
+        "logo_bottom_offset_cm": 6.0,
+        "wm_mark": true,
+        "client_logo_on_sleeve": true
+      },
+      "features": [
+        "Youth canopy",
+        "32\" frame coverage"
+      ],
+      "core_colors": [
+        "Red (NRF 200)",
+        "Neon Yellow",
+        "Cosmic Rainbow"
+      ],
+      "all_colors": [
+        "Red (NRF 200)",
+        "Neon Yellow",
+        "Cosmic Rainbow",
+        "Colorstorm",
+        "Sage",
+        "Rusty Orange",
+        "Whispy Blue",
+        "Kaleidoscope",
+        "FOH Blue 2025",
+        "Steel Blue",
+        "Lilac",
+        "Neon Pink",
+        "Blush (NRF 680)",
+        "Skyline Stripe",
+        "Canyon Glow"
+      ]
     },
     "venture_dry_pack": {
       "display_name": "Venture Dry Pack",
@@ -213,7 +1196,10 @@
       "worksheet_layout": "backpack",
       "canopy_panels": 1,
       "opening": "—",
-      "page_size_pts": [2125.98, 3259.84],
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
       "default_placement": "upper_center",
       "placements": {
         "upper_center": {
@@ -221,7 +1207,11 @@
           "callout": "upper center",
           "width_cm": 13.3,
           "height_cm": 3.7,
-          "options": ["#1", "#2", "#3"],
+          "options": [
+            "#1",
+            "#2",
+            "#3"
+          ],
           "option_by_fabric": {
             "Black (NRF 001)": "#1",
             "Steel Blue": "#2",
@@ -235,7 +1225,11 @@
           "callout": "center",
           "width_cm": 13.3,
           "height_cm": 3.7,
-          "options": ["#4", "#5", "#6"],
+          "options": [
+            "#4",
+            "#5",
+            "#6"
+          ],
           "option_by_fabric": {
             "Black (NRF 001)": "#4",
             "Steel Blue": "#5",
@@ -249,7 +1243,11 @@
           "callout": "lower right center",
           "width_cm": 7.2,
           "height_cm": 2.0,
-          "options": ["#7", "#8", "#9"],
+          "options": [
+            "#7",
+            "#8",
+            "#9"
+          ],
           "option_by_fabric": {
             "Black (NRF 001)": "#7",
             "Steel Blue": "#8",
@@ -267,8 +1265,64 @@
         "Fabric color selects Paula v2 colorway page within each placement trio",
         "Static worksheet extract — layout geometry from mapped Option page"
       ],
-      "core_colors": ["Black (NRF 001)", "Sage", "Steel Blue"],
-      "all_colors": ["Black (NRF 001)", "Sage", "Steel Blue"]
+      "core_colors": [
+        "Black (NRF 001)",
+        "Sage",
+        "Steel Blue"
+      ],
+      "all_colors": [
+        "Black (NRF 001)",
+        "Sage",
+        "Steel Blue"
+      ]
+    },
+    "trek_all_weather_hat": {
+      "display_name": "Trek All-Weather Hat",
+      "subtitle": "Hat",
+      "style_number": "40001",
+      "shopify_type": "Accessories",
+      "family": "hat",
+      "worksheet_layout": "hat",
+      "canopy_panels": 1,
+      "opening": "—",
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "default_placement": "side_view",
+      "placements": {
+        "side_view": {
+          "label": "Side view",
+          "callout": "side placement",
+          "width_cm": 2.4,
+          "height_cm": 2.4,
+          "note": "Hats-Mockups.pdf Side View Mockup · 2.4 × 2.4 cm"
+        },
+        "front_view": {
+          "label": "Front view",
+          "callout": "front placement",
+          "width_cm": 2.5,
+          "height_cm": 2.5,
+          "note": "Hats-Mockups.pdf Front View Mockup · 25 × 25 mm"
+        }
+      },
+      "artwork_width_cm": 2.4,
+      "artwork_height_cm": 2.4,
+      "features": [
+        "Artwork placement: Side view, Front view",
+        "Fabric color selects Hats-Mockups.pdf colorway page within each placement pair",
+        "Static worksheet extract — Paula 1:1 page map"
+      ],
+      "core_colors": [
+        "Navy (NRF 411)",
+        "Sage (NRF 311)",
+        "Bone (NRF 202)"
+      ],
+      "all_colors": [
+        "Navy (NRF 411)",
+        "Sage (NRF 311)",
+        "Bone (NRF 202)"
+      ]
     }
   }
 }

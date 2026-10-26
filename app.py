@@ -35,27 +35,35 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 99
+STAMP_VERSION = 101
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
-FAMILY_OPTIONS = ["Umbrella", "Backpack", "Poncho"]
-FAMILY_KEYS = {"Umbrella": "umbrella", "Backpack": "backpack", "Poncho": "poncho"}
+FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho"]
+FAMILY_KEYS = {
+    "Umbrella": "umbrella",
+    "Backpack": "backpack",
+    "Hat": "hat",
+    "Poncho": "poncho",
+}
 
 try:
     from skills.asset_logger import AssetLogger
     from skills.state_memory import StateMemory
     from utils.catalog import (
         backpack_placement_labels,
+        default_logo_color_for_fabric,
         fabric_caption,
         fabrics_for_styles,
+        hat_placement_labels,
         logo_color_names,
         logo_knockout_mode,
         resolve_backpack_placement,
+        resolve_hat_placement,
         style_labels,
     )
     from utils.exporter import WorksheetExporter, worksheet_filename
     from utils.project_guide import render_project_guide
-    from utils.renderer import JobSpec, resolve_backpack_v2_page_index
+    from utils.renderer import JobSpec, resolve_backpack_v2_page_index, resolve_hat_page_index
     from utils.vectors import SUPPORTED_EXTS, VectorLoadError, load_artwork
 except Exception:  # noqa: BLE001 — surface Cloud import crashes on-screen
     _import_tb = traceback.format_exc()
@@ -237,6 +245,23 @@ def _run_app() -> None:
                         f"{place['label']} · {place['width_cm']:g} × {place['height_cm']:g} cm "
                         f"(Style #: 40002)."
                     )
+            elif family == "hat":
+                place_labels = hat_placement_labels("trek_all_weather_hat")
+                place_options = list(place_labels.values()) or ["Side view"]
+                panel_config = st.selectbox(
+                    "Artwork placement",
+                    place_options,
+                    index=None,
+                    placeholder="Choose placement",
+                    key=f"hat_place_{FORM_KEY}",
+                )
+                panel_count = 1
+                if panel_config:
+                    place = resolve_hat_placement(panel_config)
+                    st.caption(
+                        f"{place['label']} · {place['width_cm']:g} × {place['height_cm']:g} cm "
+                        f"(Style #: 40001)."
+                    )
             else:
                 panel_config = st.selectbox(
                     "Panel configuration",
@@ -273,13 +298,25 @@ def _run_app() -> None:
                 disabled=True,
             )
             fabric = None
-        logo_options = logo_color_names()
+
+        logo_options = logo_color_names(family) if family else logo_color_names()
+        logo_key = f"logo_color_{FORM_KEY}_{family or 'none'}"
+        # When fabric changes, pair a contrast-safe default logo ink (user can override).
+        if fabric and family in {"umbrella", "backpack", "hat", "poncho"}:
+            suggested = default_logo_color_for_fabric(fabric, family)
+            pair_key = f"_logo_fabric_pair_{FORM_KEY}"
+            if (
+                suggested in logo_options
+                and st.session_state.get(pair_key) != (family, fabric)
+            ):
+                st.session_state[pair_key] = (family, fabric)
+                st.session_state[logo_key] = suggested
         logo_color = st.selectbox(
             "Logo / graphic color",
             logo_options,
             index=None,
             placeholder="Choose logo color",
-            key=f"logo_color_{FORM_KEY}",
+            key=logo_key,
         )
         knockout_mode = logo_knockout_mode(logo_color) if logo_color else "none"
         if logo_color and knockout_mode == "none":
@@ -324,6 +361,8 @@ def _run_app() -> None:
     if family == "umbrella" and not panel_config:
         missing.append("panel configuration")
     if family == "backpack" and not panel_config:
+        missing.append("artwork placement")
+    if family == "hat" and not panel_config:
         missing.append("artwork placement")
     if not fabric:
         missing.append("fabric")
@@ -458,9 +497,21 @@ def _run_app() -> None:
                 else ""
             )
             + (
+                f" · {resolve_hat_placement(panel_config)['width_cm']:g} × "
+                f"{resolve_hat_placement(panel_config)['height_cm']:g} cm"
+                if family == "hat" and panel_config
+                else ""
+            )
+            + (
                 f"  \n**Paula page:** Graphic Sample Option #"
                 f"{resolve_backpack_v2_page_index(panel_config, job.fabric_name) + 1}"
                 if family == "backpack" and panel_config
+                else ""
+            )
+            + (
+                f"  \n**Paula page:** Hats-Mockups.pdf p"
+                f"{resolve_hat_page_index(panel_config, job.fabric_name) + 1}"
+                if family == "hat" and panel_config
                 else ""
             )
             + f"  \n**Pages ({len(page_plan)}):** {' · '.join(page_labels) or '—'}"
@@ -519,7 +570,8 @@ def _run_app() -> None:
             )
 
     st.caption(
-        "Catalog: Walk · Stick · Golf Essential / 62 / 68 · Trek · Travel · Collapsible · Kids. "
+        "Catalog: Walk · Stick · Golf Essential / 62 / 68 · Trek · Travel · Collapsible · Kids · "
+        "Venture Dry Pack · Trek All-Weather Hat. "
         "Artwork bound 21.6 × 10 cm (Walk/Golf). Logos: SVG, AI, CDR, PDF, EPS."
     )
     render_project_guide(stamp_version=STAMP_VERSION)

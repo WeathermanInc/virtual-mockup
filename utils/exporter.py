@@ -25,6 +25,7 @@ from .catalog import (
     logo_color_rgb,
     logo_sheet_label,
     resolve_backpack_placement,
+    resolve_hat_placement,
     style_family,
 )
 from .renderer import (
@@ -43,8 +44,10 @@ from .renderer import (
     fit_logo_uniform,
     get_backpack_front_slot,
     get_backpack_pdf_front_slot,
+    hats_pdf_path,
     recolor_bright_ink_inplace,
     resolve_backpack_v2_page_index,
+    resolve_hat_page_index,
     BACKPACK_PDF_WEATHERMAN_COVER,
 )
 
@@ -74,6 +77,7 @@ STYLE_PAGES: dict[str, list[int]] = {
     "golf_62": [2, 3, 4],
     "golf_68": [2, 3, 4],
     "venture_dry_pack": [1],
+    "trek_all_weather_hat": [1],
 }
 
 PAGE_TITLES: dict[int, str] = {
@@ -85,6 +89,10 @@ PAGE_TITLES: dict[int, str] = {
 
 BACKPACK_TITLES: dict[int, str] = {
     1: "Venture Dry Pack",
+}
+
+HAT_TITLES: dict[int, str] = {
+    1: "Trek All-Weather Hat",
 }
 
 # Venture Dry Pack (style 40002) — M13 backpack worksheet, same page size as Walk.
@@ -225,7 +233,11 @@ PAGE_SPEC: dict[int, dict] = {
 def worksheet_filename(client: str, year: int | None = None, family: str = "umbrella") -> str:
     year = year or date.today().year
     safe = " ".join(client.strip().split()) or "Client"
-    kind = "Backpack" if family == "backpack" else "Umbrella"
+    kind = {
+        "backpack": "Backpack",
+        "hat": "Hat",
+        "poncho": "Poncho",
+    }.get(family, "Umbrella")
     return f"{safe} x WM {kind} {year} Mockup Designs.pdf"
 
 
@@ -340,11 +352,19 @@ class WorksheetExporter:
     def _page_spec(self, family: str, page_no: int) -> dict:
         if family == "backpack":
             return BACKPACK_PAGE_SPEC[page_no]
+        if family == "hat":
+            # Same page size as Walk / Venture Dry Pack worksheets.
+            return BACKPACK_PAGE_SPEC.get(page_no) or {
+                "size_pts": (2125.98, 3259.84),
+                "logos": [],
+            }
         return PAGE_SPEC[page_no]
 
     def _page_title(self, family: str, page_no: int) -> str:
         if family == "backpack":
             return BACKPACK_TITLES.get(page_no, f"Page {page_no}")
+        if family == "hat":
+            return HAT_TITLES.get(page_no, f"Page {page_no}")
         return PAGE_TITLES.get(page_no, f"Page {page_no}")
 
     def _template(self, page_no: int, family: str = "umbrella") -> PILImage.Image:
@@ -411,6 +431,10 @@ class WorksheetExporter:
         family = self._job_family(job)
         if family == "backpack" and backpack_v2_pdf_path() is not None:
             return self._preview_backpack_pdf_template(
+                job, logo, max_width=max_width, quality=quality
+            )
+        if family == "hat" and hats_pdf_path() is not None:
+            return self._preview_hat_pdf_template(
                 job, logo, max_width=max_width, quality=quality
             )
         return self._preview_standard_canvas(
@@ -482,7 +506,94 @@ class WorksheetExporter:
         family = self._job_family(job)
         if family == "backpack":
             return self.render_backpack_with_pdf_template(job, logo)
+        if family == "hat":
+            return self.render_hat_with_pdf_template(job, logo)
         return self.render_standard_canvas(job, logo)
+
+    def _preview_hat_pdf_template(
+        self,
+        job: JobSpec,
+        logo: PILImage.Image | None,
+        *,
+        max_width: int = 1400,
+        quality: int = 88,
+    ) -> list[tuple[str, bytes]]:
+        """Rasterize the hat PDF-template page for Streamlit preview."""
+        import fitz
+
+        try:
+            pdf_bytes = self.render_hat_with_pdf_template(job, logo)
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            page = doc[0]
+            zoom = max(1.0, float(max_width) / float(page.rect.width))
+            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            img = PILImage.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            if img.width > max_width:
+                ratio = max_width / img.width
+                img = img.resize(
+                    (max_width, max(1, int(img.height * ratio))),
+                    PILImage.Resampling.LANCZOS,
+                )
+            buf = BytesIO()
+            img.save(buf, format="JPEG", quality=quality, optimize=True)
+            title = self._page_title("hat", 1)
+            return [(title, buf.getvalue())]
+        except Exception:
+            print("Exporter Error:", traceback.format_exc(), flush=True)
+            return self._preview_standard_canvas(
+                job, logo, max_width=max_width, quality=quality
+            )
+
+    def render_hat_with_pdf_template(
+        self,
+        job: JobSpec,
+        logo: PILImage.Image | None,
+    ) -> bytes:
+        """Trek All-Weather Hat — Paula Hats-Mockups.pdf page 1:1 (static map).
+
+        ``HAT_STATIC_PAGE_MAP`` supplies the exact Side/Front × Navy/Sage/Bone
+        worksheet. Layout, Artwork box, and Sizing & Dimensions stay Paula's —
+        no coordinate stamps. Ticket metadata is written into the PDF info dict.
+        ``logo`` is accepted for API parity; Match/print recolor overlays can be
+        layered later without changing the page map.
+        """
+        import fitz
+
+        _ = logo  # reserved for future ink overlays; static pages are complete.
+        pdf_path = hats_pdf_path()
+        if pdf_path is None:
+            return self.render_standard_canvas(job, logo)
+
+        page_index = resolve_hat_page_index(job.panel_config, job.fabric_name)
+        src = fitz.open(pdf_path)
+        try:
+            if page_index < 0 or page_index >= src.page_count:
+                page_index = 0
+            doc = fitz.open()
+            doc.insert_pdf(src, from_page=page_index, to_page=page_index)
+        finally:
+            src.close()
+
+        place = resolve_hat_placement(job.panel_config)
+        meta = doc.metadata or {}
+        meta.update(
+            {
+                "title": worksheet_filename(job.client, job.year, "hat").replace(".pdf", ""),
+                "author": "Weatherman Virtual Mockup Creator",
+                "subject": "PRODUCTION WORKSHEET",
+                "keywords": (
+                    f"style=40001;"
+                    f"placement={place.get('label') or job.panel_config};"
+                    f"fabric={job.fabric_name};"
+                    f"logo={job.logo_color_name};"
+                    f"paula_page={page_index + 1}"
+                ),
+            }
+        )
+        doc.set_metadata(meta)
+        out = doc.tobytes(deflate=True, garbage=3)
+        doc.close()
+        return out
 
     def render_standard_canvas(self, job: JobSpec, logo: PILImage.Image | None) -> bytes:
         """Umbrella / poncho worksheets — full-page raster stamp via ReportLab."""

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from .catalog import logo_color_names, product_specs
+from .catalog import logo_color_names, product_specs, style_family
 from .vectors import SUPPORTED_EXTS
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -16,10 +16,11 @@ OPERATOR_FLOW = """
 flowchart LR
   A[Job ticket] --> B[Vector logo upload]
   B --> C[Rasterize artwork]
-  C --> D[Erase official marks]
-  D --> E[Recolor fabric]
-  E --> F[Stamp client logo]
-  F --> G[On-screen proof]
+  C --> D{Family}
+  D -->|Umbrella| E[Erase · recolor · stamp]
+  D -->|Backpack / Hat| F[Static Paula page map]
+  E --> G[On-screen proof]
+  F --> G
   G --> H[PDF export]
 """
 
@@ -33,7 +34,7 @@ flowchart TB
   subgraph Utils["utils/"]
     V[vectors.py · PyMuPDF]
     E[exporter.py · stamp + PDF]
-    R[renderer.py · logo prep]
+    R[renderer.py · logo prep · page maps]
     C[catalog.json]
   end
   T --> E
@@ -56,28 +57,29 @@ flowchart TB
     G4[Page 4 · Sleeve]
   end
   subgraph Pack["Backpack"]
-    B1[Venture Dry Pack · M13 sheet]
+    B1[Venture Dry Pack · BACKPACK_STATIC_PAGE_MAP]
+  end
+  subgraph Hat["Hat"]
+    H1[Trek All-Weather Hat · HAT_STATIC_PAGE_MAP]
   end
   Job[Selected products] --> Stick
   Job --> Golf
   Job --> Pack
+  Job --> Hat
 """
 
 BUILD_TIMELINE = """
 timeline
-  title Virtual Mockup · 16 Aug 2026
+  title Virtual Mockup · 2026
   section Foundation
-    Morning : Initial Streamlit app
-            : Official worksheet stamp pipeline
-  section Product polish
-    Afternoon : Multi-style PDF export
-              : Weatherman.com UI theme
-              : Blank ticket · no Proper preload
-  section Cloud
-    Evening : Wheel-only deps for Python 3.14
-            : PyMuPDF · no apt ImageMagick
-            : GitHub Actions keep-alive
-            : Docs and gitignore hygiene
+    Aug 16 : Initial Streamlit stamp pipeline
+           : Cloud wheels · keep-alive · docs
+  section Accessories
+    Sep : Venture Dry Pack static page map
+        : Artwork box · logo swatch · in-place Black C
+  section Hats and colorways
+    Oct 26 : Trek All-Weather Hat · Hats-Mockups.pdf map
+           : Umbrella NRF sync · Skyline 641 · Colorstorm 840
 """
 
 
@@ -90,13 +92,15 @@ def _count_official_pages() -> int:
 def render_project_guide(*, stamp_version: int) -> None:
     """Render About / diagrams / stats / timeline (safe to call on every run)."""
     styles = product_specs()
+    umbrella_n = sum(1 for k in styles if style_family(k) == "umbrella")
     logo_colors = logo_color_names()
     pages = _count_official_pages()
 
     with st.expander("About this tool · diagrams, stats, timeline", expanded=False):
         st.markdown(
             "Internal Weatherman proofing tool: stamp vector client logos onto "
-            "official production worksheets and export multi-page PDFs."
+            "official production worksheets and export multi-page PDFs for "
+            "**Umbrella**, **Backpack**, and **Hat** families."
         )
         overview, pipeline, architecture, timeline = st.tabs(
             ["Overview", "Operator pipeline", "Architecture", "Timeline"]
@@ -110,7 +114,8 @@ def render_project_guide(*, stamp_version: int) -> None:
             c4.metric("Vector formats", len(SUPPORTED_EXTS))
             c5.metric("Stamp engine", f"v{stamp_version}")
             st.caption(
-                "Walk/Golf artwork 21.6 × 10 cm. Venture Dry Pack 9.2 × 4.5 cm. Logos: "
+                f"Umbrella styles: {umbrella_n}. Walk/Golf artwork 21.6 × 10 cm. "
+                "Venture Dry Pack & Trek Hat use Paula 1:1 page maps. Logos: "
                 + ", ".join(ext.lstrip(".").upper() for ext in SUPPORTED_EXTS)
                 + "."
             )
@@ -126,7 +131,7 @@ def render_project_guide(*, stamp_version: int) -> None:
             st.mermaid_chart(ARCHITECTURE)
 
         with timeline:
-            st.markdown("Same-day build arc from first commit through Cloud harden + docs.")
+            st.markdown("Build arc from first Cloud harden through hats + NRF sync.")
             st.mermaid_chart(BUILD_TIMELINE)
             st.caption(
                 "Keep-alive: GitHub Actions Playwright every 2 hours. "

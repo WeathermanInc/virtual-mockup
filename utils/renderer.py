@@ -34,6 +34,12 @@ BACKPACK_V2_PDF_CANDIDATES = (
     BACKPACK_DIR / "Proper Brands x WM Umbrella 2026 Mockup Designs v2.pdf",
     TEMPLATE_DIR / "Proper Brands x WM Umbrella 2026 Mockup Designs v2.pdf",
 )
+# Paula Trek All-Weather Hat worksheets (Side / Front × Navy / Sage / Bone).
+HAT_PDF_CANDIDATES = (
+    ROOT / "Hats-Mockups.pdf",
+    TEMPLATE_DIR / "Hats-Mockups.pdf",
+    TEMPLATE_DIR / "official" / "hat" / "Hats-Mockups.pdf",
+)
 # Optional JPEG sidecars (smaller Cloud checkout / lower peak RAM).
 BACKPACK_FRONT_SAGE_JPG = BACKPACK_DIR / "backpack_front_sage.jpg"
 BACKPACK_FRONT_STEEL_JPG = BACKPACK_DIR / "backpack_front_steelblue.jpg"
@@ -251,6 +257,17 @@ PANTONE_BLACK_C = (45, 41, 38)
 # Pure print fills for backpack Front View in-place recolor (sheet proofing).
 LOGO_FILL_BLACK = (0, 0, 0)  # #000000
 LOGO_FILL_WHITE = (255, 255, 255)  # #FFFFFF
+
+def refresh_fabric_colors() -> dict[str, tuple[int, int, int]]:
+    """Reload fabric RGB map from catalog.json (clears catalog LRU cache)."""
+    from utils.catalog import load_catalog
+
+    load_catalog.cache_clear()
+    global FABRIC_COLORS, PRODUCT_CATALOG
+    FABRIC_COLORS = fabric_rgb_map()
+    PRODUCT_CATALOG = product_specs()
+    return FABRIC_COLORS
+
 
 FABRIC_COLORS: dict[str, tuple[int, int, int]] = fabric_rgb_map()
 PRODUCT_CATALOG: dict[str, dict[str, Any]] = product_specs()
@@ -1395,6 +1412,69 @@ def resolve_backpack_v2_page_index(
     key = str(place.get("key") or "upper_center")
     base = int(BACKPACK_PAGE_MAP_BY_KEY.get(key, BACKPACK_PAGE_MAP.get(label, 0)))
     return int(base + backpack_v2_fabric_offset(fabric_name))
+
+
+def hats_pdf_path() -> Path | None:
+    """Return the first existing Paula Trek All-Weather Hat PDF path."""
+    for path in HAT_PDF_CANDIDATES:
+        try:
+            if path.is_file() and path.stat().st_size > 1024:
+                return path
+        except OSError:
+            continue
+    return None
+
+
+# Direct (fabric family, placement label) → 0-based page in Hats-Mockups.pdf.
+# Pages are complete worksheets — no stamp, tint, or coordinate overlays.
+HAT_STATIC_PAGE_MAP: dict[tuple[str, str], int] = {
+    # Navy (NRF 411) · Steel Blue inner
+    ("navy", "Side view"): 0,
+    ("navy", "Front view"): 1,
+    # Sage (NRF 311) · Sedona Sage inner
+    ("sage", "Side view"): 2,
+    ("sage", "Front view"): 3,
+    # Bone (NRF 202) · Chocolate inner
+    ("bone", "Side view"): 4,
+    ("bone", "Front view"): 5,
+}
+
+HAT_PAGE_MAP_BY_KEY: dict[str, int] = {
+    "side_view": 0,
+    "front_view": 1,
+}
+
+
+def _hat_fabric_family(fabric_name: str | None) -> str:
+    """Normalize fabric name to static-map key: navy | sage | bone."""
+    key = _normalize_fabric_key(fabric_name)
+    if "bone" in key:
+        return "bone"
+    if "sage" in key:
+        return "sage"
+    return "navy"
+
+
+def resolve_hat_page_index(
+    placement: str | None = None,
+    fabric_name: str | None = None,
+) -> int:
+    """0-based page index via HAT_STATIC_PAGE_MAP (fabric × placement).
+
+    Exact Paula hat pages only — no coordinate stamps or canvas tinting.
+    """
+    from utils.catalog import resolve_hat_placement
+
+    place = resolve_hat_placement(placement)
+    label = str(place.get("label") or "Side view").strip()
+    fabric = _hat_fabric_family(fabric_name)
+    if (fabric, label) in HAT_STATIC_PAGE_MAP:
+        return int(HAT_STATIC_PAGE_MAP[(fabric, label)])
+    key = str(place.get("key") or "side_view")
+    base = int(HAT_PAGE_MAP_BY_KEY.get(key, 0))
+    # Fabric pairs: navy=0, sage=+2, bone=+4 within each placement column.
+    offset = {"navy": 0, "sage": 2, "bone": 4}.get(fabric, 0)
+    return int(base + offset)
 
 
 def _resolve_local_front_photo(*candidates: Path) -> Path | None:
