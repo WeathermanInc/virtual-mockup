@@ -44,6 +44,8 @@ from .renderer import (
     fit_logo_uniform,
     get_backpack_front_slot,
     get_backpack_pdf_front_slot,
+    hat_logo_fill_rgb,
+    hat_overlay_slots,
     hats_pdf_path,
     recolor_bright_ink_inplace,
     resolve_backpack_v2_page_index,
@@ -549,20 +551,25 @@ class WorksheetExporter:
         job: JobSpec,
         logo: PILImage.Image | None,
     ) -> bytes:
-        """Trek All-Weather Hat — Paula Hats-Mockups.pdf page 1:1 (static map).
+        """Trek All-Weather Hat — Paula page + client logo on mockup + GS.
 
-        ``HAT_STATIC_PAGE_MAP`` supplies the exact Side/Front × Navy/Sage/Bone
-        worksheet. Layout, Artwork box, and Sizing & Dimensions stay Paula's —
-        no coordinate stamps. Ticket metadata is written into the PDF info dict.
-        ``logo`` is accepted for API parity; Match/print recolor overlays can be
-        layered later without changing the page map.
+        ``HAT_STATIC_PAGE_MAP`` supplies the Side/Front × Navy/Sage/Bone
+        worksheet 1:1. When a logo is present, it replaces Paula's baked sample
+        on the photo mockup and the Graphic Sample box (2.4 cm / 25 mm preview),
+        recolored by Logo / graphic color. Umbrella/backpack/poncho paths untouched.
         """
         import fitz
 
-        _ = logo  # reserved for future ink overlays; static pages are complete.
         pdf_path = hats_pdf_path()
         if pdf_path is None:
             return self.render_standard_canvas(job, logo)
+
+        fill = hat_logo_fill_rgb(job.logo_color_name)
+        mark = None
+        if logo is not None:
+            mark = self.renderer.prepare_logo(
+                logo, job.resolved_knockout(), fill_rgb=fill
+            )
 
         page_index = resolve_hat_page_index(job.panel_config, job.fabric_name)
         src = fitz.open(pdf_path)
@@ -573,6 +580,10 @@ class WorksheetExporter:
             doc.insert_pdf(src, from_page=page_index, to_page=page_index)
         finally:
             src.close()
+
+        page = doc[0]
+        if mark is not None:
+            self._pdf_overlay_hat_logos(page, job, mark, page_index)
 
         place = resolve_hat_placement(job.panel_config)
         meta = doc.metadata or {}
@@ -594,6 +605,87 @@ class WorksheetExporter:
         out = doc.tobytes(deflate=True, garbage=3)
         doc.close()
         return out
+
+    def _pdf_overlay_hat_logos(
+        self,
+        page,
+        job: JobSpec,
+        mark: PILImage.Image,
+        page_index: int,
+    ) -> None:
+        """Stamp prepared client logo onto hat photo mockup + Graphic Sample."""
+        slots = hat_overlay_slots(page_index)
+        fabric = job.fabric_rgb
+
+        photo = slots.get("photo") or {}
+        photo_box = photo.get("box")
+        if photo_box:
+            # Circular fabric disc covers multi-ink baked sample (heal reconstructs
+            # the mark from the tight crop rim; a disc wipe is reliable here).
+            cover = photo.get("cover") or photo_box
+            self._pdf_insert_circular_cover(page, cover, fabric)
+            self._pdf_insert_mark(
+                page,
+                photo_box,
+                mark,
+                rotate=float(photo.get("rotate") or 0.0),
+                fit_pad=float(photo.get("fit_pad") or 0.08),
+                crisp=True,
+            )
+
+        gs = slots.get("gs") or {}
+        gs_box = gs.get("box")
+        if gs_box:
+            # GS sits on a solid outer-fabric plate — wipe with outer fabric, then stamp.
+            cover = gs.get("cover") or gs_box
+            # Pad clears AA fringe of the baked circular sample.
+            cx, cy, cw, ch = cover
+            pad = 12.0
+            wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
+            self._pdf_fill_rect(page, wiped, fabric)
+            self._pdf_insert_mark(
+                page,
+                gs_box,
+                mark,
+                rotate=float(gs.get("rotate") or 0.0),
+                fit_pad=0.06,
+                crisp=True,
+            )
+
+    def _pdf_insert_circular_cover(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+        rgb: tuple[int, int, int],
+    ) -> None:
+        """Overlay an opaque circular fabric disc that hides baked sample artwork."""
+        import numpy as np
+
+        x, y, w, h = box
+        if w < 1 or h < 1:
+            return
+        # ~3× PDF points for a clean edge when zoomed.
+        px = max(16, int(round(max(w, h) * 3.0)))
+        arr = np.zeros((px, px, 4), dtype=np.uint8)
+        yy, xx = np.ogrid[:px, :px]
+        cx = cy = (px - 1) / 2.0
+        radius = (px - 1) / 2.0
+        mask = (xx - cx) ** 2 + (yy - cy) ** 2 <= radius ** 2
+        arr[mask, 0] = int(rgb[0])
+        arr[mask, 1] = int(rgb[1])
+        arr[mask, 2] = int(rgb[2])
+        arr[mask, 3] = 255
+        disc = PILImage.fromarray(arr, "RGBA")
+        # Keep the disc circular inside the (possibly non-square) cover box.
+        side = min(float(w), float(h))
+        ox = x + (float(w) - side) / 2.0
+        oy = y + (float(h) - side) / 2.0
+        page.insert_image(
+            self._pdf_rect((ox, oy, side, side)),
+            stream=self._pdf_png_bytes(disc),
+            keep_proportion=False,
+            overlay=True,
+        )
 
     def render_standard_canvas(self, job: JobSpec, logo: PILImage.Image | None) -> bytes:
         """Umbrella / poncho worksheets — full-page raster stamp via ReportLab."""

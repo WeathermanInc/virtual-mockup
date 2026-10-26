@@ -1426,7 +1426,7 @@ def hats_pdf_path() -> Path | None:
 
 
 # Direct (fabric family, placement label) → 0-based page in Hats-Mockups.pdf.
-# Pages are complete worksheets — no stamp, tint, or coordinate overlays.
+# Base pages stay 1:1 Paula; client logo stamps use HAT_*_OVERLAYS only.
 HAT_STATIC_PAGE_MAP: dict[tuple[str, str], int] = {
     # Navy (NRF 411) · Steel Blue inner
     ("navy", "Side view"): 0,
@@ -1442,6 +1442,101 @@ HAT_STATIC_PAGE_MAP: dict[tuple[str, str], int] = {
 HAT_PAGE_MAP_BY_KEY: dict[str, int] = {
     "side_view": 0,
     "front_view": 1,
+}
+
+# Photo mockup sample-artwork boxes (PDF points) — Side/Front × Navy/Sage/Bone.
+# Measured from the baked Mubadala circular mark on each Hats-Mockups.pdf page.
+# Tech-pack scale is 2.4 cm / 25 mm; photo boxes match the foreshortened on-hat mark.
+HAT_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
+    # Navy Side — low-res embedded photo; cover disc fully clears red ring
+    0: {
+        "box": (705.0, 890.0, 43.0, 43.0),
+        "cover": (686.0, 871.0, 81.0, 81.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.08,
+    },
+    # Navy Front
+    1: {
+        "box": (620.0, 770.0, 40.0, 40.0),
+        "cover": (613.0, 763.0, 54.0, 54.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.08,
+    },
+    # Sage Side
+    2: {
+        "box": (695.5, 872.0, 55.5, 55.5),
+        "cover": (688.0, 864.5, 70.5, 70.5),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.08,
+    },
+    # Sage Front
+    3: {
+        "box": (614.0, 771.0, 40.0, 40.0),
+        "cover": (607.0, 764.0, 54.0, 54.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.08,
+    },
+    # Bone Side
+    4: {
+        "box": (696.5, 872.0, 55.0, 55.0),
+        "cover": (689.0, 864.5, 70.0, 70.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.08,
+    },
+    # Bone Front
+    5: {
+        "box": (614.0, 771.0, 40.0, 40.0),
+        "cover": (607.0, 764.0, 54.0, 54.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.08,
+    },
+}
+
+# Graphic Sample #1 preview boxes (PDF points) — enlarged 2.4 cm / 25 mm art.
+# Side worksheets share one GS plate; Front worksheets share another.
+HAT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
+    0: {
+        "box": (878.0, 2203.5, 718.5, 719.0),
+        "cover": (878.0, 2203.5, 718.5, 719.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    1: {
+        "box": (917.0, 2245.0, 667.5, 667.5),
+        "cover": (917.0, 2245.0, 667.5, 667.5),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    2: {
+        "box": (878.0, 2203.5, 718.5, 719.0),
+        "cover": (878.0, 2203.5, 718.5, 719.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    3: {
+        "box": (917.0, 2245.0, 667.5, 667.5),
+        "cover": (917.0, 2245.0, 667.5, 667.5),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    4: {
+        "box": (878.0, 2203.5, 718.5, 719.0),
+        "cover": (878.0, 2203.5, 718.5, 719.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    5: {
+        "box": (917.0, 2245.0, 667.5, 667.5),
+        "cover": (917.0, 2245.0, 667.5, 667.5),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
 }
 
 
@@ -1461,7 +1556,7 @@ def resolve_hat_page_index(
 ) -> int:
     """0-based page index via HAT_STATIC_PAGE_MAP (fabric × placement).
 
-    Exact Paula hat pages only — no coordinate stamps or canvas tinting.
+    Returns the Paula worksheet index; logo stamps use ``hat_overlay_slots``.
     """
     from utils.catalog import resolve_hat_placement
 
@@ -1475,6 +1570,28 @@ def resolve_hat_page_index(
     # Fabric pairs: navy=0, sage=+2, bone=+4 within each placement column.
     offset = {"navy": 0, "sage": 2, "bone": 4}.get(fabric, 0)
     return int(base + offset)
+
+
+def hat_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | None:
+    """Return hat Logo / graphic color fill for uploaded artwork.
+
+    - Pantone 2767 C / 1795 C / White → catalog RGB
+    - Match uploaded art → ``None`` (keep native SVG colors)
+    """
+    from utils.catalog import logo_color_rgb
+
+    token = " ".join(str(logo_color_name or "").lower().replace("-", " ").split())
+    if not token or "match uploaded" in token:
+        return None
+    return logo_color_rgb(logo_color_name)
+
+
+def hat_overlay_slots(page_index: int) -> dict[str, dict[str, Any]]:
+    """Photo mockup + Graphic Sample stamp slots for a Hats-Mockups.pdf page."""
+    idx = int(page_index)
+    photo = HAT_PHOTO_OVERLAYS.get(idx) or HAT_PHOTO_OVERLAYS[0]
+    gs = HAT_GS_OVERLAYS.get(idx) or HAT_GS_OVERLAYS[0]
+    return {"photo": dict(photo), "gs": dict(gs)}
 
 
 def _resolve_local_front_photo(*candidates: Path) -> Path | None:
