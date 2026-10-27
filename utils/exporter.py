@@ -1503,16 +1503,20 @@ class WorksheetExporter:
                 continue
             cover = slot.get("cover") or box
             if key == "draw" or slot.get("wipe") == "fabric_circle":
-                # Tech-pack body fill is page-white; catalog fabric RGB is slightly
-                # off-white and reads as a gray backing square under the stamp.
-                wipe_rgb = (255, 255, 255)
+                # Sample local hoodie-body fill, then redact — never page-white
+                # (white wipe reads as a solid container square on navy sheets).
+                self._pdf_cover_poncho_draw_mark(page, cover, fabric)
+            elif key == "artwork":
+                # Full plate wipe into fabric so Paula's Mubadala cannot remain.
+                wipe_rgb = tuple(int(v) for v in fabric)
                 cx, cy, cw, ch = cover
-                wiped = (cx - 1.0, cy - 1.0, cw + 2.0, ch + 2.0)
+                pad = 6.0
+                wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
                 self._pdf_redact_fill(page, wiped, wipe_rgb)
             else:
                 wipe_rgb = slot.get("wipe_rgb") or fabric
                 cx, cy, cw, ch = cover
-                pad = 4.0 if key == "artwork" else 2.0
+                pad = 2.0
                 wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
                 self._pdf_redact_fill(page, wiped, tuple(int(v) for v in wipe_rgb))
             self._pdf_insert_mark(

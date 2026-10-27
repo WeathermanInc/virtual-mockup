@@ -2060,80 +2060,87 @@ SUN_SHIRT_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     },
 }
 
-# Artwork callout card (right column) — wipe fabric plate, stamp client mark.
-# Frame measured from Paula black border (~1400,625,405,744); logo is left-clipped.
+# Artwork callout card (right column) — wipe FULL fabric plate, stamp client mark.
+# Plate content bbox ~ (1350,624,456,746); cover oversized so Mubadala vectors/rings go.
 SUN_SHIRT_ARTWORK_OVERLAY: dict[str, Any] = {
-    "box": (1440.0, 720.0, 340.0, 560.0),
-    "cover": (1400.0, 625.0, 410.0, 750.0),
+    "box": (1420.0, 760.0, 320.0, 480.0),
+    "cover": (1345.0, 618.0, 470.0, 760.0),
     "erase": "plate",
     "rotate": 0.0,
-    "fit_pad": 0.14,
+    "fit_pad": 0.16,
 }
 
 # Sizing & Dimensions tech-pack sample on the flat drawing (upper left chest).
-# Wipe uses local fabric sample so no rectangular backing box remains.
+# Measured per colorway — HS01 White vs Navy/Sage/River Mist shift ~35 pt in X.
+# Wipe = local body fabric (not page-white) so navy sheets don't get a white square.
 SUN_SHIRT_DRAW_OVERLAYS: dict[int, dict[str, Any]] = {
-    # HS01 pages
+    # HS01 White
     0: {
         "box": (1179.0, 2275.0, 54.0, 54.0),
-        "cover": (1172.0, 2268.0, 68.0, 68.0),
+        "cover": (1170.0, 2266.0, 72.0, 72.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
         "wipe": "fabric_circle",
     },
+    # HS01 Navy
     1: {
-        "box": (1179.0, 2275.0, 54.0, 54.0),
-        "cover": (1172.0, 2268.0, 68.0, 68.0),
+        "box": (1214.0, 2277.0, 51.0, 50.0),
+        "cover": (1205.0, 2268.0, 70.0, 70.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
         "wipe": "fabric_circle",
     },
+    # HS01 Sage
     2: {
-        "box": (1212.0, 2275.0, 54.0, 54.0),
-        "cover": (1205.0, 2268.0, 68.0, 68.0),
+        "box": (1212.0, 2275.0, 55.0, 54.0),
+        "cover": (1203.0, 2266.0, 72.0, 72.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
         "wipe": "fabric_circle",
     },
+    # HS01 River Mist
     3: {
-        "box": (1179.0, 2275.0, 54.0, 54.0),
-        "cover": (1172.0, 2268.0, 68.0, 68.0),
+        "box": (1212.0, 2275.0, 55.0, 54.0),
+        "cover": (1203.0, 2266.0, 72.0, 72.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
         "wipe": "fabric_circle",
     },
-    # BS01 pages
+    # BS01 White
     4: {
-        "box": (1169.0, 2255.0, 54.0, 54.0),
-        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "box": (1170.0, 2255.0, 54.0, 54.0),
+        "cover": (1161.0, 2246.0, 72.0, 72.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
         "wipe": "fabric_circle",
     },
+    # BS01 Iron Sage
     5: {
-        "box": (1169.0, 2255.0, 54.0, 54.0),
-        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "box": (1169.0, 2255.0, 55.0, 54.0),
+        "cover": (1160.0, 2246.0, 72.0, 72.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
         "wipe": "fabric_circle",
     },
+    # BS01 River Mist
     6: {
-        "box": (1169.0, 2255.0, 54.0, 54.0),
-        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "box": (1170.0, 2255.0, 54.0, 54.0),
+        "cover": (1161.0, 2246.0, 72.0, 72.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
         "wipe": "fabric_circle",
     },
+    # BS01 Canyon Glow
     7: {
-        "box": (1169.0, 2255.0, 54.0, 54.0),
-        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "box": (1170.0, 2255.0, 54.0, 54.0),
+        "cover": (1161.0, 2246.0, 72.0, 72.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
