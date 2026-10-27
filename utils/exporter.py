@@ -262,20 +262,14 @@ PAGE_SPEC: dict[int, dict] = {
             # Closed-sleeve wordmark — clone neighboring fabric after recolor (no rectangle).
             # Cover spans the Weatherman icon + wordmark; stop short of the ferrule.
             {"box": (670, 1410, 170, 24), "cover": (595, 1385, 305, 75), "erase": "sleeve"},
-            # Flat panel sample — stamp in the 21.6×10 cm artwork band. panel_poly
-            # paints the full trapezoid to fabric RGB so no charcoal/rect plate shows.
+            # Flat panel sample — stamp in the 21.6×10 cm artwork band.
+            # Cover clears baked Proper + Weatherman only; trap body is recolored
+            # so outer borders and width/height dimension callouts stay intact.
             {
                 "box": (800, 2518, 524, 110),
                 "cover": (760, 2488, 604, 220),
                 "erase": "flat",
                 "fit_pad": 0.14,
-                # Walk Essential flat trap (PDF pts) — full charcoal fill bounds.
-                "panel_poly": [
-                    (590.0, 2450.0),
-                    (1536.0, 2450.0),
-                    (1610.0, 2850.0),
-                    (515.0, 2850.0),
-                ],
             },
         ],
         "chip": (1300, 50, 618, 168),
@@ -286,11 +280,7 @@ PAGE_SPEC: dict[int, dict] = {
             "project_owner": (1105, 140, 190, 36),
             "print_order": (1105, 187, 190, 36),
         },
-        # Gutters beside the trapezoid only — do not notch the panel sides.
-        "white_wipes": [
-            (300, 2480, 220, 400),
-            (1620, 2480, 220, 400),
-        ],
+        # No white_wipes here — side gutters hold 26.5 cm / artwork-height callouts.
         "colors": {
             "logo_swatch": (59, 1877, 100, 44),
             "logo_label": (164, 1873, 270, 45),
@@ -2719,12 +2709,16 @@ class WorksheetExporter:
         elif erase == "ink":
             self._erase_pale_on_fabric(page, cover, fabric, fill=False)
         elif erase == "flat":
-            # Paint the trapezoid (or cover) solid fabric so the sample plate
-            # matches the Fabric/Pattern swatch — no charcoal rect / wings.
+            # Clear baked Proper / Weatherman inside the stamp cover only.
+            # Never fill the full trap — that paints over border lines and the
+            # left/right dimension arrows (26.5 cm, artwork height, etc.).
             poly = slot.get("panel_poly")
             if poly and len(poly) >= 3:
                 self._fill_polygon(page, poly, fabric)
             else:
+                # Pale heal first, then opaque fabric fill so light colorways
+                # do not keep a white Proper ghost under the client stamp.
+                self._erase_pale_on_fabric(page, cover, fabric, fill=True)
                 self._fill_cover(page, cover, fabric)
         elif erase == "block":
             self._fill_cover(page, cover, fabric)
