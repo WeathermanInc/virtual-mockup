@@ -629,8 +629,9 @@ class WorksheetExporter:
         photo_box = photo.get("box")
         if photo_box:
             cover = photo.get("cover") or photo_box
-            # Inpaint only baked sample ink — keeps photo fabric texture, no disc/box.
-            self._pdf_inpaint_baked_hat_mark(page, cover)
+            # Heal baked sample inside the embedded photo bitmap (no overlay disc).
+            if not self._pdf_heal_hat_photo_bitmap(page, cover):
+                self._pdf_inpaint_baked_hat_mark(page, cover)
             self._pdf_insert_mark(
                 page,
                 photo_box,
@@ -644,17 +645,18 @@ class WorksheetExporter:
         gs_box = gs.get("box")
         if gs_box:
             cover = gs.get("cover") or gs_box
+            # Wipe the FULL navy plate (not the inset stamp box) so fabric fill
+            # cannot read as a second blue rectangle behind the logo.
             cx, cy, cw, ch = cover
-            pad = 14.0
+            pad = 2.0
             wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
-            # Redact removes baked circular sample so no glow/ring ghosts remain.
             self._pdf_redact_fill(page, wiped, fabric)
             self._pdf_insert_mark(
                 page,
                 gs_box,
                 mark,
                 rotate=float(gs.get("rotate") or 0.0),
-                fit_pad=0.06,
+                fit_pad=0.10,
                 crisp=True,
             )
 
@@ -706,16 +708,115 @@ class WorksheetExporter:
         page.add_redact_annot(self._pdf_rect(box), fill=self._pdf_rgb(rgb))
         page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_PIXELS)
 
+    def _pdf_heal_hat_photo_bitmap(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+    ) -> bool:
+        """Inpaint Paula's baked mark inside the embedded photo XObject.
+
+        Edits pixels in-place so no circular/rectangular overlay is stamped on
+        top of the hat. Returns False if no overlapping photo image is found.
+        """
+        import cv2
+        import fitz
+        import numpy as np
+
+        cover = self._pdf_rect(box)
+        if cover.width < 2 or cover.height < 2:
+            return False
+        doc = page.parent
+        target = None
+        img_rect = None
+        for info in page.get_images(full=True):
+            xref = int(info[0])
+            for r in page.get_image_rects(xref):
+                if r.intersects(cover) and r.width > 200 and r.height > 100:
+                    if target is None or r.width * r.height > img_rect.width * img_rect.height:
+                        target = xref
+                        img_rect = r
+        if target is None or img_rect is None:
+            return False
+
+        meta = doc.extract_image(target)
+        pil = PILImage.open(BytesIO(meta["image"])).convert("RGB")
+        arr = np.array(pil)
+        ih, iw = arr.shape[:2]
+        # Map PDF cover → image pixel crop (image may be letterboxed in img_rect).
+        sx = iw / float(img_rect.width)
+        sy = ih / float(img_rect.height)
+        x0 = int(max(0, (cover.x0 - img_rect.x0) * sx))
+        y0 = int(max(0, (cover.y0 - img_rect.y0) * sy))
+        x1 = int(min(iw, (cover.x1 - img_rect.x0) * sx))
+        y1 = int(min(ih, (cover.y1 - img_rect.y0) * sy))
+        if x1 - x0 < 4 or y1 - y0 < 4:
+            return False
+
+        crop = arr[y0:y1, x0:x1].copy()
+        hh, ww = crop.shape[:2]
+        r = crop[:, :, 0].astype(np.int16)
+        g = crop[:, :, 1].astype(np.int16)
+        b = crop[:, :, 2].astype(np.int16)
+        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        band = max(2, min(hh, ww) // 8)
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        if not rim.any():
+            return False
+        med = np.median(crop[rim].astype(np.float32), axis=0)
+        red = (r > 120) & (g < 125) & (b < 125) & (r > g + 20) & (r > b + 20)
+        bright = lum >= 150
+        delta = np.linalg.norm(crop.astype(np.float32) - med, axis=2) > 16.0
+        ink = ((red | bright | delta).astype(np.uint8) * 255)
+        if not ink.any():
+            return False
+        ink = cv2.dilate(
+            ink, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)), iterations=1
+        )
+        cnts, _ = cv2.findContours(ink, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
+            return False
+        (cx, cy), radius = cv2.minEnclosingCircle(max(cnts, key=cv2.contourArea))
+        radius = float(radius) + max(2.0, min(hh, ww) * 0.08)
+        mask = np.zeros((hh, ww), dtype=np.uint8)
+        cv2.circle(mask, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1)
+        # Keep a fabric rim so TELEA has source weave.
+        mask[:band, :] = 0
+        mask[-band:, :] = 0
+        mask[:, :band] = 0
+        mask[:, -band:] = 0
+        if not mask.any():
+            return False
+        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
+        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
+        healed_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
+        # Scrub any leftover bright/red crumbs to local fabric.
+        hr, hg, hb = healed_rgb[:, :, 0], healed_rgb[:, :, 1], healed_rgb[:, :, 2]
+        hlum = 0.2126 * hr + 0.7152 * hg + 0.0722 * hb
+        crumb = (mask > 0) & (
+            (hlum >= 145)
+            | ((hr > 120) & (hg < 125) & (hb < 125) & (hr > hg + 20))
+        )
+        healed_rgb[crumb] = med.astype(np.uint8)
+        arr[y0:y1, x0:x1] = healed_rgb
+        out = PILImage.fromarray(arr, "RGB")
+        buf = BytesIO()
+        out.save(buf, format="PNG", optimize=True)
+        try:
+            page.replace_image(target, stream=buf.getvalue())
+        except Exception:
+            doc.update_stream(target, buf.getvalue())
+        return True
+
     def _pdf_inpaint_baked_hat_mark(
         self,
         page,
         box: tuple[float, float, float, float],
     ) -> None:
-        """Remove Paula's baked circular sample via inpaint (texture-preserving).
-
-        Detects red/white logo ink, dilates to swallow the navy disc center, then
-        TELEA-inpaints from surrounding fabric — no flat circular backdrop.
-        """
+        """Fallback: clear baked sample with a local-fabric circular overlay."""
         import cv2
         import fitz
         import numpy as np
@@ -723,54 +824,60 @@ class WorksheetExporter:
         rect = self._pdf_rect(box)
         if rect.width < 2 or rect.height < 2:
             return
-        zoom = 3.0
+        zoom = 4.0
         pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=rect, alpha=False)
         rgb = (
             np.frombuffer(pix.samples, dtype=np.uint8)
             .reshape(pix.height, pix.width, 3)
             .copy()
         )
+        hh, ww = int(rgb.shape[0]), int(rgb.shape[1])
         r = rgb[:, :, 0].astype(np.int16)
         g = rgb[:, :, 1].astype(np.int16)
         b = rgb[:, :, 2].astype(np.int16)
         lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        # Detect baked sample (red / pale / fabric-delta), fill its footprint, then
-        # TELEA-inpaint so surrounding weave continues — no flat circular disc.
-        hh, ww = int(rgb.shape[0]), int(rgb.shape[1])
-        band = max(2, min(hh // 10, ww // 10, 8))
-        rim = np.concatenate(
-            [
-                rgb[:band, :, :].reshape(-1, 3),
-                rgb[-band:, :, :].reshape(-1, 3),
-                rgb[:, :band, :].reshape(-1, 3),
-                rgb[:, -band:, :].reshape(-1, 3),
-            ],
-            axis=0,
-        )
-        med = np.median(rim.astype(np.float32), axis=0)
+        on_hat = (lum < 150) & (rgb.mean(axis=2) < 160)
+        band = max(3, min(hh, ww) // 10)
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        rim &= on_hat
+        if not rim.any():
+            return
+        med = np.median(rgb[rim].astype(np.float32), axis=0)
         red = (r > 130) & (g < 125) & (b < 125) & (r > g + 25) & (r > b + 25)
-        bright = lum >= 170
-        delta = np.linalg.norm(rgb.astype(np.float32) - med, axis=2)
-        mask = ((red | bright | (delta > 24.0)).astype(np.uint8) * 255)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        mask = cv2.dilate(mask, kernel, iterations=2)
-        cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if cnts:
-            hull = cv2.convexHull(max(cnts, key=cv2.contourArea))
-            filled = np.zeros_like(mask)
-            cv2.drawContours(filled, [hull], -1, 255, thickness=-1)
-            # Keep a fabric rim inside the cover so inpaint has clean source pixels.
-            erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-            safe = cv2.erode(np.ones_like(mask) * 255, erode, iterations=1)
-            mask = cv2.bitwise_and(filled, safe)
-        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
-        healed_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
-        soft = cv2.GaussianBlur(mask, (5, 5), 0)
-        soft = np.where(mask > 0, np.maximum(soft, 235), soft)
+        bright = lum >= 155
+        delta = np.linalg.norm(rgb.astype(np.float32) - med, axis=2) > 18.0
+        ink = ((red | bright | delta) & on_hat).astype(np.uint8) * 255
+        if not ink.any():
+            return
+        ink = cv2.dilate(
+            ink, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)), iterations=1
+        )
+        cnts, _ = cv2.findContours(ink, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
+            return
+        pts = max(cnts, key=cv2.contourArea)
+        (cx, cy), radius = cv2.minEnclosingCircle(pts)
+        radius = float(radius) + max(6.0, min(hh, ww) * 0.06)
+        mark_mask = np.zeros((hh, ww), dtype=np.uint8)
+        cv2.circle(mark_mask, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1)
+        mark_mask = cv2.bitwise_and(mark_mask, on_hat.astype(np.uint8) * 255)
+        if not mark_mask.any():
+            return
+        yy, xx = np.ogrid[:hh, :ww]
+        dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2)
+        core_r = max(1.0, radius * 0.95)
+        alpha = np.clip((radius - dist) / max(1.0, radius - core_r), 0.0, 1.0)
+        alpha = np.where(dist <= core_r, 1.0, alpha)
+        alpha = np.where(mark_mask > 0, alpha, 0.0)
         rgba = np.zeros((hh, ww, 4), dtype=np.uint8)
-        rgba[:, :, :3] = healed_rgb
-        rgba[:, :, 3] = soft
+        rgba[:, :, 0] = int(med[0])
+        rgba[:, :, 1] = int(med[1])
+        rgba[:, :, 2] = int(med[2])
+        rgba[:, :, 3] = np.clip(alpha * 255.0, 0, 255).astype(np.uint8)
         out = PILImage.fromarray(rgba, "RGBA")
         page.insert_image(
             rect,

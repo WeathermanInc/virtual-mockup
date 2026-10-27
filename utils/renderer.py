@@ -1447,55 +1447,56 @@ HAT_PAGE_MAP_BY_KEY: dict[str, int] = {
 # Photo mockup sample-artwork boxes (PDF points) — Side/Front × Navy/Sage/Bone.
 # Measured from the baked Mubadala circular mark on each Hats-Mockups.pdf page.
 # Tech-pack scale is 2.4 cm / 25 mm; photo boxes match the foreshortened on-hat mark.
-# cover stays tight to the mark (oversized discs read as a wrong-color blob).
+# cover = baked-mark clear zone (inpaint); box = stamp on solid fabric between vents
+# (box may sit slightly off the baked center so the mark clears metal eyelets).
 HAT_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
-    # Navy Side — center (726.8, 911.5); cover leaves fabric rim for inpaint
+    # Navy Side — vents ~688 & ~747; stamp centered ~718,908 on open crown panel
     0: {
-        "box": (705.0, 890.0, 44.0, 44.0),
-        "cover": (690.0, 875.0, 74.0, 74.0),
+        "box": (698.0, 888.0, 40.0, 40.0),
+        "cover": (682.0, 862.0, 95.0, 95.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.02,
+        "fit_pad": 0.04,
     },
     # Navy Front
     1: {
-        "box": (616.0, 766.0, 48.0, 48.0),
-        "cover": (610.0, 760.0, 60.0, 60.0),
+        "box": (618.0, 768.0, 44.0, 44.0),
+        "cover": (605.0, 755.0, 72.0, 72.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.02,
+        "fit_pad": 0.04,
     },
     # Sage Side
     2: {
-        "box": (695.5, 872.0, 55.5, 55.5),
-        "cover": (690.0, 866.5, 66.5, 66.5),
+        "box": (692.0, 874.0, 48.0, 48.0),
+        "cover": (680.0, 860.0, 85.0, 85.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.02,
+        "fit_pad": 0.04,
     },
     # Sage Front
     3: {
-        "box": (612.0, 769.0, 44.0, 44.0),
-        "cover": (606.0, 763.0, 56.0, 56.0),
+        "box": (614.0, 771.0, 40.0, 40.0),
+        "cover": (602.0, 758.0, 68.0, 68.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.02,
+        "fit_pad": 0.04,
     },
     # Bone Side
     4: {
-        "box": (696.5, 872.0, 55.0, 55.0),
-        "cover": (691.0, 866.5, 66.0, 66.0),
+        "box": (693.0, 874.0, 48.0, 48.0),
+        "cover": (681.0, 860.0, 85.0, 85.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.02,
+        "fit_pad": 0.04,
     },
     # Bone Front
     5: {
-        "box": (612.0, 769.0, 44.0, 44.0),
-        "cover": (606.0, 763.0, 56.0, 56.0),
+        "box": (614.0, 771.0, 40.0, 40.0),
+        "cover": (602.0, 758.0, 68.0, 68.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.02,
+        "fit_pad": 0.04,
     },
 }
 
@@ -1518,40 +1519,42 @@ HAT_LOGO_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
 
 # Graphic Sample #1 preview boxes (PDF points) — enlarged 2.4 cm / 25 mm art.
 # Side worksheets share one GS plate; Front worksheets share another.
+# cover = full navy plate (Paula nested fills); wiping only the inset stamp box left a
+# fabric-tinted rectangle inside the plate ("blue container box"). box = logo stamp inset.
 HAT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
     0: {
-        "box": (878.0, 2203.5, 718.5, 719.0),
-        "cover": (878.0, 2203.5, 718.5, 719.0),
+        "box": (900.0, 2225.0, 674.0, 674.0),
+        "cover": (840.0, 2166.0, 794.0, 794.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     1: {
-        "box": (917.0, 2245.0, 667.5, 667.5),
-        "cover": (917.0, 2245.0, 667.5, 667.5),
+        "box": (935.0, 2263.0, 630.0, 630.0),
+        "cover": (882.0, 2210.0, 737.0, 737.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     2: {
-        "box": (878.0, 2203.5, 718.5, 719.0),
-        "cover": (878.0, 2203.5, 718.5, 719.0),
+        "box": (900.0, 2225.0, 674.0, 674.0),
+        "cover": (840.0, 2166.0, 794.0, 794.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     3: {
-        "box": (917.0, 2245.0, 667.5, 667.5),
-        "cover": (917.0, 2245.0, 667.5, 667.5),
+        "box": (935.0, 2263.0, 630.0, 630.0),
+        "cover": (882.0, 2210.0, 737.0, 737.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     4: {
-        "box": (878.0, 2203.5, 718.5, 719.0),
-        "cover": (878.0, 2203.5, 718.5, 719.0),
+        "box": (900.0, 2225.0, 674.0, 674.0),
+        "cover": (840.0, 2166.0, 794.0, 794.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     5: {
-        "box": (917.0, 2245.0, 667.5, 667.5),
-        "cover": (917.0, 2245.0, 667.5, 667.5),
+        "box": (935.0, 2263.0, 630.0, 630.0),
+        "cover": (882.0, 2210.0, 737.0, 737.0),
         "erase": "plate",
         "rotate": 0.0,
     },
