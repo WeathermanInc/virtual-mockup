@@ -2709,17 +2709,13 @@ class WorksheetExporter:
         elif erase == "ink":
             self._erase_pale_on_fabric(page, cover, fabric, fill=False)
         elif erase == "flat":
-            # Clear baked Proper / Weatherman inside the stamp cover only.
-            # Never fill the full trap — that paints over border lines and the
-            # left/right dimension arrows (26.5 cm, artwork height, etc.).
+            # Clear baked Proper / Weatherman ink only — never a solid cover
+            # rectangle (that reads as a lighter plate behind the client stamp).
             poly = slot.get("panel_poly")
             if poly and len(poly) >= 3:
                 self._fill_polygon(page, poly, fabric)
             else:
-                # Pale heal first, then opaque fabric fill so light colorways
-                # do not keep a white Proper ghost under the client stamp.
-                self._erase_pale_on_fabric(page, cover, fabric, fill=True)
-                self._fill_cover(page, cover, fabric)
+                self._heal_flat_panel_stamp(page, cover, fabric)
         elif erase == "block":
             self._fill_cover(page, cover, fabric)
         elif erase == "artwork":
@@ -2955,6 +2951,81 @@ class WorksheetExporter:
             out[row, tx0:] = rgb[row, src_idx[np.arange(width - tx0) % src_idx.size]]
         crop[:, :, :3] = np.clip(out, 0, 255).astype(np.uint8)
         page.paste(PILImage.fromarray(crop), (x0, y0))
+
+    def _heal_flat_panel_stamp(
+        self,
+        page: PILImage.Image,
+        cover: tuple[float, float, float, float],
+        fabric: tuple[int, int, int],
+    ) -> None:
+        """Remove baked flat-panel marks into local fabric — no rectangular plate.
+
+        After canopy recolor, sample the cover rim for the true fabric tone, then
+        replace only logo / ghost ink (pale white Proper, dark Weatherman) so the
+        client stamp sits directly on the trap fill with fabric showing through
+        letter counters.
+        """
+        import cv2
+        import numpy as np
+
+        x, y, w, h = _pts(cover)
+        x0, y0 = max(0, x), max(0, y)
+        x1, y1 = min(page.width, x + w), min(page.height, y + h)
+        if x1 - x0 < 8 or y1 - y0 < 8:
+            return
+        crop = np.array(page.crop((x0, y0, x1, y1)).convert("RGB"))
+        rgb = crop.astype(np.float32)
+        hh, ww = rgb.shape[:2]
+        lum = rgb.mean(axis=2)
+        chroma = rgb.max(axis=2) - rgb.min(axis=2)
+        fabric_a = np.array(fabric, dtype=np.float32)
+        fabric_lum = float(
+            0.2126 * fabric_a[0] + 0.7152 * fabric_a[1] + 0.0722 * fabric_a[2]
+        )
+
+        band = max(4, min(hh, ww) // 10)
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        # Rim fabric: near catalog fabric, or mid-tone body (skip white page / ink).
+        near_fab = np.linalg.norm(rgb - fabric_a, axis=2) < 55.0
+        body = (lum > 40) & (lum < 235) & (chroma < 70)
+        rim_fab = rim & (near_fab | body) & ~((lum > 210) & (chroma < 35))
+        if int(rim_fab.sum()) >= 24:
+            local = np.median(rgb[rim_fab], axis=0)
+        else:
+            local = fabric_a.copy()
+
+        delta = np.linalg.norm(rgb - local, axis=2)
+        # White / pale baked Proper (and AA) on any fabric.
+        pale = ((lum >= 175) & (chroma < 55)) | ((lum >= 200) & (chroma < 80))
+        # Dark Weatherman ghost on light panels; bright glyphs on dark panels.
+        if fabric_lum >= 150.0:
+            ink = pale | ((delta > 28.0) & (lum < float(local.mean()) - 15.0))
+        else:
+            ink = pale | ((delta > 35.0) & (lum > 110.0) & (chroma < 70))
+        mask = ink.astype(np.uint8) * 255
+        if int(mask.max()) == 0:
+            return
+        mask = cv2.dilate(
+            mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)), iterations=2
+        )
+        # Inpaint from surrounding fabric — avoids a flat rectangular plate.
+        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
+        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
+        out = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
+        # Scrub residual pale crumbs to local fabric (still no full-rect fill).
+        lum2 = out.mean(axis=2)
+        chroma2 = out.max(axis=2) - out.min(axis=2)
+        crumb = (mask > 0) & (
+            ((lum2 >= 190) & (chroma2 < 45))
+            | (np.linalg.norm(out.astype(np.float32) - local, axis=2) > 40.0)
+        )
+        if crumb.any():
+            out[crumb] = local.astype(np.uint8)
+        page.paste(PILImage.fromarray(out, "RGB"), (x0, y0))
 
     def _erase_pale_on_fabric(
         self,
