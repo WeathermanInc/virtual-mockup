@@ -43,6 +43,7 @@ from .renderer import (
     backpack_pdf_baked_gs_cover,
     backpack_pdf_draw_center,
     backpack_v2_pdf_path,
+    downscale_preserving_white_ink,
     fit_logo_uniform,
     get_backpack_front_slot,
     get_backpack_pdf_front_slot,
@@ -271,7 +272,7 @@ PAGE_SPEC: dict[int, dict] = {
                 "erase": "flat",
                 "fit_pad": 0.14,
                 "crisp": True,
-                "crisp_threshold": 160,
+                "crisp_threshold": 200,
             },
         ],
         "chip": (1300, 50, 618, 168),
@@ -309,7 +310,7 @@ PAGE_SPEC: dict[int, dict] = {
                 "erase": "flat",
                 "fit_pad": 0.14,
                 "crisp": True,
-                "crisp_threshold": 160,
+                "crisp_threshold": 200,
             },
         ],
         "chip": (1300, 50, 618, 168),
@@ -602,15 +603,14 @@ class WorksheetExporter:
         previews: list[tuple[str, bytes]] = []
         for _page_no, title, page in self.iter_job_pages(job, logo):
             try:
-                rgb = page.convert("RGB")
-                if rgb.width > max_width:
-                    ratio = max_width / rgb.width
-                    rgb = rgb.resize(
-                        (max_width, max(1, int(rgb.height * ratio))),
-                        PILImage.Resampling.LANCZOS,
-                    )
+                # LANCZOS alone blends hard white stamps into fabric as pale fringe;
+                # restamp solid white ink after downscale (Blush panel logos, etc.).
+                rgb = downscale_preserving_white_ink(page.convert("RGB"), max_width)
                 buf = BytesIO()
-                rgb.save(buf, format="JPEG", quality=quality, optimize=True)
+                # PNG — JPEG mosquito noise reads as white spray around white logos
+                # on Blush / Dusty Lavender / other mid-tone fabrics.
+                _ = quality
+                rgb.save(buf, format="PNG", optimize=True)
                 previews.append((title, buf.getvalue()))
             except Exception:
                 print("Exporter Error:", traceback.format_exc(), flush=True)
@@ -2806,10 +2806,19 @@ class WorksheetExporter:
         fit_h = max(1, int(round((h - outline_px * 2) * (1.0 - pad))))
         # Uniform scale: min(fit_w/w, fit_h/h) — preserves kerning / glyph aspect.
         crisp = bool(slot.get("crisp")) or erase_mode == "flat"
-        crisp_thr = int(slot.get("crisp_threshold") or (160 if erase_mode == "flat" else 96))
+        crisp_thr = int(slot.get("crisp_threshold") or (200 if erase_mode == "flat" else 96))
         art = fit_logo_uniform(
             art, fit_w, fit_h, crisp=crisp, crisp_threshold=crisp_thr
         )
+        # Final binary knockout — no mid-alpha fringe after resize/rotate.
+        if crisp or erase_mode == "flat":
+            import numpy as np
+
+            arr = np.array(art.convert("RGBA"))
+            cut = max(1, min(250, crisp_thr))
+            solid = arr[:, :, 3] >= cut
+            arr[:, :, 3] = np.where(solid, 255, 0).astype(np.uint8)
+            art = PILImage.fromarray(arr, "RGBA")
         if outline:
             art = _outline_mark(
                 art,
@@ -2837,14 +2846,23 @@ class WorksheetExporter:
             src_w, src_h = art.size
             src = np.float32([[0, 0], [src_w, 0], [src_w, src_h], [0, src_h]])
             matrix = cv2.getPerspectiveTransform(src, local)
+            warp_flags = (
+                cv2.INTER_NEAREST
+                if (crisp or erase_mode == "flat")
+                else cv2.INTER_LINEAR
+            )
             warped = cv2.warpPerspective(
                 np.array(art),
                 matrix,
                 (x1 - x0, y1 - y0),
-                flags=cv2.INTER_LINEAR,
+                flags=warp_flags,
                 borderMode=cv2.BORDER_CONSTANT,
                 borderValue=(0, 0, 0, 0),
             )
+            if crisp or erase_mode == "flat":
+                cut = max(1, min(250, crisp_thr))
+                solid = warped[:, :, 3] >= cut
+                warped[:, :, 3] = np.where(solid, 255, 0).astype(np.uint8)
             overlay = PILImage.fromarray(warped)
             page.paste(overlay, (x0, y0), overlay)
             return
@@ -3627,6 +3645,7 @@ class WorksheetExporter:
         size_pts: tuple[float, float],
     ) -> None:
         buf = BytesIO()
-        image.convert("RGB").save(buf, format="JPEG", quality=92, optimize=True)
+        # PNG keeps hard-edge white marks clean (JPEG fringe looks like logo spray).
+        image.convert("RGB").save(buf, format="PNG", optimize=True)
         buf.seek(0)
         c.drawImage(ImageReader(buf), 0, 0, width=size_pts[0], height=size_pts[1])

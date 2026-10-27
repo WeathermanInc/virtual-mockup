@@ -456,7 +456,7 @@ class MockupRenderer:
         arr = np.array(img)
         rgb = arr[:, :, :3].astype(np.float32)
         alpha = arr[:, :, 3].astype(np.float32) / 255.0
-        opaque = alpha > (0.35 if hard_edge else 0.08)
+        opaque = alpha > (0.72 if hard_edge else 0.08)
         if not np.any(opaque):
             return img
 
@@ -478,8 +478,9 @@ class MockupRenderer:
             out[:, :, 1] = 255
             out[:, :, 2] = 255
             if hard_edge:
-                # Binary alpha — no soft fringe / white spray on navy hat photos.
-                out[:, :, 3] = np.where(ink & (alpha >= 0.40), 255, 0).astype(np.uint8)
+                # Strict binary alpha — knock out soft SVG AA (white spray on Blush).
+                # Only near-opaque coverage survives; mid-alpha fringe is discarded.
+                out[:, :, 3] = np.where(ink & (alpha >= 0.72), 255, 0).astype(np.uint8)
             else:
                 hard = np.where(ink & (alpha >= 0.28), 255.0, 0.0)
                 soft = np.where(ink & (alpha >= 0.08) & (alpha < 0.28), alpha * 255.0, 0.0)
@@ -507,7 +508,7 @@ class MockupRenderer:
         out[:, :, 1] = int(fill[1])
         out[:, :, 2] = int(fill[2])
         if hard_edge:
-            out[:, :, 3] = np.where(ink & (alpha >= 0.40), 255, 0).astype(np.uint8)
+            out[:, :, 3] = np.where(ink & (alpha >= 0.72), 255, 0).astype(np.uint8)
         else:
             out[:, :, 3] = np.clip(np.where(ink, alpha, 0.0) * 255.0, 0, 255).astype(
                 np.uint8
@@ -517,7 +518,7 @@ class MockupRenderer:
         return prepared.crop(bbox) if bbox else prepared
 
     @staticmethod
-    def _harden_mark_alpha(logo: Image.Image, threshold: int = 140) -> Image.Image:
+    def _harden_mark_alpha(logo: Image.Image, threshold: int = 184) -> Image.Image:
         """Binary-ize alpha so soft AA cannot spray onto dark fabric."""
         img = logo.convert("RGBA")
         arr = np.array(img)
@@ -1174,6 +1175,70 @@ def fit_logo_uniform(
         arr[:, :, 3] = np.where(solid, 255, 0).astype(np.uint8)
         out = Image.fromarray(arr, "RGBA")
     return out
+
+
+def white_ink_on_fabric_mask(rgb: np.ndarray) -> np.ndarray:
+    """Boolean mask of solid white ink sitting on colored fabric (not page paper).
+
+    Pure-white components that touch colored pixels and are smaller than the
+    worksheet paper field are treated as logo / swatch ink. Used to re-stamp
+    hard white after LANCZOS preview downscale.
+    """
+    arr = np.asarray(rgb)
+    if arr.ndim != 3 or arr.shape[2] < 3:
+        return np.zeros(arr.shape[:2], dtype=bool)
+    solid = (arr[:, :, 0] >= 250) & (arr[:, :, 1] >= 250) & (arr[:, :, 2] >= 250)
+    chroma = arr.max(axis=2) - arr.min(axis=2)
+    lum = arr.mean(axis=2)
+    colored = (~solid) & ((chroma >= 15) | (lum < 240))
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(
+        solid.astype(np.uint8), connectivity=8
+    )
+    page_area = int(arr.shape[0] * arr.shape[1])
+    ink = np.zeros(solid.shape, dtype=bool)
+    kernel = np.ones((3, 3), np.uint8)
+    for i in range(1, n):
+        area = int(stats[i, cv2.CC_STAT_AREA])
+        if area > page_area * 0.05:
+            continue
+        x, y, w, h = (int(stats[i, j]) for j in range(4))
+        roi = labels[y : y + h, x : x + w] == i
+        border = (
+            cv2.dilate(roi.astype(np.uint8), kernel, iterations=1).astype(bool) & ~roi
+        )
+        if np.any(border & colored[y : y + h, x : x + w]):
+            ink[y : y + h, x : x + w][roi] = True
+    return ink
+
+
+def downscale_preserving_white_ink(
+    image: Image.Image, max_width: int
+) -> Image.Image:
+    """LANCZOS-downscale a worksheet while keeping white logo stamps binary.
+
+    Soft resize blends white glyphs into Blush / navy fabric as a pale fringe.
+    Rebuild the preview from a fabric plate plus a BOX-scaled ink mask so only
+    solid white letters remain.
+    """
+    rgb = image.convert("RGB")
+    if rgb.width <= max_width:
+        return rgb
+    arr = np.asarray(rgb)
+    ink = white_ink_on_fabric_mask(arr)
+    new_w = int(max_width)
+    new_h = max(1, int(round(rgb.height * (max_width / float(rgb.width)))))
+    down = rgb.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    if not ink.any():
+        return down
+    mask_img = Image.fromarray((ink.astype(np.uint8) * 255), mode="L")
+    down_mask = np.asarray(mask_img.resize((new_w, new_h), Image.Resampling.BOX)) >= 128
+    out = np.asarray(down).copy()
+    band = cv2.dilate(down_mask.astype(np.uint8), np.ones((3, 3), np.uint8), iterations=2)
+    bgr = cv2.cvtColor(out, cv2.COLOR_RGB2BGR)
+    cleaned = cv2.inpaint(bgr, (band * 255).astype(np.uint8), 2, cv2.INPAINT_TELEA)
+    out = cv2.cvtColor(cleaned, cv2.COLOR_BGR2RGB)
+    out[down_mask] = (255, 255, 255)
+    return Image.fromarray(out, mode="RGB")
 
 
 def _load_alpha_mask(
