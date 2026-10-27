@@ -118,18 +118,18 @@
     },
     "Sage (NRF 311)": {
       "rgb": [
-        143,
-        160,
-        132
+        125,
+        154,
+        121
       ],
       "nrf": "311",
       "pantone": "16-5808 TCX",
       "family": "Green",
       "category": "Core",
       "kind": "solid",
-      "hex": "#8FA084",
+      "hex": "#7D9A79",
       "inner_color": "Sedona Sage",
-      "notes": "Trek All-Weather Hat outer; Sedona Sage inner"
+      "notes": "Trek All-Weather Hat outer; Sedona Sage inner — vibrant 16-5808 TCX"
     },
     "Bone (NRF 202)": {
       "rgb": [
@@ -148,31 +148,31 @@
     },
     "Sage (NRF 310)": {
       "rgb": [
-        165,
-        178,
-        167
+        125,
+        154,
+        121
       ],
       "nrf": "310",
       "pantone": "16-5808 TCX",
       "family": "Green",
       "category": "Core",
       "kind": "solid",
-      "hex": "#A5B2A7",
-      "notes": "Stride Pullover Poncho; UPF 50+ Hooded Sun Shirt (HS01)"
+      "hex": "#7D9A79",
+      "notes": "Stride Pullover Poncho; UPF 50+ Hooded Sun Shirt (HS01) — vibrant 16-5808 TCX"
     },
     "Iron Sage (NRF 310)": {
       "rgb": [
-        165,
-        178,
-        167
+        125,
+        154,
+        121
       ],
       "nrf": "310",
       "pantone": "16-5808 TCX",
       "family": "Green",
       "category": "Core",
       "kind": "solid",
-      "hex": "#A5B2A7",
-      "notes": "Bamboo UPF 20+ Sun Shirt (BS01) — same NRF 310 as Sage"
+      "hex": "#7D9A79",
+      "notes": "Bamboo UPF 20+ Sun Shirt (BS01) — same NRF 310 / vibrant Sage"
     },
     "Bone (NRF 920)": {
       "rgb": [
@@ -245,9 +245,9 @@
     },
     "Sage": {
       "rgb": [
-        143,
-        160,
-        132
+        125,
+        154,
+        121
       ],
       "nrf": "310",
       "pantone": "16-5808 TCX",
@@ -619,16 +619,16 @@
     },
     "River Mist (NRF 452)": {
       "rgb": [
-        186,
-        197,
-        212
+        185,
+        209,
+        232
       ],
       "nrf": "452",
       "pantone": "14-4112 TCX",
       "family": "Blue",
       "category": "Fashion",
       "kind": "solid",
-      "hex": "#BAC5D4"
+      "hex": "#B9D1E8"
     },
     "Canyon Glow (NRF 711)": {
       "rgb": [
@@ -659,16 +659,16 @@
     },
     "River Mist": {
       "rgb": [
-        186,
-        197,
-        212
+        185,
+        209,
+        232
       ],
       "nrf": "452",
       "pantone": "14-4112 TCX",
       "family": "Blue",
       "category": "Fashion",
       "kind": "solid",
-      "hex": "#BAC5D4"
+      "hex": "#B9D1E8"
     },
     "Canyon Glow": {
       "rgb": [

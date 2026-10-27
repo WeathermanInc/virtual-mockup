@@ -18,7 +18,6 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 from .catalog import (
-    artwork_preview_bg,
     backpack_option_label,
     fabric_sheet_label,
     fabric_sheet_lines,
@@ -47,6 +46,7 @@ from .renderer import (
     fit_logo_uniform,
     get_backpack_front_slot,
     get_backpack_pdf_front_slot,
+    hat_fabric_swatch_layout,
     hat_logo_fill_rgb,
     hat_logo_swatch_layout,
     hat_overlay_slots,
@@ -56,10 +56,12 @@ from .renderer import (
     poncho_overlay_slots,
     ponchos_pdf_path,
     recolor_bright_ink_inplace,
+    shade_color,
     resolve_backpack_v2_page_index,
     resolve_hat_page_index,
     resolve_poncho_page_index,
     resolve_sun_shirt_page_index,
+    sun_shirt_fabric_swatch_layout,
     sun_shirt_logo_fill_rgb,
     sun_shirt_logo_swatch_layout,
     sun_shirt_overlay_slots,
@@ -260,8 +262,21 @@ PAGE_SPEC: dict[int, dict] = {
             # Closed-sleeve wordmark — clone neighboring fabric after recolor (no rectangle).
             # Cover spans the Weatherman icon + wordmark; stop short of the ferrule.
             {"box": (670, 1410, 170, 24), "cover": (595, 1385, 305, 75), "erase": "sleeve"},
-            # Flat panel sample logo band — cover includes Weatherman ghost below Proper.
-            {"box": (758, 2504, 610, 165), "cover": (742, 2475, 644, 280), "erase": "flat"},
+            # Flat panel sample — stamp in the 21.6×10 cm artwork band. panel_poly
+            # paints the full trapezoid to fabric RGB so no charcoal/rect plate shows.
+            {
+                "box": (800, 2518, 524, 110),
+                "cover": (760, 2488, 604, 220),
+                "erase": "flat",
+                "fit_pad": 0.14,
+                # Walk Essential flat trap (PDF pts) — full charcoal fill bounds.
+                "panel_poly": [
+                    (590.0, 2450.0),
+                    (1536.0, 2450.0),
+                    (1610.0, 2850.0),
+                    (515.0, 2850.0),
+                ],
+            },
         ],
         "chip": (1300, 50, 618, 168),
         "clear_chip": True,
@@ -271,10 +286,10 @@ PAGE_SPEC: dict[int, dict] = {
             "project_owner": (1105, 140, 190, 36),
             "print_order": (1105, 187, 190, 36),
         },
-        # White side gutters beside the panel (avoid dimension labels below).
+        # Gutters beside the trapezoid only — do not notch the panel sides.
         "white_wipes": [
-            (420, 2480, 280, 400),
-            (1520, 2480, 280, 400),
+            (300, 2480, 220, 400),
+            (1620, 2480, 220, 400),
         ],
         "colors": {
             "logo_swatch": (59, 1877, 100, 44),
@@ -296,7 +311,12 @@ PAGE_SPEC: dict[int, dict] = {
     3: {
         "size_pts": (2125.98, 3543.84),
         "logos": [
-            {"box": (730, 2440, 680, 210), "cover": (710, 2420, 720, 250), "erase": "flat"},
+            {
+                "box": (790, 2460, 560, 140),
+                "cover": (740, 2430, 660, 220),
+                "erase": "flat",
+                "fit_pad": 0.14,
+            },
         ],
         "chip": (1300, 50, 618, 168),
         "colors": {
@@ -726,7 +746,8 @@ class WorksheetExporter:
         self._pdf_overlay_worksheet_number(page, spec)
         if mark is not None:
             self._pdf_overlay_hat_logos(page, job, mark, page_index)
-        # Sync Logo/Graphic Colors chip to the active sidebar print color.
+        # Sync Fabric Colors outer chip + Logo/Graphic Colors to sidebar picks.
+        self._pdf_overlay_hat_fabric_swatch(page, job, page_index)
         self._pdf_overlay_hat_logo_swatch(page, job, page_index)
 
         place = resolve_hat_placement(job.panel_config)
@@ -801,6 +822,19 @@ class WorksheetExporter:
                 crisp=True,
                 crisp_threshold=128,
             )
+
+    def _pdf_overlay_hat_fabric_swatch(
+        self,
+        page,
+        job: JobSpec,
+        page_index: int,
+    ) -> None:
+        """Paint the Fabric Colors outer chip with the active catalog fabric RGB."""
+        layout = hat_fabric_swatch_layout(page_index)
+        swatch = layout.get("swatch")
+        if not swatch:
+            return
+        self._pdf_fill_rect(page, swatch, job.fabric_rgb)
 
     def _pdf_overlay_hat_logo_swatch(
         self,
@@ -1446,6 +1480,7 @@ class WorksheetExporter:
                 self._pdf_overlay_worksheet_number(page, spec)
                 if mark is not None:
                     self._pdf_overlay_sun_shirt_logos(page, job, mark, page_index)
+                self._pdf_overlay_sun_shirt_fabric_swatch(page, job, page_index)
                 self._pdf_overlay_sun_shirt_logo_swatch(page, job, page_index)
         finally:
             src.close()
@@ -1522,8 +1557,11 @@ class WorksheetExporter:
                 self._pdf_wipe_sun_shirt_draw_mark(page, cover, fabric)
             elif key == "artwork":
                 # Cover must include the full Mubadala circle (ink from ~x=1246).
-                # Redact line art + paint an opaque fabric plate so nothing ghosts.
-                wipe_rgb = tuple(int(v) for v in fabric)
+                # Sample Paula plate fabric (not page-white / catalog mismatch),
+                # then redact line art + paint an opaque fabric plate.
+                wipe_rgb = self._pdf_sample_sun_shirt_artwork_fabric(
+                    page, cover, fabric
+                )
                 cx, cy, cw, ch = cover
                 pad = 4.0
                 wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
@@ -1669,6 +1707,60 @@ class WorksheetExporter:
             doc.update_stream(target, buf.getvalue())
         return True
 
+    def _pdf_sample_sun_shirt_artwork_fabric(
+        self,
+        page,
+        cover: tuple[float, float, float, float],
+        fabric_rgb: tuple[int, int, int],
+    ) -> tuple[int, int, int]:
+        """Sample Paula Artwork plate fabric from corner patches (not page white).
+
+        Catalog RGB can drift from the sheet (River Mist catalog was gray-blue
+        while the plate is ``[185, 209, 232]``). Corner patches sit on the fabric
+        plate; the center holds the baked logo and must be skipped.
+        """
+        import numpy as np
+
+        cx, cy, cw, ch = cover
+        if cw < 8 or ch < 8:
+            return tuple(int(v) for v in fabric_rgb)
+
+        samples: list = []
+        # Inset corner patches — avoid page-white gutters and the center logo.
+        for fx, fy in ((0.14, 0.10), (0.72, 0.10), (0.14, 0.72), (0.72, 0.72)):
+            pw = max(24.0, cw * 0.12)
+            ph = max(24.0, ch * 0.10)
+            patch = (cx + cw * fx, cy + ch * fy, pw, ph)
+            rect = self._pdf_rect(patch)
+            try:
+                pix = page.get_pixmap(
+                    matrix=__import__("fitz").Matrix(2.0, 2.0),
+                    clip=rect,
+                    alpha=False,
+                )
+            except Exception:
+                continue
+            rgb = (
+                np.frombuffer(pix.samples, dtype=np.uint8)
+                .reshape(pix.height, pix.width, 3)
+                .astype(np.float32)
+            )
+            lum = 0.2126 * rgb[:, :, 0] + 0.7152 * rgb[:, :, 1] + 0.0722 * rgb[:, :, 2]
+            r = rgb[:, :, 0]
+            g = rgb[:, :, 1]
+            b = rgb[:, :, 2]
+            red = (r > 120) & (g < 130) & (b < 130) & (r > g + 15)
+            white = lum >= 230
+            keep = ~red & ~white
+            if int(keep.sum()) < 16:
+                continue
+            samples.append(np.median(rgb[keep], axis=0))
+
+        if not samples:
+            return tuple(int(v) for v in fabric_rgb)
+        med = np.median(np.stack(samples, axis=0), axis=0)
+        return (int(med[0]), int(med[1]), int(med[2]))
+
     def _pdf_wipe_sun_shirt_draw_mark(
         self,
         page,
@@ -1726,6 +1818,19 @@ class WorksheetExporter:
         # Redact pixels + opaque fill on top covers the sample without killing paths.
         self._pdf_redact_fill(page, box, fill, remove_line_art=False)
         self._pdf_fill_rect(page, box, fill)
+
+    def _pdf_overlay_sun_shirt_fabric_swatch(
+        self,
+        page,
+        job: JobSpec,
+        page_index: int,
+    ) -> None:
+        """Paint the Fabric Colors outer chip with the active catalog fabric RGB."""
+        layout = sun_shirt_fabric_swatch_layout(page_index)
+        swatch = layout.get("swatch")
+        if not swatch:
+            return
+        self._pdf_fill_rect(page, swatch, job.fabric_rgb)
 
     def _pdf_overlay_sun_shirt_logo_swatch(
         self,
@@ -1830,7 +1935,7 @@ class WorksheetExporter:
         if fill is not None and fill != (255, 255, 255):
             self._pdf_recolor_baked_logos_inplace(page, job, fill)
 
-        # Artwork preview box (black-on-light / white-on-dark).
+        # Artwork preview box — fabric-colored plate + client mark.
         art_slot = next(
             (s for s in spec.get("logos") or [] if str(s.get("erase") or "") == "artwork"),
             None,
@@ -2134,15 +2239,14 @@ class WorksheetExporter:
         mark: PILImage.Image | None,
         job: JobSpec,
     ) -> None:
+        """Artwork callout — fabric-colored plate (same behavior as sun shirt)."""
         cover = slot.get("cover") or slot.get("box")
         box = slot.get("box") or cover
         if not cover or not box:
             return
-        fill = backpack_logo_fill_rgb(job.logo_color_name)
-        bg, border = artwork_preview_bg(
-            job.logo_color_name,
-            fill if fill is not None else logo_color_rgb(job.logo_color_name),
-        )
+        # Match sun shirt / product fabric — never charcoal contrast plates.
+        bg = tuple(int(v) for v in job.fabric_rgb)
+        border = shade_color(bg, 0.88)
         self._pdf_fill_rect(page, cover, bg)
         page.draw_rect(
             self._pdf_rect(cover),
@@ -2487,7 +2591,9 @@ class WorksheetExporter:
             # Photo/sleeve heals sample already-tinted fabric. Running them before
             # recolor left a gray plate (skipped by the lum<95 shift) and leftover
             # bevels that read as a ghost under the new mark.
-            post = {"photo", "sleeve", "plate", "artwork", "none"}
+            # flat is post-recolor so the plate fills with the active fabric RGB
+            # (pre-recolor black erase left a charcoal box that missed light fabrics).
+            post = {"photo", "sleeve", "plate", "artwork", "flat", "none"}
             for slot in spec["logos"]:
                 erase = str(slot.get("erase") or "")
                 if erase in post or slot.get("clear_default"):
@@ -2529,7 +2635,7 @@ class WorksheetExporter:
             )
             for slot in spec["logos"]:
                 erase = str(slot.get("erase") or "")
-                if erase not in {"photo", "sleeve", "plate"}:
+                if erase not in {"photo", "sleeve", "plate", "flat"}:
                     continue
                 if skip_photo_erase and erase == "photo":
                     continue
@@ -2613,7 +2719,13 @@ class WorksheetExporter:
         elif erase == "ink":
             self._erase_pale_on_fabric(page, cover, fabric, fill=False)
         elif erase == "flat":
-            self._erase_pale_on_fabric(page, cover, fabric, fill=True)
+            # Paint the trapezoid (or cover) solid fabric so the sample plate
+            # matches the Fabric/Pattern swatch — no charcoal rect / wings.
+            poly = slot.get("panel_poly")
+            if poly and len(poly) >= 3:
+                self._fill_polygon(page, poly, fabric)
+            else:
+                self._fill_cover(page, cover, fabric)
         elif erase == "block":
             self._fill_cover(page, cover, fabric)
         elif erase == "artwork":
@@ -2683,15 +2795,11 @@ class WorksheetExporter:
                 ink_lum = 255.0
                 ink_tuple = (255, 255, 255)
 
-            # Artwork card: canvas already flips dark/light from print color — match it.
-            if erase_mode == "artwork":
-                slot_bg, _ = artwork_preview_bg(rgb=ink_tuple)
-            else:
-                slot_bg = fabric
+            slot_bg = fabric
             bg_lum = 0.2126 * float(slot_bg[0]) + 0.7152 * float(slot_bg[1]) + 0.0722 * float(slot_bg[2])
             delta_lum = abs(ink_lum - bg_lum)
 
-            # Skip outlines on the Artwork card once the canvas provides contrast.
+            # Skip outlines on the Artwork card once the fabric plate provides contrast.
             if erase_mode != "artwork" and delta_lum < 48.0:
                 outline_px = max(1, int(round(1.0 * SCALE)))
                 outline = (255, 255, 255) if ink_lum < 128.0 else (120, 120, 120)
@@ -2921,6 +3029,19 @@ class WorksheetExporter:
         draw = ImageDraw.Draw(page)
         draw.rectangle((x, y, x + w, y + h), fill=fabric + (255,))
 
+    def _fill_polygon(
+        self,
+        page: PILImage.Image,
+        poly: list[tuple[float, float]],
+        fabric: tuple[int, int, int],
+    ) -> None:
+        """Fill a PDF-point polygon (e.g. umbrella flat panel trap) with fabric RGB."""
+        pts = [_pt_xy(float(px), float(py)) for px, py in poly]
+        if len(pts) < 3:
+            return
+        draw = ImageDraw.Draw(page)
+        draw.polygon(pts, fill=fabric + (255,))
+
     def _blank_photo_logo_zone(
         self,
         page: PILImage.Image,
@@ -3036,16 +3157,15 @@ class WorksheetExporter:
         *,
         job: JobSpec | None = None,
     ) -> None:
-        """Artwork callout: dark charcoal for white/light logos, light plate for dark logos."""
+        """Artwork callout: active fabric plate (matches sun shirt / product body)."""
         cover = slot.get("cover") or slot.get("box")
         if not cover:
             return
         x, y, w, h = _pts(cover)
         if w < 1 or h < 1:
             return
-        name = job.logo_color_name if job is not None else None
-        rgb = logo_color_rgb(name) if name else None
-        bg_rgb, border_rgb = artwork_preview_bg(name, rgb)
+        bg_rgb = tuple(int(v) for v in (job.fabric_rgb if job is not None else fabric))
+        border_rgb = shade_color(bg_rgb, 0.88)
         swatch = self.renderer.solid_artwork_panel((w, h), bg_rgb=bg_rgb, border_rgb=border_rgb)
         if page.mode == "RGBA":
             page.paste(swatch, (x, y), swatch)

@@ -24,8 +24,35 @@ def fabric_rgb_map() -> dict[str, tuple[int, int, int]]:
     out: dict[str, tuple[int, int, int]] = {}
     for name, rec in load_catalog()["fabrics"].items():
         rgb = rec["rgb"]
-        out[name] = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        value = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        out[name] = value
+        # Alias "Skyline Stripe (NRF 641)" etc. so sheet labels still resolve.
+        nrf = rec.get("nrf")
+        if nrf and f"(NRF {nrf})" not in str(name):
+            out[f"{name} (NRF {nrf})"] = value
     return out
+
+
+def resolve_fabric_rgb(name: str | None) -> tuple[int, int, int] | None:
+    """Exact or NRF-tolerant fabric RGB lookup."""
+    if not name:
+        return None
+    colors = fabric_rgb_map()
+    if name in colors:
+        return colors[name]
+    token = " ".join(str(name).split())
+    if token in colors:
+        return colors[token]
+    # Strip trailing "(NRF ###)" and retry bare catalog key.
+    import re
+
+    bare = re.sub(r"\s*\(NRF\s*\d+\)\s*$", "", token, flags=re.IGNORECASE).strip()
+    if bare and bare in colors:
+        return colors[bare]
+    # Case-insensitive fallback.
+    lower = {k.lower(): v for k, v in colors.items()}
+    hit = lower.get(token.lower()) or lower.get(bare.lower())
+    return hit
 
 
 def fabric_record(name: str) -> dict[str, Any]:

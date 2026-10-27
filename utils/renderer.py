@@ -379,7 +379,11 @@ class JobSpec:
 
     @property
     def fabric_rgb(self) -> tuple[int, int, int]:
-        return FABRIC_COLORS.get(self.fabric_name, FABRIC_COLORS["Black (NRF 001)"])
+        from utils.catalog import resolve_fabric_rgb
+
+        return resolve_fabric_rgb(self.fabric_name) or FABRIC_COLORS.get(
+            "Black (NRF 001)", (30, 30, 30)
+        )
 
     @property
     def logo_rgb(self) -> tuple[int, int, int]:
@@ -609,7 +613,7 @@ class MockupRenderer:
         bg_rgb: tuple[int, int, int] = (244, 244, 245),
         border_rgb: tuple[int, int, int] | None = (226, 232, 240),
     ) -> Image.Image:
-        """Standalone Artwork container; bg/border set by artwork_preview_bg()."""
+        """Standalone Artwork container; bg/border follow active fabric (or caller)."""
         w, h = max(1, int(size[0])), max(1, int(size[1]))
         color = tuple(int(v) for v in bg_rgb) + (255,)
         panel = Image.new("RGBA", (w, h), color)
@@ -1563,6 +1567,17 @@ HAT_LOGO_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
     },
 }
 
+# Fabric Colors — outer chip only (leave Sedona Sage / Bone inner Paula chips).
+# Measured from Hats-Mockups.pdf Sage Side (p2) / Front (p3); Navy/Bone share bands.
+HAT_FABRIC_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
+    "side": {
+        "swatch": (56.0, 1817.0, 85.0, 42.0),
+    },
+    "front": {
+        "swatch": (56.0, 1864.0, 85.0, 42.0),
+    },
+}
+
 # Graphic Sample #1 preview boxes (PDF points) — enlarged 2.4 cm / 25 mm art.
 # Side worksheets share one GS plate; Front worksheets share another.
 # cover = full navy plate (Paula nested fills); wiping only the inset stamp box left a
@@ -1665,6 +1680,12 @@ def hat_logo_swatch_layout(page_index: int) -> dict[str, Any]:
     """Active Logo/Graphic Colors chip layout for a hat worksheet page."""
     key = "front" if int(page_index) % 2 == 1 else "side"
     return dict(HAT_LOGO_SWATCH_LAYOUTS[key])
+
+
+def hat_fabric_swatch_layout(page_index: int) -> dict[str, Any]:
+    """Active Fabric Colors outer-chip layout for a hat worksheet page."""
+    key = "front" if int(page_index) % 2 == 1 else "side"
+    return dict(HAT_FABRIC_SWATCH_LAYOUTS[key])
 
 
 def ponchos_pdf_path() -> Path | None:
@@ -2173,6 +2194,14 @@ SUN_SHIRT_LOGO_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
     },
 }
 
+# Fabric Colors outer chip — HS01 Sage @ y≈1892; BS01 Iron Sage @ y≈1880.
+# White pages sit on the same X; Y matches the colorway band above Logo/Graphic.
+SUN_SHIRT_FABRIC_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
+    "hs01_white": {"swatch": (56.0, 1895.0, 85.0, 40.0)},
+    "hs01": {"swatch": (56.0, 1892.0, 85.0, 40.0)},
+    "bs01": {"swatch": (58.0, 1880.0, 85.0, 40.0)},
+}
+
 # Graphic Sample preview (41 × 41 mm) — white page wipe around circular mark.
 SUN_SHIRT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
     idx: {
@@ -2282,6 +2311,18 @@ def sun_shirt_logo_swatch_layout(page_index: int) -> dict[str, Any]:
     else:
         key = "bs01"
     return dict(SUN_SHIRT_LOGO_SWATCH_LAYOUTS[key])
+
+
+def sun_shirt_fabric_swatch_layout(page_index: int) -> dict[str, Any]:
+    """Active Fabric Colors outer-chip layout for a sun shirt worksheet page."""
+    idx = int(page_index)
+    if idx == 0:
+        key = "hs01_white"
+    elif idx < 4:
+        key = "hs01"
+    else:
+        key = "bs01"
+    return dict(SUN_SHIRT_FABRIC_SWATCH_LAYOUTS[key])
 
 
 def _resolve_local_front_photo(*candidates: Path) -> Path | None:
