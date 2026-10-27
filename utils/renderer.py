@@ -1447,54 +1447,72 @@ HAT_PAGE_MAP_BY_KEY: dict[str, int] = {
 # Photo mockup sample-artwork boxes (PDF points) — Side/Front × Navy/Sage/Bone.
 # Measured from the baked Mubadala circular mark on each Hats-Mockups.pdf page.
 # Tech-pack scale is 2.4 cm / 25 mm; photo boxes match the foreshortened on-hat mark.
+# cover stays tight to the mark (oversized discs read as a wrong-color blob).
 HAT_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
-    # Navy Side — low-res embedded photo; cover disc fully clears red ring
+    # Navy Side — center (726.8, 911.5); cover leaves fabric rim for inpaint
     0: {
-        "box": (705.0, 890.0, 43.0, 43.0),
-        "cover": (686.0, 871.0, 81.0, 81.0),
+        "box": (705.0, 890.0, 44.0, 44.0),
+        "cover": (690.0, 875.0, 74.0, 74.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.08,
+        "fit_pad": 0.02,
     },
     # Navy Front
     1: {
-        "box": (620.0, 770.0, 40.0, 40.0),
-        "cover": (613.0, 763.0, 54.0, 54.0),
+        "box": (616.0, 766.0, 48.0, 48.0),
+        "cover": (610.0, 760.0, 60.0, 60.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.08,
+        "fit_pad": 0.02,
     },
     # Sage Side
     2: {
         "box": (695.5, 872.0, 55.5, 55.5),
-        "cover": (688.0, 864.5, 70.5, 70.5),
+        "cover": (690.0, 866.5, 66.5, 66.5),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.08,
+        "fit_pad": 0.02,
     },
     # Sage Front
     3: {
-        "box": (614.0, 771.0, 40.0, 40.0),
-        "cover": (607.0, 764.0, 54.0, 54.0),
+        "box": (612.0, 769.0, 44.0, 44.0),
+        "cover": (606.0, 763.0, 56.0, 56.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.08,
+        "fit_pad": 0.02,
     },
     # Bone Side
     4: {
         "box": (696.5, 872.0, 55.0, 55.0),
-        "cover": (689.0, 864.5, 70.0, 70.0),
+        "cover": (691.0, 866.5, 66.0, 66.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.08,
+        "fit_pad": 0.02,
     },
     # Bone Front
     5: {
-        "box": (614.0, 771.0, 40.0, 40.0),
-        "cover": (607.0, 764.0, 54.0, 54.0),
+        "box": (612.0, 769.0, 44.0, 44.0),
+        "cover": (606.0, 763.0, 56.0, 56.0),
         "erase": "photo",
         "rotate": 0.0,
-        "fit_pad": 0.08,
+        "fit_pad": 0.02,
+    },
+}
+
+# Logo/Graphic Colors block — wipe Paula's three hardcoded chips, stamp active ink.
+# Side worksheets (pages 0/2/4) share one Y band; Front (1/3/5) sit ~46 pt lower.
+HAT_LOGO_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
+    "side": {
+        "wipe": (56.0, 2035.0, 420.0, 180.0),
+        "swatch": (56.4, 2045.7, 85.0, 42.5),
+        "label": (161.0, 2040.0, 300.0, 50.0),
+        "font_pt": 32.0,
+    },
+    "front": {
+        "wipe": (56.0, 2081.0, 420.0, 180.0),
+        "swatch": (56.4, 2092.0, 85.0, 42.5),
+        "label": (161.0, 2086.0, 300.0, 50.0),
+        "font_pt": 32.0,
     },
 }
 
@@ -1592,6 +1610,12 @@ def hat_overlay_slots(page_index: int) -> dict[str, dict[str, Any]]:
     photo = HAT_PHOTO_OVERLAYS.get(idx) or HAT_PHOTO_OVERLAYS[0]
     gs = HAT_GS_OVERLAYS.get(idx) or HAT_GS_OVERLAYS[0]
     return {"photo": dict(photo), "gs": dict(gs)}
+
+
+def hat_logo_swatch_layout(page_index: int) -> dict[str, Any]:
+    """Active Logo/Graphic Colors chip layout for a hat worksheet page."""
+    key = "front" if int(page_index) % 2 == 1 else "side"
+    return dict(HAT_LOGO_SWATCH_LAYOUTS[key])
 
 
 def _resolve_local_front_photo(*candidates: Path) -> Path | None:

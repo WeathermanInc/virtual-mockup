@@ -45,6 +45,7 @@ from .renderer import (
     get_backpack_front_slot,
     get_backpack_pdf_front_slot,
     hat_logo_fill_rgb,
+    hat_logo_swatch_layout,
     hat_overlay_slots,
     hats_pdf_path,
     recolor_bright_ink_inplace,
@@ -584,6 +585,9 @@ class WorksheetExporter:
         page = doc[0]
         if mark is not None:
             self._pdf_overlay_hat_logos(page, job, mark, page_index)
+        # Sync Logo/Graphic Colors chip to the active sidebar print color.
+        # Header fields stay Paula's — never redrawn on this path.
+        self._pdf_overlay_hat_logo_swatch(page, job, page_index)
 
         place = resolve_hat_placement(job.panel_config)
         meta = doc.metadata or {}
@@ -613,36 +617,38 @@ class WorksheetExporter:
         mark: PILImage.Image,
         page_index: int,
     ) -> None:
-        """Stamp prepared client logo onto hat photo mockup + Graphic Sample."""
+        """Stamp prepared client logo onto hat photo mockup + Graphic Sample.
+
+        Photo path: heal baked sample into surrounding fabric (no disc / box),
+        then stamp the transparent mark. GS path: solid fabric wipe + stamp.
+        """
         slots = hat_overlay_slots(page_index)
         fabric = job.fabric_rgb
 
         photo = slots.get("photo") or {}
         photo_box = photo.get("box")
         if photo_box:
-            # Circular fabric disc covers multi-ink baked sample (heal reconstructs
-            # the mark from the tight crop rim; a disc wipe is reliable here).
             cover = photo.get("cover") or photo_box
-            self._pdf_insert_circular_cover(page, cover, fabric)
+            # Inpaint only baked sample ink — keeps photo fabric texture, no disc/box.
+            self._pdf_inpaint_baked_hat_mark(page, cover)
             self._pdf_insert_mark(
                 page,
                 photo_box,
                 mark,
                 rotate=float(photo.get("rotate") or 0.0),
-                fit_pad=float(photo.get("fit_pad") or 0.08),
+                fit_pad=float(photo.get("fit_pad") or 0.02),
                 crisp=True,
             )
 
         gs = slots.get("gs") or {}
         gs_box = gs.get("box")
         if gs_box:
-            # GS sits on a solid outer-fabric plate — wipe with outer fabric, then stamp.
             cover = gs.get("cover") or gs_box
-            # Pad clears AA fringe of the baked circular sample.
             cx, cy, cw, ch = cover
-            pad = 12.0
+            pad = 14.0
             wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
-            self._pdf_fill_rect(page, wiped, fabric)
+            # Redact removes baked circular sample so no glow/ring ghosts remain.
+            self._pdf_redact_fill(page, wiped, fabric)
             self._pdf_insert_mark(
                 page,
                 gs_box,
@@ -652,37 +658,123 @@ class WorksheetExporter:
                 crisp=True,
             )
 
-    def _pdf_insert_circular_cover(
+    def _pdf_overlay_hat_logo_swatch(
+        self,
+        page,
+        job: JobSpec,
+        page_index: int,
+    ) -> None:
+        """Replace Paula's three Logo/Graphic chips with the active print color only."""
+        layout = hat_logo_swatch_layout(page_index)
+        wipe = layout.get("wipe")
+        swatch = layout.get("swatch")
+        label_box = layout.get("label")
+        if not wipe or not swatch or not label_box:
+            return
+
+        fill = hat_logo_fill_rgb(job.logo_color_name)
+        logo_rgb = (128, 128, 128) if fill is None else fill
+
+        # Redact Paula's three hardcoded rows (drawings + text), then stamp one chip.
+        self._pdf_redact_fill(page, wipe, (255, 255, 255))
+        self._pdf_fill_rect(page, swatch, logo_rgb)
+        if max(logo_rgb) > 210:
+            page.draw_rect(
+                self._pdf_rect(swatch),
+                color=self._pdf_rgb((35, 35, 35)),
+                fill=None,
+                width=1.0,
+            )
+        x, y, _w, h = label_box
+        page.insert_text(
+            (x, y + h * 0.72),
+            logo_sheet_label(job.logo_color_name),
+            fontsize=float(layout.get("font_pt") or 32),
+            fontname="hebo",
+            color=self._pdf_rgb(NAVY),
+        )
+
+    def _pdf_redact_fill(
         self,
         page,
         box: tuple[float, float, float, float],
         rgb: tuple[int, int, int],
     ) -> None:
-        """Overlay an opaque circular fabric disc that hides baked sample artwork."""
+        """Hard-remove page content inside ``box`` and fill with ``rgb``."""
+        import fitz
+
+        page.add_redact_annot(self._pdf_rect(box), fill=self._pdf_rgb(rgb))
+        page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_PIXELS)
+
+    def _pdf_inpaint_baked_hat_mark(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+    ) -> None:
+        """Remove Paula's baked circular sample via inpaint (texture-preserving).
+
+        Detects red/white logo ink, dilates to swallow the navy disc center, then
+        TELEA-inpaints from surrounding fabric — no flat circular backdrop.
+        """
+        import cv2
+        import fitz
         import numpy as np
 
-        x, y, w, h = box
-        if w < 1 or h < 1:
+        rect = self._pdf_rect(box)
+        if rect.width < 2 or rect.height < 2:
             return
-        # ~3× PDF points for a clean edge when zoomed.
-        px = max(16, int(round(max(w, h) * 3.0)))
-        arr = np.zeros((px, px, 4), dtype=np.uint8)
-        yy, xx = np.ogrid[:px, :px]
-        cx = cy = (px - 1) / 2.0
-        radius = (px - 1) / 2.0
-        mask = (xx - cx) ** 2 + (yy - cy) ** 2 <= radius ** 2
-        arr[mask, 0] = int(rgb[0])
-        arr[mask, 1] = int(rgb[1])
-        arr[mask, 2] = int(rgb[2])
-        arr[mask, 3] = 255
-        disc = PILImage.fromarray(arr, "RGBA")
-        # Keep the disc circular inside the (possibly non-square) cover box.
-        side = min(float(w), float(h))
-        ox = x + (float(w) - side) / 2.0
-        oy = y + (float(h) - side) / 2.0
+        zoom = 3.0
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=rect, alpha=False)
+        rgb = (
+            np.frombuffer(pix.samples, dtype=np.uint8)
+            .reshape(pix.height, pix.width, 3)
+            .copy()
+        )
+        r = rgb[:, :, 0].astype(np.int16)
+        g = rgb[:, :, 1].astype(np.int16)
+        b = rgb[:, :, 2].astype(np.int16)
+        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        # Detect baked sample (red / pale / fabric-delta), fill its footprint, then
+        # TELEA-inpaint so surrounding weave continues — no flat circular disc.
+        hh, ww = int(rgb.shape[0]), int(rgb.shape[1])
+        band = max(2, min(hh // 10, ww // 10, 8))
+        rim = np.concatenate(
+            [
+                rgb[:band, :, :].reshape(-1, 3),
+                rgb[-band:, :, :].reshape(-1, 3),
+                rgb[:, :band, :].reshape(-1, 3),
+                rgb[:, -band:, :].reshape(-1, 3),
+            ],
+            axis=0,
+        )
+        med = np.median(rim.astype(np.float32), axis=0)
+        red = (r > 130) & (g < 125) & (b < 125) & (r > g + 25) & (r > b + 25)
+        bright = lum >= 170
+        delta = np.linalg.norm(rgb.astype(np.float32) - med, axis=2)
+        mask = ((red | bright | (delta > 24.0)).astype(np.uint8) * 255)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        mask = cv2.dilate(mask, kernel, iterations=2)
+        cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if cnts:
+            hull = cv2.convexHull(max(cnts, key=cv2.contourArea))
+            filled = np.zeros_like(mask)
+            cv2.drawContours(filled, [hull], -1, 255, thickness=-1)
+            # Keep a fabric rim inside the cover so inpaint has clean source pixels.
+            erode = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+            safe = cv2.erode(np.ones_like(mask) * 255, erode, iterations=1)
+            mask = cv2.bitwise_and(filled, safe)
+        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
+        healed_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
+        soft = cv2.GaussianBlur(mask, (5, 5), 0)
+        soft = np.where(mask > 0, np.maximum(soft, 235), soft)
+        rgba = np.zeros((hh, ww, 4), dtype=np.uint8)
+        rgba[:, :, :3] = healed_rgb
+        rgba[:, :, 3] = soft
+        out = PILImage.fromarray(rgba, "RGBA")
         page.insert_image(
-            self._pdf_rect((ox, oy, side, side)),
-            stream=self._pdf_png_bytes(disc),
+            rect,
+            stream=self._pdf_png_bytes(out),
             keep_proportion=False,
             overlay=True,
         )
