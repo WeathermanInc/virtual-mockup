@@ -18,7 +18,7 @@ flowchart LR
   B --> C[Rasterize artwork]
   C --> D{Family}
   D -->|Umbrella| E[Erase · recolor · stamp]
-  D -->|Backpack / Hat| F[Static Paula page map]
+  D -->|Backpack / Hat / Poncho| F[Static Paula page map]
   E --> G[On-screen proof]
   F --> G
   G --> H[PDF export]
@@ -106,7 +106,7 @@ def render_project_guide(*, stamp_version: int) -> None:
         st.markdown(
             "Internal Weatherman proofing tool: stamp vector client logos onto "
             "official production worksheets and export multi-page PDFs for "
-            "**Umbrella**, **Backpack**, and **Hat** families."
+            "**Umbrella**, **Backpack**, **Hat**, and **Poncho** families."
         )
         overview, pipeline, architecture, timeline = st.tabs(
             ["Overview", "Operator pipeline", "Architecture", "Timeline"]
@@ -121,7 +121,8 @@ def render_project_guide(*, stamp_version: int) -> None:
             c5.metric("Stamp engine", f"v{stamp_version}")
             st.caption(
                 f"Umbrella styles: {umbrella_n}. Walk/Golf artwork 21.6 × 10 cm. "
-                "Venture Dry Pack & Trek Hat use Paula 1:1 page maps. Logos: "
+                "Venture Dry Pack, Trek Hat, and Stride Pullover Poncho use Paula "
+                "1:1 page maps (`BACKPACK_` / `HAT_` / `PONCHO_STATIC_PAGE_MAP`). Logos: "
                 + ", ".join(ext.lstrip(".").upper() for ext in SUPPORTED_EXTS)
                 + "."
             )
@@ -137,7 +138,9 @@ def render_project_guide(*, stamp_version: int) -> None:
             st.mermaid_chart(ARCHITECTURE)
 
         with timeline:
-            st.markdown("Build arc from first Cloud harden through hats + NRF sync.")
+            st.markdown(
+                "Build arc from first Cloud harden through hats, NRF sync, and ponchos."
+            )
             st.mermaid_chart(BUILD_TIMELINE)
             st.caption(
                 "Keep-alive: GitHub Actions Playwright every 2 hours. "

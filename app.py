@@ -35,7 +35,7 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 111
+STAMP_VERSION = 112
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho"]
@@ -609,7 +609,7 @@ def _run_app() -> None:
 
     st.caption(
         "Catalog: Walk · Stick · Golf Essential / 62 / 68 · Trek · Travel · Collapsible · Kids · "
-        "Venture Dry Pack · Trek All-Weather Hat. "
+        "Venture Dry Pack · Trek All-Weather Hat · Stride Pullover Poncho. "
         "Artwork bound 21.6 × 10 cm (Walk/Golf). Logos: SVG, AI, CDR, PDF, EPS."
     )
     render_project_guide(stamp_version=STAMP_VERSION)

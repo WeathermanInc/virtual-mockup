@@ -3,12 +3,12 @@
 ## Tech Stack & Architecture
 - **Language:** Python 3.10+
 - **Core Libraries:** Pillow (PIL), OpenCV, ReportLab, Streamlit, PyMuPDF.
-- **Design Specs:** Strict adherence to Weatherman production worksheet standards (e.g., Walk/Golf Essential panels, standard 21.6cm x 10cm artwork bounds; Venture Dry Pack and Trek Hat Paula 1:1 page maps).
+- **Design Specs:** Strict adherence to Weatherman production worksheet standards (e.g., Walk/Golf Essential panels, standard 21.6cm x 10cm artwork bounds; Venture Dry Pack, Trek Hat, and Stride Pullover Poncho Paula 1:1 page maps).
 
 ## Guardrails & Execution
 - Always maintain exact coordinate mappings, aspect ratios, and scaling factors when projecting client logos onto umbrella panels.
 - Keep UI code cleanly decoupled from the image-processing and PDF-export modules inside `utils/`.
-- Ensure generated multi-view proofs mirror official production sheets (Front View, Top View, Sleeve, Flat Pattern, and Hat Side/Front layouts).
-- Keep `BACKPACK_STATIC_PAGE_MAP` and `HAT_STATIC_PAGE_MAP` intact — serve Paula PDF pages 1:1; do not recalculate Front View / tech-pack coordinates on those paths.
+- Ensure generated multi-view proofs mirror official production sheets (Front View, Top View, Sleeve, Flat Pattern, Hat Side/Front, and Poncho Front/Back layouts).
+- Keep `BACKPACK_STATIC_PAGE_MAP`, `HAT_STATIC_PAGE_MAP`, and `PONCHO_STATIC_PAGE_MAP` intact — serve Paula PDF pages 1:1; do not recalculate Front View / tech-pack coordinates on those paths.
 - Keep Backpack, Hat, Poncho, and Umbrella pipelines isolated (family-scoped fabrics, logo colors, and exporters).
-- Reference sheets: @Proper Brands x WM Umbrella 2026 Mockup Designs.pdf @Proper Brands x WM Umbrella 2026 Mockup Designs v2.pdf @Hats-Mockups.pdf
+- Reference sheets: @Proper Brands x WM Umbrella 2026 Mockup Designs.pdf @Proper Brands x WM Umbrella 2026 Mockup Designs v2.pdf @Hats-Mockups.pdf @Ponchos-Mockups.pdf
