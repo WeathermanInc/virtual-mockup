@@ -1114,11 +1114,15 @@ class WorksheetExporter:
             if not box:
                 continue
             cover = slot.get("cover") or box
-            wipe_rgb = slot.get("wipe_rgb") or fabric
-            cx, cy, cw, ch = cover
-            pad = 4.0 if key == "artwork" else 2.0
-            wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
-            self._pdf_redact_fill(page, wiped, tuple(int(v) for v in wipe_rgb))
+            if key == "draw" or slot.get("wipe") == "fabric_circle":
+                # Circular fabric wipe — no white/rect backing under tech-pack logo.
+                self._pdf_cover_poncho_draw_mark(page, cover, fabric)
+            else:
+                wipe_rgb = slot.get("wipe_rgb") or fabric
+                cx, cy, cw, ch = cover
+                pad = 4.0 if key == "artwork" else 2.0
+                wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
+                self._pdf_redact_fill(page, wiped, tuple(int(v) for v in wipe_rgb))
             self._pdf_insert_mark(
                 page,
                 box,
@@ -1163,6 +1167,52 @@ class WorksheetExporter:
             fontname="hebo",
             color=self._pdf_rgb(NAVY),
         )
+
+    def _pdf_cover_poncho_draw_mark(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+        fabric_rgb: tuple[int, int, int],
+    ) -> None:
+        """Clear tech-pack sample into the local line-drawing body color.
+
+        Samples Paula's flat fill from the cover rim (catalog RGB often mismatches
+        the sheet), then redacts the sample. The transparent client mark stamps
+        next — fabric shows between glyphs with no white backing box.
+        """
+        import fitz
+        import numpy as np
+
+        rect = self._pdf_rect(box)
+        if rect.width < 2 or rect.height < 2:
+            return
+        zoom = 4.0
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=rect, alpha=False)
+        rgb = (
+            np.frombuffer(pix.samples, dtype=np.uint8)
+            .reshape(pix.height, pix.width, 3)
+            .copy()
+        )
+        hh, ww = int(rgb.shape[0]), int(rgb.shape[1])
+        r = rgb[:, :, 0].astype(np.int16)
+        g = rgb[:, :, 1].astype(np.int16)
+        b = rgb[:, :, 2].astype(np.int16)
+        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        band = max(2, min(hh, ww) // 8)
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        red = (r > 120) & (g < 130) & (b < 130) & (r > g + 15)
+        bright = lum >= 200
+        fabric_rim = rim & ~red & ~bright
+        if fabric_rim.any():
+            med = np.median(rgb[fabric_rim].astype(np.float32), axis=0)
+            fill = (int(med[0]), int(med[1]), int(med[2]))
+        else:
+            fill = tuple(int(v) for v in fabric_rgb)
+        self._pdf_redact_fill(page, box, fill)
 
     def _pdf_cover_poncho_photo_mark(
         self,

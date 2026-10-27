@@ -1777,38 +1777,40 @@ PONCHO_ARTWORK_OVERLAY: dict[str, Any] = {
 
 # Sizing & Dimensions line-drawing sample (Front worksheets only).
 # Back worksheets put the sample inside the Graphic Sample plate instead.
+# Wipe uses job fabric (not white) so the transparent mark sits on the poncho body
+# with no rectangular backing box.
 PONCHO_DRAW_OVERLAYS: dict[int, dict[str, Any]] = {
     0: {
         "box": (1048.0, 2245.0, 56.0, 56.0),
-        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "cover": (1042.0, 2238.0, 70.0, 70.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
-        "wipe_rgb": (255, 255, 255),
+        "wipe": "fabric_circle",
     },
     2: {
         "box": (1048.0, 2245.0, 56.0, 56.0),
-        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "cover": (1042.0, 2238.0, 70.0, 70.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
-        "wipe_rgb": (255, 255, 255),
+        "wipe": "fabric_circle",
     },
     4: {
         "box": (1048.0, 2245.0, 56.0, 56.0),
-        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "cover": (1042.0, 2238.0, 70.0, 70.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
-        "wipe_rgb": (255, 255, 255),
+        "wipe": "fabric_circle",
     },
     6: {
         "box": (1048.0, 2245.0, 56.0, 56.0),
-        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "cover": (1042.0, 2238.0, 70.0, 70.0),
         "erase": "draw",
         "rotate": 0.0,
         "fit_pad": 0.06,
-        "wipe_rgb": (255, 255, 255),
+        "wipe": "fabric_circle",
     },
 }
 
