@@ -12,9 +12,9 @@ related views).
 
 ## Suggested GitHub description
 
-> Internal Weatherman Streamlit app that stamps vector client logos onto official production worksheets and exports multi-page PDF proofs for Umbrella, Backpack, Hat, and Poncho styles.
+> Internal Weatherman Streamlit app that stamps vector client logos onto official production worksheets and exports multi-page PDF proofs for Umbrella, Backpack, Hat, Poncho, and Sun Shirt styles.
 
-**Topics (optional):** `streamlit` · `weatherman` · `umbrella` · `backpack` · `hat` · `poncho` · `mockup` · `pdf` · `pillow` · `opencv`
+**Topics (optional):** `streamlit` · `weatherman` · `umbrella` · `backpack` · `hat` · `poncho` · `sun-shirt` · `mockup` · `pdf` · `pillow` · `opencv`
 
 ---
 
@@ -27,6 +27,7 @@ related views).
    - **Backpack** — 1:1 Paula Venture Dry Pack pages via `BACKPACK_STATIC_PAGE_MAP` (fabric × placement); Artwork box + logo swatch follow Logo / graphic color; Front View / tech-pack Proper can recolor in place for Black C.
    - **Hat** — 1:1 Paula Trek All-Weather Hat pages via `HAT_STATIC_PAGE_MAP` (fabric × Side/Front) from `Hats-Mockups.pdf`.
    - **Poncho** — 1:1 Paula Stride Pullover Poncho pages via `PONCHO_STATIC_PAGE_MAP` (fabric × Front/Back) from `Ponchos-Mockups.pdf`; photo + Artwork + GS / tech-pack draw stamps; Logo inks White / Black / Match uploaded art.
+   - **Sun Shirt** — 1:1 Paula pages via `SUN_SHIRT_STATIC_PAGE_MAP` (product × fabric) from `Sun-Shirts-Mockups.pdf`; Front view upper-left chest only; photo heal + Artwork + GS (41 mm) + tech-pack draw; Logo inks White / Black / Match uploaded art.
 4. On-screen proof shows the official pages; **Generate** writes a PDF for download.
 
 ### Product families
@@ -37,8 +38,9 @@ related views).
 | Backpack | Venture Dry Pack (Style #: 40002) | Placements: Upper center / Center / Lower right center × Black / Steel Blue / Sage. |
 | Hat | Trek All-Weather Hat (Style #: 40001) | Placements: Side view / Front view × Navy (411) / Sage (311) / Bone (202). Logo inks: White, Black, Match uploaded art. |
 | Poncho | Stride Pullover Poncho (Style #: 23001) | Placements: Front view (upper right chest) / Back view × Navy (411) / Sage (310) / Bone (920) / Chocolate (201). Logo inks: White, Black, Match uploaded art. Worksheet **#4**. |
+| Sun Shirt | UPF 50+ Hooded (HS01), Bamboo UPF 20+ (BS01) | Placement: Front view (upper left chest) only. HS01: White / Navy / Sage / River Mist. BS01: White / Iron Sage / River Mist / Canyon Glow. Logo inks: White, Black, Match uploaded art. Worksheet **#5**. |
 
-Artwork bounds follow Weatherman production standards (e.g. 21.6 cm × 10 cm Walk/Golf panels; hat marks 2.4–2.5 cm; poncho Graphic Sample 7 × 7 cm).
+Artwork bounds follow Weatherman production standards (e.g. 21.6 cm × 10 cm Walk/Golf panels; hat marks 2.4–2.5 cm; poncho Graphic Sample 7 × 7 cm; sun shirt Graphic Sample 41 × 41 mm).
 
 ---
 
@@ -49,12 +51,12 @@ Artwork bounds follow Weatherman production standards (e.g. 21.6 cm × 10 cm Wal
 | UI | Streamlit (`app.py`) |
 | Imaging | Pillow, OpenCV (headless) |
 | Vectors | PyMuPDF on Cloud; optional local `rsvg` / Ghostscript / Poppler / ImageMagick |
-| PDF export | ReportLab (umbrella rasters) · PyMuPDF `insert_pdf` (backpack / hat / poncho static pages) |
+| PDF export | ReportLab (umbrella rasters) · PyMuPDF `insert_pdf` (backpack / hat / poncho / sun shirt static pages) |
 | Fonts | Vendored Liberation Sans under `assets/fonts/` |
 
 Processing stays in `utils/`; UI stays in `app.py`. Do not rebuild worksheets from
 scratch in ReportLab — stamp onto the official page templates in
-`assets/templates/official/`, or extract 1:1 pages from Paula PDFs for backpack/hat/poncho.
+`assets/templates/official/`, or extract 1:1 pages from Paula PDFs for backpack/hat/poncho/sun shirt.
 
 ---
 
@@ -65,6 +67,7 @@ app.py                      # Streamlit dashboard
 requirements.txt            # Python deps (wheels-only for Cloud)
 Hats-Mockups.pdf            # Paula Trek All-Weather Hat worksheets (static map)
 Ponchos-Mockups.pdf         # Paula Stride Pullover Poncho worksheets (static map)
+Sun-Shirts-Mockups.pdf      # Paula HS01 / BS01 Sun Shirt worksheets (static map)
 Proper Brands x WM … v2.pdf # Paula Venture Dry Pack worksheets (static map)
 assets/
   catalog/catalog.json      # Fabrics, styles, logo colors, placements
@@ -81,7 +84,7 @@ scripts/keepalive.py        # Playwright wake for Community Cloud
 Local-only (gitignored): `.venv/`, `data/`, `output/`, `assets/logos/`, screen
 recordings, IDE workspaces, Streamlit log dumps, and large proprietary sheets
 such as the original umbrella mockup PDF / M13 backpack options. Tracked Paula
-maps: `Hats-Mockups.pdf`, `Ponchos-Mockups.pdf`, Umbrella v2 Venture Dry Pack PDF.
+maps: `Hats-Mockups.pdf`, `Ponchos-Mockups.pdf`, `Sun-Shirts-Mockups.pdf`, Umbrella v2 Venture Dry Pack PDF.
 
 ---
 
@@ -137,12 +140,12 @@ dependency changes or a dashboard reboot.
 ## Operator notes
 
 - Job ticket starts **blank** — no Proper demo defaults.
-- Choose **product family** first (Umbrella / Backpack / Hat / Poncho).
+- Choose **product family** first (Umbrella / Backpack / Hat / Poncho / Sun Shirt).
 - Upload vector logos only (no PNG/JPG).
 - Select products before fabric options appear; fabric change suggests a contrast-safe logo color (overridable).
 - Fill required ticket fields (including worksheet year) before the proof builds.
 - Walk + Golf Essential → multi-page PDF when both are selected.
-- Backpack / Hat / Poncho proofs are exact Paula page extracts keyed by fabric × placement.
+- Backpack / Hat / Poncho / Sun Shirt proofs are exact Paula page extracts keyed by fabric × placement (Sun Shirt: product × fabric).
 
 ---
 
@@ -156,7 +159,7 @@ flowchart LR
   B --> C[Rasterize artwork]
   C --> D{Family}
   D -->|Umbrella| E[Erase · recolor · stamp]
-  D -->|Backpack / Hat / Poncho| F[Static Paula page map]
+  D -->|Backpack / Hat / Poncho / Sun Shirt| F[Static Paula page map]
   E --> G[On-screen proof]
   F --> G
   G --> H[PDF export]
@@ -207,11 +210,15 @@ flowchart TB
   subgraph Poncho["Poncho"]
     P1[Stride Pullover Poncho · PONCHO_STATIC_PAGE_MAP]
   end
+  subgraph SunShirt["Sun Shirt"]
+    SS1[HS01 / BS01 · SUN_SHIRT_STATIC_PAGE_MAP]
+  end
   Job[Selected products] --> Stick
   Job --> Golf
   Job --> Pack
   Job --> Hat
   Job --> Poncho
+  Job --> SunShirt
 ```
 
 ### Build timeline
@@ -230,6 +237,8 @@ timeline
            : Umbrella NRF sync · Skyline 641 · Colorstorm 840
   section Ponchos
     Oct 26 : Stride Pullover Poncho · Ponchos-Mockups.pdf map
+  section Sun Shirts
+    Oct 26 : HS01 / BS01 · Sun-Shirts-Mockups.pdf map
 ```
 
 The same diagrams and live metrics appear in the Streamlit UI under
@@ -240,6 +249,6 @@ The same diagrams and live metrics appear in the Streamlit UI under
 ## Development rules (short)
 
 See `.cursorrules` for production constraints: keep exact panel mappings and
-scale factors, keep UI decoupled from `utils/`, keep backpack/hat/poncho static
-page maps intact, and keep generated proofs aligned with official Front / Top /
-Sleeve / Flat / Side / Hat Side-Front / Poncho Front-Back layouts.
+scale factors, keep UI decoupled from `utils/`, keep backpack/hat/poncho/sun shirt
+static page maps intact, and keep generated proofs aligned with official Front / Top /
+Sleeve / Flat / Side / Hat Side-Front / Poncho Front-Back / Sun Shirt Front layouts.

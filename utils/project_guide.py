@@ -65,11 +65,15 @@ flowchart TB
   subgraph Poncho["Poncho"]
     P1[Stride Pullover Poncho · PONCHO_STATIC_PAGE_MAP]
   end
+  subgraph SunShirt["Sun Shirt"]
+    SS1[HS01 / BS01 · SUN_SHIRT_STATIC_PAGE_MAP]
+  end
   Job[Selected products] --> Stick
   Job --> Golf
   Job --> Pack
   Job --> Hat
   Job --> Poncho
+  Job --> SunShirt
 """
 
 BUILD_TIMELINE = """
@@ -86,6 +90,8 @@ timeline
            : Umbrella NRF sync · Skyline 641 · Colorstorm 840
   section Ponchos
     Oct 26 : Stride Pullover Poncho · Ponchos-Mockups.pdf map
+  section Sun Shirts
+    Oct 26 : HS01 / BS01 · Sun-Shirts-Mockups.pdf map
 """
 
 
@@ -106,7 +112,7 @@ def render_project_guide(*, stamp_version: int) -> None:
         st.markdown(
             "Internal Weatherman proofing tool: stamp vector client logos onto "
             "official production worksheets and export multi-page PDFs for "
-            "**Umbrella**, **Backpack**, **Hat**, and **Poncho** families."
+            "**Umbrella**, **Backpack**, **Hat**, **Poncho**, and **Sun Shirt** families."
         )
         overview, pipeline, architecture, timeline = st.tabs(
             ["Overview", "Operator pipeline", "Architecture", "Timeline"]
@@ -121,8 +127,8 @@ def render_project_guide(*, stamp_version: int) -> None:
             c5.metric("Stamp engine", f"v{stamp_version}")
             st.caption(
                 f"Umbrella styles: {umbrella_n}. Walk/Golf artwork 21.6 × 10 cm. "
-                "Venture Dry Pack, Trek Hat, and Stride Pullover Poncho use Paula "
-                "1:1 page maps (`BACKPACK_` / `HAT_` / `PONCHO_STATIC_PAGE_MAP`). Logos: "
+                "Venture Dry Pack, Trek Hat, Stride Pullover Poncho, and Sun Shirts use Paula "
+                "1:1 page maps (`BACKPACK_` / `HAT_` / `PONCHO_` / `SUN_SHIRT_STATIC_PAGE_MAP`). Logos: "
                 + ", ".join(ext.lstrip(".").upper() for ext in SUPPORTED_EXTS)
                 + "."
             )

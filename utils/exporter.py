@@ -24,9 +24,11 @@ from .catalog import (
     fabric_sheet_lines,
     logo_color_rgb,
     logo_sheet_label,
+    product_specs,
     resolve_backpack_placement,
     resolve_hat_placement,
     resolve_poncho_placement,
+    resolve_sun_shirt_placement,
     style_family,
 )
 from .renderer import (
@@ -57,6 +59,12 @@ from .renderer import (
     resolve_backpack_v2_page_index,
     resolve_hat_page_index,
     resolve_poncho_page_index,
+    resolve_sun_shirt_page_index,
+    sun_shirt_logo_fill_rgb,
+    sun_shirt_logo_swatch_layout,
+    sun_shirt_overlay_slots,
+    sun_shirt_supports_fabric,
+    sun_shirts_pdf_path,
     BACKPACK_PDF_WEATHERMAN_COVER,
 )
 
@@ -88,6 +96,8 @@ STYLE_PAGES: dict[str, list[int]] = {
     "venture_dry_pack": [1],
     "trek_all_weather_hat": [1],
     "stride_pullover_poncho": [1],
+    "upf_hooded_sun_shirt": [1],
+    "bamboo_sun_shirt": [1],
 }
 
 PAGE_TITLES: dict[int, str] = {
@@ -107,6 +117,11 @@ HAT_TITLES: dict[int, str] = {
 
 PONCHO_TITLES: dict[int, str] = {
     1: "Stride Pullover Poncho",
+}
+
+SUN_SHIRT_TITLES: dict[str, str] = {
+    "upf_hooded_sun_shirt": "UPF 50+ Hooded Sun Shirt",
+    "bamboo_sun_shirt": "Bamboo UPF 20+ Sun Shirt",
 }
 
 # Venture Dry Pack (style 40002) — M13 backpack worksheet, same page size as Walk.
@@ -216,6 +231,24 @@ PONCHO_PAGE_SPEC: dict[int, dict] = {
     },
 }
 
+# Sun Shirts — header overlays on Sun-Shirts-Mockups.pdf (logos use sun_shirt_overlay_slots).
+SUN_SHIRT_PAGE_SPEC: dict[int, dict] = {
+    1: {
+        "size_pts": (2125.98, 3259.84),
+        "chip": _PAULA_HEADER_CHIP,
+        "clear_chip": True,
+        "header_fields": {
+            "request_date": (1105, 42, 195, 42),
+            "last_update": (1105, 90, 195, 42),
+            "project_owner": (1105, 138, 195, 42),
+            "print_order": (1105, 186, 195, 42),
+        },
+        "worksheet_number": "5",
+        "worksheet_number_box": (1998.0, 120.0, 70.0, 100.0),
+        "worksheet_number_pt": 93.0,
+    },
+}
+
 # Coordinates are PDF points at 72 dpi (page-1 = 2126×3260, golf = 2126×3544).
 # `box` is the fitted logo; `cover` is inpainted so original ink leaves no patch.
 PAGE_SPEC: dict[int, dict] = {
@@ -299,6 +332,7 @@ def worksheet_filename(client: str, year: int | None = None, family: str = "umbr
         "backpack": "Backpack",
         "hat": "Hat",
         "poncho": "Poncho",
+        "sun_shirt": "Sun Shirt",
     }.get(family, "Umbrella")
     return f"{safe} x WM {kind} {year} Mockup Designs.pdf"
 
@@ -413,7 +447,7 @@ class WorksheetExporter:
             if fam != "umbrella":
                 return fam
         fam = str(getattr(job, "family", None) or "").strip()
-        if fam in {"backpack", "hat", "poncho", "umbrella"}:
+        if fam in {"backpack", "hat", "poncho", "sun_shirt", "umbrella"}:
             return fam
         return "umbrella"
 
@@ -424,6 +458,8 @@ class WorksheetExporter:
             return HAT_PAGE_SPEC.get(page_no) or HAT_PAGE_SPEC[1]
         if family == "poncho":
             return PONCHO_PAGE_SPEC.get(page_no) or PONCHO_PAGE_SPEC[1]
+        if family == "sun_shirt":
+            return SUN_SHIRT_PAGE_SPEC.get(page_no) or SUN_SHIRT_PAGE_SPEC[1]
         return PAGE_SPEC[page_no]
 
     def _page_title(self, family: str, page_no: int) -> str:
@@ -433,7 +469,17 @@ class WorksheetExporter:
             return HAT_TITLES.get(page_no, f"Page {page_no}")
         if family == "poncho":
             return PONCHO_TITLES.get(page_no, f"Page {page_no}")
+        if family == "sun_shirt":
+            return SUN_SHIRT_TITLES.get(
+                "upf_hooded_sun_shirt" if page_no == 1 else "bamboo_sun_shirt",
+                "Sun Shirt",
+            )
         return PAGE_TITLES.get(page_no, f"Page {page_no}")
+
+    def _sun_shirt_page_title(self, product_key: str) -> str:
+        return SUN_SHIRT_TITLES.get(product_key) or (
+            str((product_specs().get(product_key) or {}).get("display_name") or "Sun Shirt")
+        )
 
     def _template(self, page_no: int, family: str = "umbrella") -> PILImage.Image:
         key = (family, page_no)
@@ -454,8 +500,18 @@ class WorksheetExporter:
     def page_plan(self, job: JobSpec) -> list[tuple[int, str]]:
         """Official worksheet pages that will be included for the selected styles."""
         family = self._job_family(job)
+        if family == "sun_shirt":
+            keys = [k for k in job.product_keys if style_family(k) == "sun_shirt"]
+            matched = [
+                k for k in keys if sun_shirt_supports_fabric(k, job.fabric_name)
+            ]
+            keys = matched or keys[:1]
+            return [
+                (i + 1, self._sun_shirt_page_title(key))
+                for i, key in enumerate(keys)
+            ]
         seen: set[int] = set()
-        plan: list[tuple[int, str]] = []
+        plan = []
         for key in job.product_keys:
             for page_no in STYLE_PAGES.get(key, []):
                 if page_no in seen:
@@ -508,6 +564,10 @@ class WorksheetExporter:
         # Poncho never falls through to the umbrella raster sheet.
         if family == "poncho":
             return self._preview_poncho_pdf_template(
+                job, logo, max_width=max_width, quality=quality
+            )
+        if family == "sun_shirt":
+            return self._preview_sun_shirt_pdf_template(
                 job, logo, max_width=max_width, quality=quality
             )
         return self._preview_standard_canvas(
@@ -583,6 +643,8 @@ class WorksheetExporter:
             return self.render_hat_with_pdf_template(job, logo)
         if family == "poncho":
             return self.render_poncho_with_pdf_template(job, logo)
+        if family == "sun_shirt":
+            return self.render_sun_shirt_with_pdf_template(job, logo)
         return self.render_standard_canvas(job, logo)
 
     def _preview_hat_pdf_template(
@@ -1279,6 +1341,345 @@ class WorksheetExporter:
             stream=self._pdf_png_bytes(photo_crop),
             keep_proportion=False,
             overlay=True,
+        )
+
+    def _preview_sun_shirt_pdf_template(
+        self,
+        job: JobSpec,
+        logo: PILImage.Image | None,
+        *,
+        max_width: int = 1400,
+        quality: int = 88,
+    ) -> list[tuple[str, bytes]]:
+        """Rasterize sun shirt PDF-template page(s) for Streamlit preview."""
+        import fitz
+
+        try:
+            pdf_bytes = self.render_sun_shirt_with_pdf_template(job, logo)
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            out: list[tuple[str, bytes]] = []
+            keys = [k for k in job.product_keys if style_family(k) == "sun_shirt"]
+            for i, page in enumerate(doc):
+                zoom = max(1.0, float(max_width) / float(page.rect.width))
+                pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+                img = PILImage.frombytes("RGB", (pix.width, pix.height), pix.samples)
+                if img.width > max_width:
+                    ratio = max_width / img.width
+                    img = img.resize(
+                        (max_width, max(1, int(img.height * ratio))),
+                        PILImage.Resampling.LANCZOS,
+                    )
+                buf = BytesIO()
+                img.save(buf, format="PNG", optimize=True)
+                key = keys[i] if i < len(keys) else "upf_hooded_sun_shirt"
+                out.append((self._sun_shirt_page_title(key), buf.getvalue()))
+            doc.close()
+            return out
+        except Exception:
+            print("Exporter Error:", traceback.format_exc(), flush=True)
+            return []
+
+    def render_sun_shirt_with_pdf_template(
+        self,
+        job: JobSpec,
+        logo: PILImage.Image | None,
+    ) -> bytes:
+        """Sun Shirts — Paula page(s) + client logo on mockup + Artwork + GS + draw.
+
+        ``SUN_SHIRT_STATIC_PAGE_MAP`` supplies the Product × Fabric worksheet 1:1.
+        When a logo is present, it replaces Paula's baked sample on the photo
+        mockup, Artwork plate, Graphic Sample (41 mm), and tech-pack draw,
+        recolored by Logo / graphic color. Other product families untouched.
+        """
+        import fitz
+
+        pdf_path = sun_shirts_pdf_path()
+        if pdf_path is None:
+            raise FileNotFoundError(
+                "Sun-Shirts-Mockups.pdf not found. Place it at the repo root "
+                "(or assets/templates/official/sun_shirt/) so Sun Shirt proofs "
+                "can load Paula's static pages."
+            )
+
+        fill = sun_shirt_logo_fill_rgb(job.logo_color_name)
+        mark = None
+        if logo is not None:
+            mark = self.renderer.prepare_logo(
+                logo, job.resolved_knockout(), fill_rgb=fill, hard_edge=True
+            )
+
+        product_keys = [k for k in job.product_keys if style_family(k) == "sun_shirt"]
+        if not product_keys:
+            product_keys = ["upf_hooded_sun_shirt"]
+        # Only emit worksheets whose Paula map includes the active fabric colorway.
+        matched = [
+            k for k in product_keys if sun_shirt_supports_fabric(k, job.fabric_name)
+        ]
+        product_keys = matched or product_keys[:1]
+
+        src = fitz.open(pdf_path)
+        doc = fitz.open()
+        try:
+            for product_key in product_keys:
+                page_index = resolve_sun_shirt_page_index(product_key, job.fabric_name)
+                if page_index < 0 or page_index >= src.page_count:
+                    page_index = 0 if product_key == "upf_hooded_sun_shirt" else 4
+                doc.insert_pdf(src, from_page=page_index, to_page=page_index)
+                page = doc[-1]
+                spec = self._page_spec("sun_shirt", 1)
+                self._pdf_clear_header_chip(page, spec)
+                self._pdf_overlay_header(page, spec, job)
+                self._pdf_overlay_worksheet_number(page, spec)
+                if mark is not None:
+                    self._pdf_overlay_sun_shirt_logos(page, job, mark, page_index)
+                self._pdf_overlay_sun_shirt_logo_swatch(page, job, page_index)
+        finally:
+            src.close()
+
+        place = resolve_sun_shirt_placement(job.panel_config, product_keys[0])
+        style_nums = []
+        for key in product_keys:
+            sn = (product_specs().get(key) or {}).get("style_number")
+            if sn:
+                style_nums.append(str(sn))
+        meta = doc.metadata or {}
+        meta.update(
+            {
+                "title": worksheet_filename(job.client, job.year, "sun_shirt").replace(
+                    ".pdf", ""
+                ),
+                "author": "Weatherman Virtual Mockup Creator",
+                "subject": "PRODUCTION WORKSHEET",
+                "keywords": (
+                    f"style={'+'.join(style_nums) or 'HS01'};"
+                    f"placement={place.get('label') or job.panel_config};"
+                    f"fabric={job.fabric_name};"
+                    f"logo={job.logo_color_name}"
+                ),
+            }
+        )
+        doc.set_metadata(meta)
+        out = BytesIO()
+        doc.save(out, garbage=3, deflate=True)
+        doc.close()
+        return out.getvalue()
+
+    def _pdf_overlay_sun_shirt_logos(
+        self,
+        page,
+        job: JobSpec,
+        mark: PILImage.Image,
+        page_index: int,
+    ) -> None:
+        """Stamp prepared client logo onto sun shirt photo + Artwork + GS + draw.
+
+        Photo path: heal baked sample inside the embedded photo bitmap (no disc).
+        Artwork / GS: solid wipe then stamp. Draw: local fabric-circle wipe.
+        """
+        slots = sun_shirt_overlay_slots(page_index)
+        fabric = job.fabric_rgb
+
+        photo = slots.get("photo") or {}
+        photo_box = photo.get("box")
+        if photo_box:
+            cover = photo.get("cover") or photo_box
+            # Baked into photo XObject — heal logo ink only (not bright white fabric).
+            if not self._pdf_heal_sun_shirt_photo_bitmap(page, cover, fabric):
+                self._pdf_inpaint_baked_hat_mark(page, cover)
+            self._pdf_insert_mark(
+                page,
+                photo_box,
+                mark,
+                rotate=float(photo.get("rotate") or 0.0),
+                fit_pad=float(photo.get("fit_pad") or 0.02),
+                crisp=True,
+                crisp_threshold=160,
+            )
+
+        for key in ("artwork", "gs", "draw"):
+            slot = slots.get(key) or {}
+            box = slot.get("box")
+            if not box:
+                continue
+            cover = slot.get("cover") or box
+            if key == "draw" or slot.get("wipe") == "fabric_circle":
+                # Tech-pack body fill is page-white; catalog fabric RGB is slightly
+                # off-white and reads as a gray backing square under the stamp.
+                wipe_rgb = (255, 255, 255)
+                cx, cy, cw, ch = cover
+                wiped = (cx - 1.0, cy - 1.0, cw + 2.0, ch + 2.0)
+                self._pdf_redact_fill(page, wiped, wipe_rgb)
+            else:
+                wipe_rgb = slot.get("wipe_rgb") or fabric
+                cx, cy, cw, ch = cover
+                pad = 4.0 if key == "artwork" else 2.0
+                wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
+                self._pdf_redact_fill(page, wiped, tuple(int(v) for v in wipe_rgb))
+            self._pdf_insert_mark(
+                page,
+                box,
+                mark,
+                rotate=float(slot.get("rotate") or 0.0),
+                fit_pad=float(slot.get("fit_pad") or 0.10),
+                crisp=True,
+                crisp_threshold=128,
+            )
+
+    def _pdf_heal_sun_shirt_photo_bitmap(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+        fabric_rgb: tuple[int, int, int],
+    ) -> bool:
+        """Inpaint Paula's baked chest mark inside the photo XObject.
+
+        Unlike hat heal, white/light sun-shirt fabric must NOT be treated as ink
+        (hat uses lum>=150 which would flatten the whole cover into a visible
+        square). Targets saturated logo colors on light shirts and bright marks
+        on dark shirts only.
+        """
+        import cv2
+        import fitz
+        import numpy as np
+
+        cover = self._pdf_rect(box)
+        if cover.width < 2 or cover.height < 2:
+            return False
+        doc = page.parent
+        target = None
+        img_rect = None
+        for info in page.get_images(full=True):
+            xref = int(info[0])
+            for r in page.get_image_rects(xref):
+                if r.intersects(cover) and r.width > 200 and r.height > 100:
+                    if target is None or r.width * r.height > img_rect.width * img_rect.height:
+                        target = xref
+                        img_rect = r
+        if target is None or img_rect is None:
+            return False
+
+        meta = doc.extract_image(target)
+        pil = PILImage.open(BytesIO(meta["image"])).convert("RGB")
+        arr = np.array(pil)
+        ih, iw = arr.shape[:2]
+        sx = iw / float(img_rect.width)
+        sy = ih / float(img_rect.height)
+        x0 = int(max(0, (cover.x0 - img_rect.x0) * sx))
+        y0 = int(max(0, (cover.y0 - img_rect.y0) * sy))
+        x1 = int(min(iw, (cover.x1 - img_rect.x0) * sx))
+        y1 = int(min(ih, (cover.y1 - img_rect.y0) * sy))
+        if x1 - x0 < 4 or y1 - y0 < 4:
+            return False
+
+        crop = arr[y0:y1, x0:x1].copy()
+        hh, ww = crop.shape[:2]
+        r = crop[:, :, 0].astype(np.int16)
+        g = crop[:, :, 1].astype(np.int16)
+        b = crop[:, :, 2].astype(np.int16)
+        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        band = max(2, min(hh, ww) // 8)
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        if not rim.any():
+            return False
+        med = np.median(crop[rim].astype(np.float32), axis=0)
+        fabric_lum = float(
+            0.2126 * fabric_rgb[0] + 0.7152 * fabric_rgb[1] + 0.0722 * fabric_rgb[2]
+        )
+        # Mubadala sample: red ring + navy center (+ white glyphs on dark shirts).
+        red = (r > 120) & (g < 130) & (b < 130) & (r > g + 15) & (r > b + 15)
+        navy = (b > g + 10) & (b > r + 10) & (b < 160) & (lum < 140) & (lum > 20)
+        if fabric_lum >= 160:
+            # Light shirts — only colored logo ink (never bright fabric).
+            ink = ((red | navy).astype(np.uint8) * 255)
+        else:
+            # Dark shirts — white/light glyphs + red accents.
+            bright = (lum >= 170) & (np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b) < 40)
+            ink = ((red | navy | bright).astype(np.uint8) * 255)
+        if not ink.any():
+            # Fallback: chroma vs rim fabric.
+            delta = np.linalg.norm(crop.astype(np.float32) - med, axis=2) > 35.0
+            if fabric_lum >= 160:
+                ink = (delta & (lum < 200)).astype(np.uint8) * 255
+            else:
+                ink = delta.astype(np.uint8) * 255
+        if not ink.any():
+            return False
+        ink = cv2.dilate(
+            ink, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)), iterations=2
+        )
+        cnts, _ = cv2.findContours(ink, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not cnts:
+            return False
+        (cx, cy), radius = cv2.minEnclosingCircle(max(cnts, key=cv2.contourArea))
+        radius = float(radius) + max(2.0, min(hh, ww) * 0.06)
+        mask = np.zeros((hh, ww), dtype=np.uint8)
+        cv2.circle(mask, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1)
+        mask[:band, :] = 0
+        mask[-band:, :] = 0
+        mask[:, :band] = 0
+        mask[:, -band:] = 0
+        if not mask.any():
+            return False
+        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
+        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
+        healed_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
+        # Scrub residual logo chroma only — do not flatten white fabric weave.
+        hr, hg, hb = healed_rgb[:, :, 0], healed_rgb[:, :, 1], healed_rgb[:, :, 2]
+        residual_red = (hr > 120) & (hg < 130) & (hb < 130) & (hr > hg + 15)
+        residual_navy = (hb > hg + 10) & (hb > hr + 10) & (hb < 160)
+        crumb = (mask > 0) & (residual_red | residual_navy)
+        if fabric_lum < 160:
+            hlum = 0.2126 * hr + 0.7152 * hg + 0.0722 * hb
+            crumb = crumb | ((mask > 0) & (hlum >= 170))
+        if crumb.any():
+            healed_rgb[crumb] = med.astype(np.uint8)
+        arr[y0:y1, x0:x1] = healed_rgb
+        out = PILImage.fromarray(arr, "RGB")
+        buf = BytesIO()
+        out.save(buf, format="PNG", optimize=True)
+        try:
+            page.replace_image(target, stream=buf.getvalue())
+        except Exception:
+            doc.update_stream(target, buf.getvalue())
+        return True
+
+    def _pdf_overlay_sun_shirt_logo_swatch(
+        self,
+        page,
+        job: JobSpec,
+        page_index: int,
+    ) -> None:
+        """Replace Paula's three Logo/Graphic chips with the active print color only."""
+        layout = sun_shirt_logo_swatch_layout(page_index)
+        wipe = layout.get("wipe")
+        swatch = layout.get("swatch")
+        label_box = layout.get("label")
+        if not wipe or not swatch or not label_box:
+            return
+
+        fill = sun_shirt_logo_fill_rgb(job.logo_color_name)
+        logo_rgb = (128, 128, 128) if fill is None else fill
+
+        self._pdf_redact_fill(page, wipe, (255, 255, 255))
+        self._pdf_fill_rect(page, swatch, logo_rgb)
+        if max(logo_rgb) > 210:
+            page.draw_rect(
+                self._pdf_rect(swatch),
+                color=self._pdf_rgb((35, 35, 35)),
+                fill=None,
+                width=1.0,
+            )
+        x, y, _w, h = label_box
+        page.insert_text(
+            (x, y + h * 0.72),
+            logo_sheet_label(job.logo_color_name),
+            fontsize=float(layout.get("font_pt") or 32),
+            fontname="hebo",
+            color=self._pdf_rgb(NAVY),
         )
 
     def render_standard_canvas(self, job: JobSpec, logo: PILImage.Image | None) -> bytes:

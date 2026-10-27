@@ -46,6 +46,12 @@ PONCHO_PDF_CANDIDATES = (
     TEMPLATE_DIR / "Ponchos-Mockups.pdf",
     TEMPLATE_DIR / "official" / "poncho" / "Ponchos-Mockups.pdf",
 )
+# Paula Sun Shirt worksheets (HS01 / BS01 × fabric colorways).
+SUN_SHIRT_PDF_CANDIDATES = (
+    ROOT / "Sun-Shirts-Mockups.pdf",
+    TEMPLATE_DIR / "Sun-Shirts-Mockups.pdf",
+    TEMPLATE_DIR / "official" / "sun_shirt" / "Sun-Shirts-Mockups.pdf",
+)
 # Optional JPEG sidecars (smaller Cloud checkout / lower peak RAM).
 BACKPACK_FRONT_SAGE_JPG = BACKPACK_DIR / "backpack_front_sage.jpg"
 BACKPACK_FRONT_STEEL_JPG = BACKPACK_DIR / "backpack_front_steelblue.jpg"
@@ -1956,6 +1962,317 @@ def poncho_logo_swatch_layout(page_index: int) -> dict[str, Any]:
     """Active Logo/Graphic Colors chip layout for a poncho worksheet page."""
     _ = page_index
     return dict(PONCHO_LOGO_SWATCH_LAYOUT)
+
+
+def sun_shirts_pdf_path() -> Path | None:
+    """Return the first existing Paula Sun Shirt PDF path."""
+    for path in SUN_SHIRT_PDF_CANDIDATES:
+        try:
+            if path.is_file() and path.stat().st_size > 64:
+                return path
+        except OSError:
+            continue
+    return None
+
+
+# Direct (product_key, fabric family) → 0-based page in Sun-Shirts-Mockups.pdf.
+# Base pages stay 1:1 Paula; client logo stamps use SUN_SHIRT_*_OVERLAYS only.
+SUN_SHIRT_STATIC_PAGE_MAP: dict[tuple[str, str], int] = {
+    # UPF 50+ Hooded Sun Shirt (HS01)
+    ("upf_hooded_sun_shirt", "white"): 0,
+    ("upf_hooded_sun_shirt", "navy"): 1,
+    ("upf_hooded_sun_shirt", "sage"): 2,
+    ("upf_hooded_sun_shirt", "river_mist"): 3,
+    # Bamboo UPF 20+ Sun Shirt (BS01)
+    ("bamboo_sun_shirt", "white"): 4,
+    ("bamboo_sun_shirt", "iron_sage"): 5,
+    ("bamboo_sun_shirt", "sage"): 5,  # Iron Sage alias
+    ("bamboo_sun_shirt", "river_mist"): 6,
+    ("bamboo_sun_shirt", "canyon_glow"): 7,
+}
+
+# Photo mockup sample-artwork boxes (PDF points) — measured from baked Mubadala mark.
+# cover is oversized for bitmap heal; box is the stamp size (~28–30 pt on photo).
+SUN_SHIRT_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
+    # HS01 White — cover hugs the ~28 pt circular mark (avoid flat heal square).
+    0: {
+        "box": (647.0, 973.0, 28.0, 28.0),
+        "cover": (643.0, 969.0, 36.0, 36.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # HS01 Navy
+    1: {
+        "box": (689.0, 973.0, 28.0, 28.0),
+        "cover": (685.0, 969.0, 36.0, 36.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # HS01 Sage
+    2: {
+        "box": (689.0, 973.0, 28.0, 28.0),
+        "cover": (685.0, 969.0, 36.0, 36.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # HS01 River Mist
+    3: {
+        "box": (689.0, 973.0, 28.0, 28.0),
+        "cover": (685.0, 969.0, 36.0, 36.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # BS01 White
+    4: {
+        "box": (693.0, 986.0, 30.0, 30.0),
+        "cover": (689.0, 982.0, 38.0, 38.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # BS01 Iron Sage
+    5: {
+        "box": (693.0, 986.0, 30.0, 30.0),
+        "cover": (689.0, 982.0, 38.0, 38.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # BS01 River Mist
+    6: {
+        "box": (695.0, 986.0, 30.0, 30.0),
+        "cover": (691.0, 982.0, 38.0, 38.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # BS01 Canyon Glow
+    7: {
+        "box": (694.0, 986.0, 30.0, 30.0),
+        "cover": (690.0, 982.0, 38.0, 38.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+}
+
+# Artwork callout card (right column) — wipe fabric plate, stamp client mark.
+# Frame measured from Paula black border (~1400,625,405,744); logo is left-clipped.
+SUN_SHIRT_ARTWORK_OVERLAY: dict[str, Any] = {
+    "box": (1440.0, 720.0, 340.0, 560.0),
+    "cover": (1400.0, 625.0, 410.0, 750.0),
+    "erase": "plate",
+    "rotate": 0.0,
+    "fit_pad": 0.14,
+}
+
+# Sizing & Dimensions tech-pack sample on the flat drawing (upper left chest).
+# Wipe uses local fabric sample so no rectangular backing box remains.
+SUN_SHIRT_DRAW_OVERLAYS: dict[int, dict[str, Any]] = {
+    # HS01 pages
+    0: {
+        "box": (1179.0, 2275.0, 54.0, 54.0),
+        "cover": (1172.0, 2268.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+    1: {
+        "box": (1179.0, 2275.0, 54.0, 54.0),
+        "cover": (1172.0, 2268.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+    2: {
+        "box": (1212.0, 2275.0, 54.0, 54.0),
+        "cover": (1205.0, 2268.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+    3: {
+        "box": (1179.0, 2275.0, 54.0, 54.0),
+        "cover": (1172.0, 2268.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+    # BS01 pages
+    4: {
+        "box": (1169.0, 2255.0, 54.0, 54.0),
+        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+    5: {
+        "box": (1169.0, 2255.0, 54.0, 54.0),
+        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+    6: {
+        "box": (1169.0, 2255.0, 54.0, 54.0),
+        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+    7: {
+        "box": (1169.0, 2255.0, 54.0, 54.0),
+        "cover": (1162.0, 2248.0, 68.0, 68.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe": "fabric_circle",
+    },
+}
+
+# Logo/Graphic Colors block — wipe Paula's three hardcoded chips, stamp active ink.
+# HS01 White (p0) sits lower; other HS01 pages share one band; BS01 another.
+SUN_SHIRT_LOGO_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
+    "hs01_white": {
+        "wipe": (56.0, 2095.0, 420.0, 200.0),
+        "swatch": (56.4, 2114.0, 85.0, 42.5),
+        "label": (161.0, 2109.0, 300.0, 50.0),
+        "font_pt": 32.0,
+    },
+    "hs01": {
+        "wipe": (56.0, 2045.0, 420.0, 200.0),
+        "swatch": (56.4, 2059.0, 85.0, 42.5),
+        "label": (161.0, 2054.0, 300.0, 50.0),
+        "font_pt": 32.0,
+    },
+    "bs01": {
+        "wipe": (56.0, 2030.0, 420.0, 200.0),
+        "swatch": (56.4, 2045.0, 85.0, 42.5),
+        "label": (161.0, 2040.0, 300.0, 50.0),
+        "font_pt": 32.0,
+    },
+}
+
+# Graphic Sample preview (41 × 41 mm) — white page wipe around circular mark.
+SUN_SHIRT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
+    idx: {
+        "box": (1594.0, 2240.0, 116.0, 116.0),
+        "cover": (1588.0, 2234.0, 128.0, 128.0),
+        "erase": "plate",
+        "rotate": 0.0,
+        "wipe_rgb": (255, 255, 255),
+        "fit_pad": 0.08,
+    }
+    for idx in range(8)
+}
+
+
+def _sun_shirt_fabric_family(fabric_name: str | None) -> str:
+    """Normalize fabric name to static-map key."""
+    key = _normalize_fabric_key(fabric_name)
+    if "canyon" in key:
+        return "canyon_glow"
+    if "river" in key or "mist" in key:
+        return "river_mist"
+    if "iron" in key and "sage" in key:
+        return "iron_sage"
+    if "sage" in key:
+        return "sage"
+    if "navy" in key:
+        return "navy"
+    if "white" in key:
+        return "white"
+    return "white"
+
+
+def _sun_shirt_product_key(product_key: str | None) -> str:
+    """Normalize to catalog sun shirt product key."""
+    token = " ".join(str(product_key or "").lower().replace("-", " ").split())
+    if "bamboo" in token or token in {"bs01", "bamboo_sun_shirt"}:
+        return "bamboo_sun_shirt"
+    return "upf_hooded_sun_shirt"
+
+
+def sun_shirt_supports_fabric(
+    product_key: str | None,
+    fabric_name: str | None,
+) -> bool:
+    """True when ``SUN_SHIRT_STATIC_PAGE_MAP`` has a page for this product × fabric."""
+    product = _sun_shirt_product_key(product_key)
+    fabric = _sun_shirt_fabric_family(fabric_name)
+    return (product, fabric) in SUN_SHIRT_STATIC_PAGE_MAP
+
+
+def resolve_sun_shirt_page_index(
+    product_key: str | None = None,
+    fabric_name: str | None = None,
+) -> int:
+    """0-based page index via SUN_SHIRT_STATIC_PAGE_MAP (product × fabric).
+
+    Returns the Paula worksheet index; logo stamps use ``sun_shirt_overlay_slots``.
+    """
+    product = _sun_shirt_product_key(product_key)
+    fabric = _sun_shirt_fabric_family(fabric_name)
+    if (product, fabric) in SUN_SHIRT_STATIC_PAGE_MAP:
+        return int(SUN_SHIRT_STATIC_PAGE_MAP[(product, fabric)])
+    # Fallbacks: prefer White page for the active product.
+    fallback = (product, "white")
+    if fallback in SUN_SHIRT_STATIC_PAGE_MAP:
+        return int(SUN_SHIRT_STATIC_PAGE_MAP[fallback])
+    return 0 if product == "upf_hooded_sun_shirt" else 4
+
+
+def sun_shirt_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | None:
+    """Return sun shirt Logo / graphic color fill for uploaded artwork.
+
+    - White / Black → catalog RGB
+    - Match uploaded art → ``None`` (keep native SVG colors)
+    """
+    from utils.catalog import logo_color_rgb
+
+    token = " ".join(str(logo_color_name or "").lower().replace("-", " ").split())
+    if not token or "match uploaded" in token:
+        return None
+    return logo_color_rgb(logo_color_name)
+
+
+def sun_shirt_overlay_slots(page_index: int) -> dict[str, dict[str, Any]]:
+    """Photo + Artwork + Graphic Sample + tech-pack draw stamp slots."""
+    idx = int(page_index)
+    photo = SUN_SHIRT_PHOTO_OVERLAYS.get(idx) or SUN_SHIRT_PHOTO_OVERLAYS[0]
+    gs = SUN_SHIRT_GS_OVERLAYS.get(idx) or SUN_SHIRT_GS_OVERLAYS[0]
+    slots: dict[str, dict[str, Any]] = {
+        "photo": dict(photo),
+        "artwork": dict(SUN_SHIRT_ARTWORK_OVERLAY),
+        "gs": dict(gs),
+    }
+    draw = SUN_SHIRT_DRAW_OVERLAYS.get(idx)
+    if draw:
+        slots["draw"] = dict(draw)
+    return slots
+
+
+def sun_shirt_logo_swatch_layout(page_index: int) -> dict[str, Any]:
+    """Active Logo/Graphic Colors chip layout for a sun shirt worksheet page."""
+    idx = int(page_index)
+    if idx == 0:
+        key = "hs01_white"
+    elif idx < 4:
+        key = "hs01"
+    else:
+        key = "bs01"
+    return dict(SUN_SHIRT_LOGO_SWATCH_LAYOUTS[key])
 
 
 def _resolve_local_front_photo(*candidates: Path) -> Path | None:

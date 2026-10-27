@@ -35,15 +35,16 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 112
+STAMP_VERSION = 113
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
-FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho"]
+FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho", "Sun Shirt"]
 FAMILY_KEYS = {
     "Umbrella": "umbrella",
     "Backpack": "backpack",
     "Hat": "hat",
     "Poncho": "poncho",
+    "Sun Shirt": "sun_shirt",
 }
 
 try:
@@ -58,10 +59,13 @@ try:
         logo_color_names,
         logo_knockout_mode,
         poncho_placement_labels,
+        product_specs,
         resolve_backpack_placement,
         resolve_hat_placement,
         resolve_poncho_placement,
+        resolve_sun_shirt_placement,
         style_labels,
+        sun_shirt_placement_labels,
     )
     from utils.exporter import WorksheetExporter, worksheet_filename
     from utils.project_guide import render_project_guide
@@ -71,6 +75,8 @@ try:
         resolve_backpack_v2_page_index,
         resolve_hat_page_index,
         resolve_poncho_page_index,
+        resolve_sun_shirt_page_index,
+        sun_shirts_pdf_path,
     )
     from utils.vectors import SUPPORTED_EXTS, VectorLoadError, load_artwork
 except Exception:  # noqa: BLE001 — surface Cloud import crashes on-screen
@@ -278,6 +284,29 @@ def _run_app() -> None:
                     f"{place['width_cm']:g} × {place['height_cm']:g} cm "
                     f"(Style #: 23001)."
                 )
+        elif family == "sun_shirt":
+            place_key = product_keys[0] if product_keys else "upf_hooded_sun_shirt"
+            place_labels = sun_shirt_placement_labels(place_key)
+            place_options = list(place_labels.values()) or ["Front view"]
+            panel_config = st.selectbox(
+                "Artwork placement",
+                place_options,
+                index=0 if place_options else None,
+                placeholder="Choose placement",
+                key=f"sun_shirt_place_{FORM_KEY}",
+            )
+            panel_count = 1
+            if panel_config:
+                place = resolve_sun_shirt_placement(panel_config, place_key)
+                styles = ", ".join(
+                    str(product_specs().get(k, {}).get("style_number") or k)
+                    for k in product_keys
+                ) or "HS01"
+                st.caption(
+                    f"{place['label']} · {place.get('callout') or ''} · "
+                    f"{place['width_cm']:g} × {place['height_cm']:g} cm "
+                    f"(Style #: {styles})."
+                )
         else:
             panel_config = st.selectbox(
                 "Panel configuration",
@@ -318,7 +347,7 @@ def _run_app() -> None:
         logo_options = logo_color_names(family) if family else logo_color_names()
         logo_key = f"logo_color_{FORM_KEY}_{family or 'none'}"
         # When fabric changes, pair a contrast-safe default logo ink (user can override).
-        if fabric and family in {"umbrella", "backpack", "hat", "poncho"}:
+        if fabric and family in {"umbrella", "backpack", "hat", "poncho", "sun_shirt"}:
             suggested = default_logo_color_for_fabric(fabric, family)
             pair_key = f"_logo_fabric_pair_{FORM_KEY}"
             if (
@@ -380,6 +409,8 @@ def _run_app() -> None:
         missing.append("artwork placement")
     if family == "poncho" and not panel_config:
         missing.append("artwork placement")
+    if family == "sun_shirt" and not panel_config:
+        missing.append("artwork placement")
     if not fabric:
         missing.append("fabric")
     if not logo_color:
@@ -388,6 +419,8 @@ def _run_app() -> None:
         missing.append("worksheet year")
     if family == "poncho" and ponchos_pdf_path() is None:
         missing.append("Ponchos-Mockups.pdf (missing from deploy)")
+    if family == "sun_shirt" and sun_shirts_pdf_path() is None:
+        missing.append("Sun-Shirts-Mockups.pdf (missing from deploy)")
 
     if missing:
         st.warning("Fill the job ticket to build a proof: " + ", ".join(missing) + ".")
@@ -535,6 +568,12 @@ def _run_app() -> None:
                 else ""
             )
             + (
+                f" · {resolve_sun_shirt_placement(panel_config)['width_cm']:g} × "
+                f"{resolve_sun_shirt_placement(panel_config)['height_cm']:g} cm"
+                if family == "sun_shirt" and panel_config
+                else ""
+            )
+            + (
                 f"  \n**Paula page:** Graphic Sample Option #"
                 f"{resolve_backpack_v2_page_index(panel_config, job.fabric_name) + 1}"
                 if family == "backpack" and panel_config
@@ -550,6 +589,15 @@ def _run_app() -> None:
                 f"  \n**Paula page:** Ponchos-Mockups.pdf p"
                 f"{resolve_poncho_page_index(panel_config, job.fabric_name) + 1}"
                 if family == "poncho" and panel_config
+                else ""
+            )
+            + (
+                "  \n**Paula page:** Sun-Shirts-Mockups.pdf p"
+                + ", ".join(
+                    str(resolve_sun_shirt_page_index(k, job.fabric_name) + 1)
+                    for k in product_keys
+                )
+                if family == "sun_shirt" and product_keys
                 else ""
             )
             + f"  \n**Pages ({len(page_plan)}):** {' · '.join(page_labels) or '—'}"

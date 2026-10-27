@@ -9,6 +9,7 @@
     "Production worksheet: M13-Backpack-custom-mockup-options.pdf (Venture Dry Pack 40002)",
     "Production worksheet: Hats-Mockups.pdf (Trek All-Weather Hat 40001)",
     "Production worksheet: Ponchos-Mockups.pdf (Stride Pullover Poncho 23001)",
+    "Production worksheet: Sun-Shirts-Mockups.pdf (UPF 50+ Hooded HS01, Bamboo UPF 20+ BS01)",
     "Shopify Admin: Venture Dry Pack (Accessories), Trail Hound Rain Vest (Apparel / poncho tag)",
     "Google Drive: NEW Weatherman NRF Color Reference (Oct 16, 2026) — Skyline Stripe 641 / Colorstorm 840"
   ],
@@ -56,7 +57,8 @@
       "knockout": "white",
       "families": [
         "hat",
-        "poncho"
+        "poncho",
+        "sun_shirt"
       ]
     },
     {
@@ -70,7 +72,8 @@
       "knockout": "black",
       "families": [
         "hat",
-        "poncho"
+        "poncho",
+        "sun_shirt"
       ]
     },
     {
@@ -155,7 +158,21 @@
       "category": "Core",
       "kind": "solid",
       "hex": "#A5B2A7",
-      "notes": "Stride Pullover Poncho (Ponchos-Mockups.pdf)"
+      "notes": "Stride Pullover Poncho; UPF 50+ Hooded Sun Shirt (HS01)"
+    },
+    "Iron Sage (NRF 310)": {
+      "rgb": [
+        165,
+        178,
+        167
+      ],
+      "nrf": "310",
+      "pantone": "16-5808 TCX",
+      "family": "Green",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#A5B2A7",
+      "notes": "Bamboo UPF 20+ Sun Shirt (BS01) — same NRF 310 as Sage"
     },
     "Bone (NRF 920)": {
       "rgb": [
@@ -1402,6 +1419,92 @@
         "Sage (NRF 310)",
         "Bone (NRF 920)",
         "Chocolate (NRF 201)"
+      ]
+    },
+    "upf_hooded_sun_shirt": {
+      "display_name": "UPF 50+ Hooded Sun Shirt",
+      "subtitle": "Sun Shirt",
+      "style_number": "HS01",
+      "shopify_type": "Apparel",
+      "family": "sun_shirt",
+      "worksheet_layout": "sun_shirt",
+      "canopy_panels": 1,
+      "opening": "—",
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "default_placement": "front_view",
+      "placements": {
+        "front_view": {
+          "label": "Front view",
+          "callout": "Upper left chest area on the front only",
+          "width_cm": 4.1,
+          "height_cm": 4.1,
+          "note": "Sun-Shirts-Mockups.pdf Front View Mockup · Graphic Sample 41 × 41 mm"
+        }
+      },
+      "artwork_width_cm": 4.1,
+      "artwork_height_cm": 4.1,
+      "features": [
+        "Artwork placement: Front view (upper left chest) only",
+        "Fabric color selects Sun-Shirts-Mockups.pdf colorway page for HS01",
+        "Static worksheet extract — Paula 1:1 page map"
+      ],
+      "core_colors": [
+        "White (NRF 100)",
+        "Navy (NRF 411)",
+        "Sage (NRF 310)",
+        "River Mist (NRF 452)"
+      ],
+      "all_colors": [
+        "White (NRF 100)",
+        "Navy (NRF 411)",
+        "Sage (NRF 310)",
+        "River Mist (NRF 452)"
+      ]
+    },
+    "bamboo_sun_shirt": {
+      "display_name": "Bamboo UPF 20+ Sun Shirt",
+      "subtitle": "Sun Shirt",
+      "style_number": "BS01",
+      "shopify_type": "Apparel",
+      "family": "sun_shirt",
+      "worksheet_layout": "sun_shirt",
+      "canopy_panels": 1,
+      "opening": "—",
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "default_placement": "front_view",
+      "placements": {
+        "front_view": {
+          "label": "Front view",
+          "callout": "Upper left chest area on the front only",
+          "width_cm": 4.1,
+          "height_cm": 4.1,
+          "note": "Sun-Shirts-Mockups.pdf Front View Mockup · Graphic Sample 41 × 41 mm"
+        }
+      },
+      "artwork_width_cm": 4.1,
+      "artwork_height_cm": 4.1,
+      "features": [
+        "Artwork placement: Front view (upper left chest) only",
+        "Fabric color selects Sun-Shirts-Mockups.pdf colorway page for BS01",
+        "Static worksheet extract — Paula 1:1 page map"
+      ],
+      "core_colors": [
+        "White (NRF 100)",
+        "Iron Sage (NRF 310)",
+        "River Mist (NRF 452)",
+        "Canyon Glow (NRF 711)"
+      ],
+      "all_colors": [
+        "White (NRF 100)",
+        "Iron Sage (NRF 310)",
+        "River Mist (NRF 452)",
+        "Canyon Glow (NRF 711)"
       ]
     }
   }
