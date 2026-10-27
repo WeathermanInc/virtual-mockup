@@ -270,6 +270,8 @@ PAGE_SPEC: dict[int, dict] = {
                 "cover": (760, 2488, 604, 220),
                 "erase": "flat",
                 "fit_pad": 0.14,
+                "crisp": True,
+                "crisp_threshold": 160,
             },
         ],
         "chip": (1300, 50, 618, 168),
@@ -306,6 +308,8 @@ PAGE_SPEC: dict[int, dict] = {
                 "cover": (740, 2430, 660, 220),
                 "erase": "flat",
                 "fit_pad": 0.14,
+                "crisp": True,
+                "crisp_threshold": 160,
             },
         ],
         "chip": (1300, 50, 618, 168),
@@ -541,7 +545,10 @@ class WorksheetExporter:
             fill = None
             if job.logo_color_name != "Match uploaded art":
                 fill = logo_color_rgb(job.logo_color_name)
-            mark = self.renderer.prepare_logo(logo, job.resolved_knockout(), fill_rgb=fill)
+            # Hard edges kill soft SVG AA that reads as a white halo on fabric.
+            mark = self.renderer.prepare_logo(
+                logo, job.resolved_knockout(), fill_rgb=fill, hard_edge=True
+            )
         family = self._job_family(job)
         seen: set[int] = set()
         for key in job.product_keys:
@@ -2798,7 +2805,11 @@ class WorksheetExporter:
         fit_w = max(1, int(round((w - outline_px * 2) * (1.0 - pad))))
         fit_h = max(1, int(round((h - outline_px * 2) * (1.0 - pad))))
         # Uniform scale: min(fit_w/w, fit_h/h) — preserves kerning / glyph aspect.
-        art = fit_logo_uniform(art, fit_w, fit_h, crisp=bool(slot.get("crisp")))
+        crisp = bool(slot.get("crisp")) or erase_mode == "flat"
+        crisp_thr = int(slot.get("crisp_threshold") or (160 if erase_mode == "flat" else 96))
+        art = fit_logo_uniform(
+            art, fit_w, fit_h, crisp=crisp, crisp_threshold=crisp_thr
+        )
         if outline:
             art = _outline_mark(
                 art,
@@ -2958,14 +2969,11 @@ class WorksheetExporter:
         cover: tuple[float, float, float, float],
         fabric: tuple[int, int, int],
     ) -> None:
-        """Remove baked flat-panel marks into local fabric — no rectangular plate.
+        """Wipe baked Proper / Weatherman under the stamp with local fabric fill.
 
-        After canopy recolor, sample the cover rim for the true fabric tone, then
-        replace only logo / ghost ink (pale white Proper, dark Weatherman) so the
-        client stamp sits directly on the trap fill with fabric showing through
-        letter counters.
+        Samples the recolored trap rim (not catalog RGB) so the wipe matches the
+        panel body — no ghost text and no mismatched charcoal/catalog plate.
         """
-        import cv2
         import numpy as np
 
         x, y, w, h = _pts(cover)
@@ -2979,53 +2987,44 @@ class WorksheetExporter:
         lum = rgb.mean(axis=2)
         chroma = rgb.max(axis=2) - rgb.min(axis=2)
         fabric_a = np.array(fabric, dtype=np.float32)
-        fabric_lum = float(
-            0.2126 * fabric_a[0] + 0.7152 * fabric_a[1] + 0.0722 * fabric_a[2]
-        )
 
-        band = max(4, min(hh, ww) // 10)
+        band = max(6, min(hh, ww) // 8)
         rim = np.zeros((hh, ww), dtype=bool)
         rim[:band, :] = True
         rim[-band:, :] = True
         rim[:, :band] = True
         rim[:, -band:] = True
-        # Rim fabric: near catalog fabric, or mid-tone body (skip white page / ink).
-        near_fab = np.linalg.norm(rgb - fabric_a, axis=2) < 55.0
-        body = (lum > 40) & (lum < 235) & (chroma < 70)
-        rim_fab = rim & (near_fab | body) & ~((lum > 210) & (chroma < 35))
+        # Skip white page and residual logo ink when sampling the trap tone.
+        near_fab = np.linalg.norm(rgb - fabric_a, axis=2) < 60.0
+        body = (lum > 35) & (lum < 240) & (chroma < 75)
+        pale = (lum >= 200) & (chroma < 40)
+        rim_fab = rim & (near_fab | body) & ~pale
         if int(rim_fab.sum()) >= 24:
             local = np.median(rgb[rim_fab], axis=0)
         else:
-            local = fabric_a.copy()
+            # Fallback: sample outside cover on the same row band.
+            pad = 40
+            sx0, sy0 = max(0, x0 - pad), max(0, y0)
+            sx1, sy1 = min(page.width, x1 + pad), min(page.height, y1)
+            ring = np.array(page.crop((sx0, sy0, sx1, sy1)).convert("RGB")).astype(
+                np.float32
+            )
+            rl = ring.mean(axis=2)
+            rc = ring.max(axis=2) - ring.min(axis=2)
+            ok = (rl > 35) & (rl < 240) & (rc < 75) & ~((rl >= 200) & (rc < 40))
+            local = (
+                np.median(ring[ok], axis=0)
+                if int(ok.sum()) >= 24
+                else fabric_a.copy()
+            )
 
-        delta = np.linalg.norm(rgb - local, axis=2)
-        # White / pale baked Proper (and AA) on any fabric.
-        pale = ((lum >= 175) & (chroma < 55)) | ((lum >= 200) & (chroma < 80))
-        # Dark Weatherman ghost on light panels; bright glyphs on dark panels.
-        if fabric_lum >= 150.0:
-            ink = pale | ((delta > 28.0) & (lum < float(local.mean()) - 15.0))
-        else:
-            ink = pale | ((delta > 35.0) & (lum > 110.0) & (chroma < 70))
-        mask = ink.astype(np.uint8) * 255
-        if int(mask.max()) == 0:
-            return
-        mask = cv2.dilate(
-            mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)), iterations=2
+        fill = (
+            int(round(float(local[0]))),
+            int(round(float(local[1]))),
+            int(round(float(local[2]))),
         )
-        # Inpaint from surrounding fabric — avoids a flat rectangular plate.
-        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
-        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
-        out = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
-        # Scrub residual pale crumbs to local fabric (still no full-rect fill).
-        lum2 = out.mean(axis=2)
-        chroma2 = out.max(axis=2) - out.min(axis=2)
-        crumb = (mask > 0) & (
-            ((lum2 >= 190) & (chroma2 < 45))
-            | (np.linalg.norm(out.astype(np.float32) - local, axis=2) > 40.0)
-        )
-        if crumb.any():
-            out[crumb] = local.astype(np.uint8)
-        page.paste(PILImage.fromarray(out, "RGB"), (x0, y0))
+        # Full cover wipe — removes ghost Proper; local matches recolored trap.
+        self._fill_cover(page, cover, fill)
 
     def _erase_pale_on_fabric(
         self,
