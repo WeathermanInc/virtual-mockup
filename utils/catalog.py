@@ -63,7 +63,7 @@ def style_labels(family: str | None = None) -> dict[str, str]:
     for key, spec in product_specs().items():
         if family and style_family(key) != family:
             continue
-        if style_family(key) in {"backpack", "hat"}:
+        if style_family(key) in {"backpack", "hat", "poncho"}:
             labels[key] = f"{spec['display_name']} · Style #: {spec.get('style_number')}"
             continue
         cov = spec.get("frame_coverage_in")
@@ -337,6 +337,63 @@ def fabric_inner_label(name: str) -> str | None:
     return str(inner) if inner else None
 
 
+def poncho_placements(product_key: str = "stride_pullover_poncho") -> dict[str, dict[str, Any]]:
+    """Placement modes for Stride Pullover Poncho (Style #: 23001)."""
+    spec = product_specs().get(product_key) or {}
+    raw = spec.get("placements") or {}
+    out: dict[str, dict[str, Any]] = {}
+    for key, rec in raw.items():
+        out[str(key)] = dict(rec)
+    return out
+
+
+def poncho_placement_labels(product_key: str = "stride_pullover_poncho") -> dict[str, str]:
+    """Map poncho placement key → UI label."""
+    return {
+        key: str(rec.get("label") or key.replace("_", " ").title())
+        for key, rec in poncho_placements(product_key).items()
+    }
+
+
+def resolve_poncho_placement(
+    panel_config: str | None,
+    product_key: str = "stride_pullover_poncho",
+) -> dict[str, Any]:
+    """Resolve a panel_config label/key to Stride poncho placement dims."""
+    placements = poncho_placements(product_key)
+    default_key = str(
+        (product_specs().get(product_key) or {}).get("default_placement") or "front_view"
+    )
+    token = " ".join(str(panel_config or "").lower().replace("-", " ").split())
+    key = default_key
+    if token in placements:
+        key = token
+    else:
+        for cand, rec in placements.items():
+            label = " ".join(str(rec.get("label") or "").lower().split())
+            callout = " ".join(str(rec.get("callout") or "").lower().split())
+            if token and (token == label or token == callout):
+                key = cand
+                break
+        else:
+            if "back" in token:
+                key = "back_view" if "back_view" in placements else key
+            elif "front" in token or "chest" in token:
+                key = "front_view" if "front_view" in placements else key
+    rec = dict(placements.get(key) or placements.get(default_key) or {})
+    if not rec:
+        rec = {"label": "Front view", "width_cm": 7.0, "height_cm": 7.0}
+    rec["key"] = key if key in placements else default_key
+    rec.setdefault("label", key.replace("_", " ").title())
+    rec.setdefault(
+        "callout",
+        str(rec.get("label") or key.replace("_", " ")).lower(),
+    )
+    rec.setdefault("width_cm", 7.0)
+    rec.setdefault("height_cm", 7.0)
+    return rec
+
+
 def is_light_fabric(name: str | None = None, rgb: tuple[int, int, int] | None = None) -> bool:
     """True when canopy/fabric needs a dark print ink for contrast."""
     token = " ".join(str(name or "").lower().replace("-", " ").split())
@@ -369,11 +426,11 @@ def default_logo_color_for_fabric(
 ) -> str:
     """Suggested Logo / graphic color for a fabric colorway.
 
-    Umbrella / backpack / poncho: light canopies → Pantone Black C, else White C.
-    Hats: light outers → Black, else White.
+    Umbrella / backpack: light canopies → Pantone Black C, else White C.
+    Hats / ponchos: light outers → Black, else White.
     """
     fam = str(family or "umbrella")
     light = is_light_fabric(fabric_name)
-    if fam == "hat":
+    if fam in {"hat", "poncho"}:
         return "Black" if light else "White"
     return "Pantone Black C" if light else "Pantone White C"

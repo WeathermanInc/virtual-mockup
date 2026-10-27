@@ -62,10 +62,14 @@ flowchart TB
   subgraph Hat["Hat"]
     H1[Trek All-Weather Hat · HAT_STATIC_PAGE_MAP]
   end
+  subgraph Poncho["Poncho"]
+    P1[Stride Pullover Poncho · PONCHO_STATIC_PAGE_MAP]
+  end
   Job[Selected products] --> Stick
   Job --> Golf
   Job --> Pack
   Job --> Hat
+  Job --> Poncho
 """
 
 BUILD_TIMELINE = """
@@ -80,6 +84,8 @@ timeline
   section Hats and colorways
     Oct 26 : Trek All-Weather Hat · Hats-Mockups.pdf map
            : Umbrella NRF sync · Skyline 641 · Colorstorm 840
+  section Ponchos
+    Oct 26 : Stride Pullover Poncho · Ponchos-Mockups.pdf map
 """
 
 

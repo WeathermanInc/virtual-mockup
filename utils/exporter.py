@@ -26,6 +26,7 @@ from .catalog import (
     logo_sheet_label,
     resolve_backpack_placement,
     resolve_hat_placement,
+    resolve_poncho_placement,
     style_family,
 )
 from .renderer import (
@@ -48,9 +49,14 @@ from .renderer import (
     hat_logo_swatch_layout,
     hat_overlay_slots,
     hats_pdf_path,
+    poncho_logo_fill_rgb,
+    poncho_logo_swatch_layout,
+    poncho_overlay_slots,
+    ponchos_pdf_path,
     recolor_bright_ink_inplace,
     resolve_backpack_v2_page_index,
     resolve_hat_page_index,
+    resolve_poncho_page_index,
     BACKPACK_PDF_WEATHERMAN_COVER,
 )
 
@@ -81,6 +87,7 @@ STYLE_PAGES: dict[str, list[int]] = {
     "golf_68": [2, 3, 4],
     "venture_dry_pack": [1],
     "trek_all_weather_hat": [1],
+    "stride_pullover_poncho": [1],
 }
 
 PAGE_TITLES: dict[int, str] = {
@@ -96,6 +103,10 @@ BACKPACK_TITLES: dict[int, str] = {
 
 HAT_TITLES: dict[int, str] = {
     1: "Trek All-Weather Hat",
+}
+
+PONCHO_TITLES: dict[int, str] = {
+    1: "Stride Pullover Poncho",
 }
 
 # Venture Dry Pack (style 40002) — M13 backpack worksheet, same page size as Walk.
@@ -182,6 +193,24 @@ HAT_PAGE_SPEC: dict[int, dict] = {
         },
         "worksheet_number": "3",
         # Below WORKSHEET label (y≈117); do not wipe PRODUCTION/WORKSHEET text.
+        "worksheet_number_box": (1998.0, 120.0, 70.0, 100.0),
+        "worksheet_number_pt": 93.0,
+    },
+}
+
+# Stride Pullover Poncho — header overlays on Ponchos-Mockups.pdf (logos use poncho_overlay_slots).
+PONCHO_PAGE_SPEC: dict[int, dict] = {
+    1: {
+        "size_pts": (2125.98, 3259.84),
+        "chip": _PAULA_HEADER_CHIP,
+        "clear_chip": True,
+        # Poncho sheet has Request Date / Last Update / Project owner only (no Print Order).
+        "header_fields": {
+            "request_date": (1105, 52, 185, 42),
+            "last_update": (1105, 100, 185, 42),
+            "project_owner": (1105, 148, 185, 42),
+        },
+        "worksheet_number": "4",
         "worksheet_number_box": (1998.0, 120.0, 70.0, 100.0),
         "worksheet_number_pt": 93.0,
     },
@@ -387,6 +416,8 @@ class WorksheetExporter:
             return BACKPACK_PAGE_SPEC[page_no]
         if family == "hat":
             return HAT_PAGE_SPEC.get(page_no) or HAT_PAGE_SPEC[1]
+        if family == "poncho":
+            return PONCHO_PAGE_SPEC.get(page_no) or PONCHO_PAGE_SPEC[1]
         return PAGE_SPEC[page_no]
 
     def _page_title(self, family: str, page_no: int) -> str:
@@ -394,6 +425,8 @@ class WorksheetExporter:
             return BACKPACK_TITLES.get(page_no, f"Page {page_no}")
         if family == "hat":
             return HAT_TITLES.get(page_no, f"Page {page_no}")
+        if family == "poncho":
+            return PONCHO_TITLES.get(page_no, f"Page {page_no}")
         return PAGE_TITLES.get(page_no, f"Page {page_no}")
 
     def _template(self, page_no: int, family: str = "umbrella") -> PILImage.Image:
@@ -464,6 +497,10 @@ class WorksheetExporter:
             )
         if family == "hat" and hats_pdf_path() is not None:
             return self._preview_hat_pdf_template(
+                job, logo, max_width=max_width, quality=quality
+            )
+        if family == "poncho" and ponchos_pdf_path() is not None:
+            return self._preview_poncho_pdf_template(
                 job, logo, max_width=max_width, quality=quality
             )
         return self._preview_standard_canvas(
@@ -537,6 +574,8 @@ class WorksheetExporter:
             return self.render_backpack_with_pdf_template(job, logo)
         if family == "hat":
             return self.render_hat_with_pdf_template(job, logo)
+        if family == "poncho":
+            return self.render_poncho_with_pdf_template(job, logo)
         return self.render_standard_canvas(job, logo)
 
     def _preview_hat_pdf_template(
@@ -922,8 +961,247 @@ class WorksheetExporter:
             overlay=True,
         )
 
+    def _preview_poncho_pdf_template(
+        self,
+        job: JobSpec,
+        logo: PILImage.Image | None,
+        *,
+        max_width: int = 1400,
+        quality: int = 88,
+    ) -> list[tuple[str, bytes]]:
+        """Rasterize the poncho PDF-template page for Streamlit preview."""
+        import fitz
+
+        try:
+            pdf_bytes = self.render_poncho_with_pdf_template(job, logo)
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            page = doc[0]
+            zoom = max(1.0, float(max_width) / float(page.rect.width))
+            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            img = PILImage.frombytes("RGB", (pix.width, pix.height), pix.samples)
+            if img.width > max_width:
+                ratio = max_width / img.width
+                img = img.resize(
+                    (max_width, max(1, int(img.height * ratio))),
+                    PILImage.Resampling.LANCZOS,
+                )
+            buf = BytesIO()
+            # PNG avoids JPEG mosquito noise that reads as white spray around logos.
+            img.save(buf, format="PNG", optimize=True)
+            title = self._page_title("poncho", 1)
+            return [(title, buf.getvalue())]
+        except Exception:
+            print("Exporter Error:", traceback.format_exc(), flush=True)
+            return self._preview_standard_canvas(
+                job, logo, max_width=max_width, quality=quality
+            )
+
+    def render_poncho_with_pdf_template(
+        self,
+        job: JobSpec,
+        logo: PILImage.Image | None,
+    ) -> bytes:
+        """Stride Pullover Poncho — Paula page + client logo on mockup + GS.
+
+        ``PONCHO_STATIC_PAGE_MAP`` supplies the Front/Back × Navy/Sage/Bone/Chocolate
+        worksheet 1:1. When a logo is present, it replaces Paula's baked sample
+        on the photo mockup, Artwork plate, and Graphic Sample box (7 cm),
+        recolored by Logo / graphic color. Umbrella/backpack/hat paths untouched.
+        """
+        import fitz
+
+        pdf_path = ponchos_pdf_path()
+        if pdf_path is None:
+            return self.render_standard_canvas(job, logo)
+
+        fill = poncho_logo_fill_rgb(job.logo_color_name)
+        mark = None
+        if logo is not None:
+            mark = self.renderer.prepare_logo(
+                logo, job.resolved_knockout(), fill_rgb=fill, hard_edge=True
+            )
+
+        page_index = resolve_poncho_page_index(job.panel_config, job.fabric_name)
+        src = fitz.open(pdf_path)
+        try:
+            if page_index < 0 or page_index >= src.page_count:
+                page_index = 0
+            doc = fitz.open()
+            doc.insert_pdf(src, from_page=page_index, to_page=page_index)
+        finally:
+            src.close()
+
+        page = doc[0]
+        spec = self._page_spec("poncho", 1)
+        self._pdf_clear_header_chip(page, spec)
+        self._pdf_overlay_header(page, spec, job)
+        self._pdf_overlay_worksheet_number(page, spec)
+        if mark is not None:
+            self._pdf_overlay_poncho_logos(page, job, mark, page_index)
+        self._pdf_overlay_poncho_logo_swatch(page, job, page_index)
+
+        place = resolve_poncho_placement(job.panel_config)
+        meta = doc.metadata or {}
+        meta.update(
+            {
+                "title": worksheet_filename(job.client, job.year, "poncho").replace(".pdf", ""),
+                "author": "Weatherman Virtual Mockup Creator",
+                "subject": "PRODUCTION WORKSHEET",
+                "keywords": (
+                    f"style=23001;"
+                    f"placement={place.get('label') or job.panel_config};"
+                    f"fabric={job.fabric_name};"
+                    f"logo={job.logo_color_name};"
+                    f"paula_page={page_index + 1}"
+                ),
+            }
+        )
+        doc.set_metadata(meta)
+        out = BytesIO()
+        doc.save(out, garbage=3, deflate=True)
+        doc.close()
+        return out.getvalue()
+
+    def _pdf_overlay_poncho_logos(
+        self,
+        page,
+        job: JobSpec,
+        mark: PILImage.Image,
+        page_index: int,
+    ) -> None:
+        """Stamp prepared client logo onto poncho photo + Artwork + Graphic Sample.
+
+        Photo path: Paula's chest/back samples are vector drawings on top of the
+        photo (not baked pixels), so clear with a fabric-matched circle then stamp.
+        Artwork/GS: solid fabric wipe + stamp.
+        """
+        slots = poncho_overlay_slots(page_index)
+        fabric = job.fabric_rgb
+
+        photo = slots.get("photo") or {}
+        photo_box = photo.get("box")
+        if photo_box:
+            cover = photo.get("cover") or photo_box
+            self._pdf_cover_poncho_photo_mark(page, cover)
+            self._pdf_insert_mark(
+                page,
+                photo_box,
+                mark,
+                rotate=float(photo.get("rotate") or 0.0),
+                fit_pad=float(photo.get("fit_pad") or 0.02),
+                crisp=True,
+                crisp_threshold=160,
+            )
+
+        for key in ("artwork", "gs"):
+            slot = slots.get(key) or {}
+            box = slot.get("box")
+            if not box:
+                continue
+            cover = slot.get("cover") or box
+            cx, cy, cw, ch = cover
+            pad = 2.0
+            wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
+            self._pdf_redact_fill(page, wiped, fabric)
+            self._pdf_insert_mark(
+                page,
+                box,
+                mark,
+                rotate=float(slot.get("rotate") or 0.0),
+                fit_pad=float(slot.get("fit_pad") or 0.10),
+                crisp=True,
+                crisp_threshold=128,
+            )
+
+    def _pdf_overlay_poncho_logo_swatch(
+        self,
+        page,
+        job: JobSpec,
+        page_index: int,
+    ) -> None:
+        """Replace Paula's three Logo/Graphic chips with the active print color only."""
+        layout = poncho_logo_swatch_layout(page_index)
+        wipe = layout.get("wipe")
+        swatch = layout.get("swatch")
+        label_box = layout.get("label")
+        if not wipe or not swatch or not label_box:
+            return
+
+        fill = poncho_logo_fill_rgb(job.logo_color_name)
+        logo_rgb = (128, 128, 128) if fill is None else fill
+
+        self._pdf_redact_fill(page, wipe, (255, 255, 255))
+        self._pdf_fill_rect(page, swatch, logo_rgb)
+        if max(logo_rgb) > 210:
+            page.draw_rect(
+                self._pdf_rect(swatch),
+                color=self._pdf_rgb((35, 35, 35)),
+                fill=None,
+                width=1.0,
+            )
+        x, y, _w, h = label_box
+        page.insert_text(
+            (x, y + h * 0.72),
+            logo_sheet_label(job.logo_color_name),
+            fontsize=float(layout.get("font_pt") or 32),
+            fontname="hebo",
+            color=self._pdf_rgb(NAVY),
+        )
+
+    def _pdf_cover_poncho_photo_mark(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+    ) -> None:
+        """Hide Paula's vector chest/back sample with a cloned photo-fabric patch.
+
+        Poncho marks sit as drawings above the photo XObject (not in bitmap
+        pixels). Overlay the clean photo crop over the cover box so weave and
+        lighting match exactly — no flat disc and no circular guide ring.
+        """
+        import fitz
+
+        rect = self._pdf_rect(box)
+        if rect.width < 2 or rect.height < 2:
+            return
+        doc = page.parent
+        target = None
+        img_rect = None
+        for info in page.get_images(full=True):
+            xref = int(info[0])
+            for r in page.get_image_rects(xref):
+                if r.intersects(rect) and r.width > 200 and r.height > 100:
+                    if target is None or r.width * r.height > img_rect.width * img_rect.height:
+                        target = xref
+                        img_rect = r
+        if target is None or img_rect is None:
+            return
+
+        import numpy as np
+
+        meta = doc.extract_image(target)
+        pil = PILImage.open(BytesIO(meta["image"])).convert("RGB")
+        arr = np.array(pil)
+        ih, iw = arr.shape[:2]
+        sx = iw / float(img_rect.width)
+        sy = ih / float(img_rect.height)
+        x0 = int(max(0, (rect.x0 - img_rect.x0) * sx))
+        y0 = int(max(0, (rect.y0 - img_rect.y0) * sy))
+        x1 = int(min(iw, (rect.x1 - img_rect.x0) * sx))
+        y1 = int(min(ih, (rect.y1 - img_rect.y0) * sy))
+        if x1 - x0 < 4 or y1 - y0 < 4:
+            return
+        photo_crop = PILImage.fromarray(arr[y0:y1, x0:x1], "RGB")
+        # Opaque photo clone — hides vector sample without a circular disc edge.
+        page.insert_image(
+            rect,
+            stream=self._pdf_png_bytes(photo_crop),
+            keep_proportion=False,
+            overlay=True,
+        )
+
     def render_standard_canvas(self, job: JobSpec, logo: PILImage.Image | None) -> bytes:
-        """Umbrella / poncho worksheets — full-page raster stamp via ReportLab."""
+        """Umbrella worksheets — full-page raster stamp via ReportLab."""
         buffer = BytesIO()
         family = self._job_family(job)
         first_pages = STYLE_PAGES.get(job.product_keys[0], [1]) if job.product_keys else [1]

@@ -8,6 +8,7 @@
     "Production worksheet: Proper Brands x WM Umbrella 2026 Mockup Designs v2.pdf (Venture Dry Pack 40002 placements)",
     "Production worksheet: M13-Backpack-custom-mockup-options.pdf (Venture Dry Pack 40002)",
     "Production worksheet: Hats-Mockups.pdf (Trek All-Weather Hat 40001)",
+    "Production worksheet: Ponchos-Mockups.pdf (Stride Pullover Poncho 23001)",
     "Shopify Admin: Venture Dry Pack (Accessories), Trail Hound Rain Vest (Apparel / poncho tag)",
     "Google Drive: NEW Weatherman NRF Color Reference (Oct 16, 2026) — Skyline Stripe 641 / Colorstorm 840"
   ],
@@ -27,8 +28,7 @@
       "knockout": "white",
       "families": [
         "umbrella",
-        "backpack",
-        "poncho"
+        "backpack"
       ]
     },
     {
@@ -42,8 +42,7 @@
       "knockout": "black",
       "families": [
         "umbrella",
-        "backpack",
-        "poncho"
+        "backpack"
       ]
     },
     {
@@ -56,7 +55,8 @@
       "pantone": "White",
       "knockout": "white",
       "families": [
-        "hat"
+        "hat",
+        "poncho"
       ]
     },
     {
@@ -69,7 +69,8 @@
       "pantone": "Black",
       "knockout": "black",
       "families": [
-        "hat"
+        "hat",
+        "poncho"
       ]
     },
     {
@@ -141,6 +142,48 @@
       "hex": "#E1D6C4",
       "inner_color": "Chocolate",
       "notes": "Trek All-Weather Hat outer; Chocolate inner"
+    },
+    "Sage (NRF 310)": {
+      "rgb": [
+        165,
+        178,
+        167
+      ],
+      "nrf": "310",
+      "pantone": "16-5808 TCX",
+      "family": "Green",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#A5B2A7",
+      "notes": "Stride Pullover Poncho (Ponchos-Mockups.pdf)"
+    },
+    "Bone (NRF 920)": {
+      "rgb": [
+        206,
+        202,
+        195
+      ],
+      "nrf": "920",
+      "pantone": "12-0713 TCX",
+      "family": "Neutral",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#CECAC3",
+      "notes": "Stride Pullover Poncho (Ponchos-Mockups.pdf)"
+    },
+    "Chocolate (NRF 201)": {
+      "rgb": [
+        126,
+        103,
+        95
+      ],
+      "nrf": "201",
+      "pantone": "19-1116 TCX",
+      "family": "Brown",
+      "category": "Core",
+      "kind": "solid",
+      "hex": "#7E675F",
+      "notes": "Stride Pullover Poncho (Ponchos-Mockups.pdf)"
     },
     "Navy Blue (NRF 600)": {
       "rgb": [
@@ -1309,6 +1352,56 @@
         "Navy (NRF 411)",
         "Sage (NRF 311)",
         "Bone (NRF 202)"
+      ]
+    },
+    "stride_pullover_poncho": {
+      "display_name": "Stride Pullover Poncho",
+      "subtitle": "Poncho",
+      "style_number": "23001",
+      "shopify_type": "Apparel",
+      "family": "poncho",
+      "worksheet_layout": "poncho",
+      "canopy_panels": 1,
+      "opening": "—",
+      "page_size_pts": [
+        2125.98,
+        3259.84
+      ],
+      "default_placement": "front_view",
+      "placements": {
+        "front_view": {
+          "label": "Front view",
+          "callout": "Upper right chest",
+          "width_cm": 7.0,
+          "height_cm": 7.0,
+          "note": "Ponchos-Mockups.pdf Front View Mockup · Graphic Sample 7 × 7 cm"
+        },
+        "back_view": {
+          "label": "Back view",
+          "callout": "Back",
+          "width_cm": 7.0,
+          "height_cm": 7.0,
+          "note": "Ponchos-Mockups.pdf Back View Mockup · Graphic Sample Option #2"
+        }
+      },
+      "artwork_width_cm": 7.0,
+      "artwork_height_cm": 7.0,
+      "features": [
+        "Artwork placement: Front view (upper right chest), Back view",
+        "Fabric color selects Ponchos-Mockups.pdf colorway page within each placement pair",
+        "Static worksheet extract — Paula 1:1 page map"
+      ],
+      "core_colors": [
+        "Navy (NRF 411)",
+        "Sage (NRF 310)",
+        "Bone (NRF 920)",
+        "Chocolate (NRF 201)"
+      ],
+      "all_colors": [
+        "Navy (NRF 411)",
+        "Sage (NRF 310)",
+        "Bone (NRF 920)",
+        "Chocolate (NRF 201)"
       ]
     }
   }

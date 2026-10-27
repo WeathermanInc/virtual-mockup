@@ -35,7 +35,7 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 101
+STAMP_VERSION = 107
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho"]
@@ -57,13 +57,20 @@ try:
         hat_placement_labels,
         logo_color_names,
         logo_knockout_mode,
+        poncho_placement_labels,
         resolve_backpack_placement,
         resolve_hat_placement,
+        resolve_poncho_placement,
         style_labels,
     )
     from utils.exporter import WorksheetExporter, worksheet_filename
     from utils.project_guide import render_project_guide
-    from utils.renderer import JobSpec, resolve_backpack_v2_page_index, resolve_hat_page_index
+    from utils.renderer import (
+        JobSpec,
+        resolve_backpack_v2_page_index,
+        resolve_hat_page_index,
+        resolve_poncho_page_index,
+    )
     from utils.vectors import SUPPORTED_EXTS, VectorLoadError, load_artwork
 except Exception:  # noqa: BLE001 — surface Cloud import crashes on-screen
     _import_tb = traceback.format_exc()
@@ -206,77 +213,85 @@ def _run_app() -> None:
         )
         family = FAMILY_KEYS.get(family_label or "")
 
-        if family == "poncho":
-            st.caption(
-                "No production worksheet yet. Trail Hound Rain Vest is on Shopify "
-                "(Bone / Navy / Sage). Add an official sheet to enable proofs."
-            )
-            labels = {}
-            product_keys = []
-            panel_config = None
-            panel_count = 0
-        else:
-            labels = style_labels(family) if family else {}
-            selected_labels = st.multiselect(
-                "Products",
-                options=list(labels.values()) if labels else [],
-                default=[],
-                placeholder="Choose styles" if family else "Choose a product family first",
-                key=f"products_{FORM_KEY}_{family or 'none'}",
-                disabled=not bool(labels),
-            )
-            label_to_key = {v: k for k, v in labels.items()}
-            product_keys = [label_to_key[label] for label in selected_labels]
+        labels = style_labels(family) if family else {}
+        selected_labels = st.multiselect(
+            "Products",
+            options=list(labels.values()) if labels else [],
+            default=[],
+            placeholder="Choose styles" if family else "Choose a product family first",
+            key=f"products_{FORM_KEY}_{family or 'none'}",
+            disabled=not bool(labels),
+        )
+        label_to_key = {v: k for k, v in labels.items()}
+        product_keys = [label_to_key[label] for label in selected_labels]
 
-            if family == "backpack":
-                place_labels = backpack_placement_labels("venture_dry_pack")
-                place_options = list(place_labels.values()) or ["Upper center"]
-                panel_config = st.selectbox(
-                    "Artwork placement",
-                    place_options,
-                    index=None,
-                    placeholder="Choose placement",
-                    key=f"backpack_place_{FORM_KEY}",
+        if family == "backpack":
+            place_labels = backpack_placement_labels("venture_dry_pack")
+            place_options = list(place_labels.values()) or ["Upper center"]
+            panel_config = st.selectbox(
+                "Artwork placement",
+                place_options,
+                index=None,
+                placeholder="Choose placement",
+                key=f"backpack_place_{FORM_KEY}",
+            )
+            panel_count = 1
+            if panel_config:
+                place = resolve_backpack_placement(panel_config)
+                st.caption(
+                    f"{place['label']} · {place['width_cm']:g} × {place['height_cm']:g} cm "
+                    f"(Style #: 40002)."
                 )
-                panel_count = 1
-                if panel_config:
-                    place = resolve_backpack_placement(panel_config)
-                    st.caption(
-                        f"{place['label']} · {place['width_cm']:g} × {place['height_cm']:g} cm "
-                        f"(Style #: 40002)."
-                    )
-            elif family == "hat":
-                place_labels = hat_placement_labels("trek_all_weather_hat")
-                place_options = list(place_labels.values()) or ["Side view"]
-                panel_config = st.selectbox(
-                    "Artwork placement",
-                    place_options,
-                    index=None,
-                    placeholder="Choose placement",
-                    key=f"hat_place_{FORM_KEY}",
+        elif family == "hat":
+            place_labels = hat_placement_labels("trek_all_weather_hat")
+            place_options = list(place_labels.values()) or ["Side view"]
+            panel_config = st.selectbox(
+                "Artwork placement",
+                place_options,
+                index=None,
+                placeholder="Choose placement",
+                key=f"hat_place_{FORM_KEY}",
+            )
+            panel_count = 1
+            if panel_config:
+                place = resolve_hat_placement(panel_config)
+                st.caption(
+                    f"{place['label']} · {place['width_cm']:g} × {place['height_cm']:g} cm "
+                    f"(Style #: 40001)."
                 )
-                panel_count = 1
-                if panel_config:
-                    place = resolve_hat_placement(panel_config)
-                    st.caption(
-                        f"{place['label']} · {place['width_cm']:g} × {place['height_cm']:g} cm "
-                        f"(Style #: 40001)."
-                    )
-            else:
-                panel_config = st.selectbox(
-                    "Panel configuration",
-                    PANEL_OPTIONS,
-                    index=None,
-                    placeholder="Choose panel configuration",
-                    key=f"panel_{FORM_KEY}",
-                    disabled=family != "umbrella",
+        elif family == "poncho":
+            place_labels = poncho_placement_labels("stride_pullover_poncho")
+            place_options = list(place_labels.values()) or ["Front view"]
+            panel_config = st.selectbox(
+                "Artwork placement",
+                place_options,
+                index=None,
+                placeholder="Choose placement",
+                key=f"poncho_place_{FORM_KEY}",
+            )
+            panel_count = 1
+            if panel_config:
+                place = resolve_poncho_placement(panel_config)
+                st.caption(
+                    f"{place['label']} · {place.get('callout') or ''} · "
+                    f"{place['width_cm']:g} × {place['height_cm']:g} cm "
+                    f"(Style #: 23001)."
                 )
-                panel_count = {
-                    "Standard 1 Panel": 1,
-                    "Standard 2 Panel": 2,
-                    "Standard 4 Panel": 4,
-                    "All-over 8 Panel": 8,
-                }.get(panel_config or "", 0)
+        else:
+            panel_config = st.selectbox(
+                "Panel configuration",
+                PANEL_OPTIONS,
+                index=None,
+                placeholder="Choose panel configuration",
+                key=f"panel_{FORM_KEY}",
+                disabled=family != "umbrella",
+            )
+            panel_count = {
+                "Standard 1 Panel": 1,
+                "Standard 2 Panel": 2,
+                "Standard 4 Panel": 4,
+                "All-over 8 Panel": 8,
+            }.get(panel_config or "", 0)
 
         fabric_options = fabrics_for_styles(product_keys) if product_keys else []
         if fabric_options:
@@ -354,8 +369,6 @@ def _run_app() -> None:
         missing.append("client")
     if not family:
         missing.append("product family")
-    elif family == "poncho":
-        missing.append("a poncho worksheet (not available yet)")
     if not product_keys:
         missing.append("products")
     if family == "umbrella" and not panel_config:
@@ -363,6 +376,8 @@ def _run_app() -> None:
     if family == "backpack" and not panel_config:
         missing.append("artwork placement")
     if family == "hat" and not panel_config:
+        missing.append("artwork placement")
+    if family == "poncho" and not panel_config:
         missing.append("artwork placement")
     if not fabric:
         missing.append("fabric")
@@ -503,6 +518,12 @@ def _run_app() -> None:
                 else ""
             )
             + (
+                f" · {resolve_poncho_placement(panel_config)['width_cm']:g} × "
+                f"{resolve_poncho_placement(panel_config)['height_cm']:g} cm"
+                if family == "poncho" and panel_config
+                else ""
+            )
+            + (
                 f"  \n**Paula page:** Graphic Sample Option #"
                 f"{resolve_backpack_v2_page_index(panel_config, job.fabric_name) + 1}"
                 if family == "backpack" and panel_config
@@ -512,6 +533,12 @@ def _run_app() -> None:
                 f"  \n**Paula page:** Hats-Mockups.pdf p"
                 f"{resolve_hat_page_index(panel_config, job.fabric_name) + 1}"
                 if family == "hat" and panel_config
+                else ""
+            )
+            + (
+                f"  \n**Paula page:** Ponchos-Mockups.pdf p"
+                f"{resolve_poncho_page_index(panel_config, job.fabric_name) + 1}"
+                if family == "poncho" and panel_config
                 else ""
             )
             + f"  \n**Pages ({len(page_plan)}):** {' · '.join(page_labels) or '—'}"

@@ -40,6 +40,12 @@ HAT_PDF_CANDIDATES = (
     TEMPLATE_DIR / "Hats-Mockups.pdf",
     TEMPLATE_DIR / "official" / "hat" / "Hats-Mockups.pdf",
 )
+# Paula Stride Pullover Poncho worksheets (Front / Back × Navy / Sage / Bone / Chocolate).
+PONCHO_PDF_CANDIDATES = (
+    ROOT / "Ponchos-Mockups.pdf",
+    TEMPLATE_DIR / "Ponchos-Mockups.pdf",
+    TEMPLATE_DIR / "official" / "poncho" / "Ponchos-Mockups.pdf",
+)
 # Optional JPEG sidecars (smaller Cloud checkout / lower peak RAM).
 BACKPACK_FRONT_SAGE_JPG = BACKPACK_DIR / "backpack_front_sage.jpg"
 BACKPACK_FRONT_STEEL_JPG = BACKPACK_DIR / "backpack_front_steelblue.jpg"
@@ -1653,6 +1659,247 @@ def hat_logo_swatch_layout(page_index: int) -> dict[str, Any]:
     """Active Logo/Graphic Colors chip layout for a hat worksheet page."""
     key = "front" if int(page_index) % 2 == 1 else "side"
     return dict(HAT_LOGO_SWATCH_LAYOUTS[key])
+
+
+def ponchos_pdf_path() -> Path | None:
+    """Return the first existing Paula Stride Pullover Poncho PDF path."""
+    for path in PONCHO_PDF_CANDIDATES:
+        try:
+            if path.is_file() and path.stat().st_size > 1024:
+                return path
+        except OSError:
+            continue
+    return None
+
+
+# Direct (fabric family, placement label) → 0-based page in Ponchos-Mockups.pdf.
+# Base pages stay 1:1 Paula; client logo stamps use PONCHO_*_OVERLAYS only.
+PONCHO_STATIC_PAGE_MAP: dict[tuple[str, str], int] = {
+    # Navy (NRF 411)
+    ("navy", "Front view"): 0,
+    ("navy", "Back view"): 1,
+    # Sage (NRF 310)
+    ("sage", "Front view"): 2,
+    ("sage", "Back view"): 3,
+    # Bone (NRF 920)
+    ("bone", "Front view"): 4,
+    ("bone", "Back view"): 5,
+    # Chocolate (NRF 201)
+    ("chocolate", "Front view"): 6,
+    ("chocolate", "Back view"): 7,
+}
+
+PONCHO_PAGE_MAP_BY_KEY: dict[str, int] = {
+    "front_view": 0,
+    "back_view": 1,
+}
+
+# Photo mockup sample-artwork boxes (PDF points) — Front/Back × colorways.
+# Measured from the baked Mubadala circular mark on each Ponchos-Mockups.pdf page.
+PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
+    # Navy Front — upper-right chest
+    0: {
+        "box": (433.0, 768.5, 40.0, 40.0),
+        "cover": (420.0, 755.0, 66.0, 66.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # Navy Back
+    1: {
+        "box": (1005.0, 820.0, 115.0, 115.0),
+        "cover": (990.0, 805.0, 145.0, 145.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # Sage Front
+    2: {
+        "box": (434.0, 772.5, 40.0, 40.0),
+        "cover": (421.0, 759.0, 66.0, 66.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # Sage Back
+    3: {
+        "box": (1005.0, 820.0, 115.0, 115.0),
+        "cover": (990.0, 805.0, 145.0, 145.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # Bone Front
+    4: {
+        "box": (434.0, 766.5, 40.0, 40.0),
+        "cover": (421.0, 753.0, 66.0, 66.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # Bone Back
+    5: {
+        "box": (1005.0, 820.0, 115.0, 115.0),
+        "cover": (990.0, 805.0, 145.0, 145.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # Chocolate Front
+    6: {
+        "box": (433.0, 769.5, 40.0, 40.0),
+        "cover": (420.0, 756.0, 66.0, 66.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+    # Chocolate Back
+    7: {
+        "box": (1005.0, 820.0, 115.0, 115.0),
+        "cover": (990.0, 805.0, 145.0, 145.0),
+        "erase": "photo",
+        "rotate": 0.0,
+        "fit_pad": 0.04,
+    },
+}
+
+# Artwork callout plate (right column) — shared geometry across all 8 pages.
+PONCHO_ARTWORK_OVERLAY: dict[str, Any] = {
+    "box": (1540.0, 795.0, 405.0, 405.0),
+    "cover": (1510.0, 765.0, 465.0, 465.0),
+    "erase": "plate",
+    "rotate": 0.0,
+    "fit_pad": 0.10,
+}
+
+# Logo/Graphic Colors block — wipe Paula's three hardcoded chips, stamp active ink.
+# Front (even) and Back (odd) share the same Y band on poncho sheets.
+PONCHO_LOGO_SWATCH_LAYOUT: dict[str, Any] = {
+    "wipe": (56.0, 2015.0, 420.0, 200.0),
+    "swatch": (56.4, 2027.0, 85.0, 42.5),
+    "label": (161.0, 2022.0, 300.0, 50.0),
+    "font_pt": 32.0,
+}
+
+# Graphic Sample preview boxes (PDF points) — 7 cm plate on Front; Back plate slightly smaller.
+# cover = full navy plate; box = logo stamp inset (avoids fabric-tinted rectangle).
+PONCHO_GS_OVERLAYS: dict[int, dict[str, Any]] = {
+    # Front worksheets (even)
+    0: {
+        "box": (1529.0, 2173.0, 180.0, 180.0),
+        "cover": (1518.0, 2162.0, 202.0, 202.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    2: {
+        "box": (1529.0, 2173.0, 180.0, 180.0),
+        "cover": (1518.0, 2162.0, 202.0, 202.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    4: {
+        "box": (1529.0, 2173.0, 180.0, 180.0),
+        "cover": (1518.0, 2162.0, 202.0, 202.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    6: {
+        "box": (1529.0, 2173.0, 180.0, 180.0),
+        "cover": (1518.0, 2162.0, 202.0, 202.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    # Back worksheets (odd)
+    1: {
+        "box": (1029.0, 2317.0, 167.0, 167.0),
+        "cover": (1018.0, 2306.0, 190.0, 190.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    3: {
+        "box": (1029.0, 2317.0, 167.0, 167.0),
+        "cover": (1018.0, 2306.0, 190.0, 190.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    5: {
+        "box": (1029.0, 2317.0, 167.0, 167.0),
+        "cover": (1018.0, 2306.0, 190.0, 190.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+    7: {
+        "box": (1029.0, 2317.0, 167.0, 167.0),
+        "cover": (1018.0, 2306.0, 190.0, 190.0),
+        "erase": "plate",
+        "rotate": 0.0,
+    },
+}
+
+
+def _poncho_fabric_family(fabric_name: str | None) -> str:
+    """Normalize fabric name to static-map key: navy | sage | bone | chocolate."""
+    key = _normalize_fabric_key(fabric_name)
+    if "chocolate" in key or "choc" in key:
+        return "chocolate"
+    if "bone" in key:
+        return "bone"
+    if "sage" in key:
+        return "sage"
+    return "navy"
+
+
+def resolve_poncho_page_index(
+    placement: str | None = None,
+    fabric_name: str | None = None,
+) -> int:
+    """0-based page index via PONCHO_STATIC_PAGE_MAP (fabric × placement).
+
+    Returns the Paula worksheet index; logo stamps use ``poncho_overlay_slots``.
+    """
+    from utils.catalog import resolve_poncho_placement
+
+    place = resolve_poncho_placement(placement)
+    label = str(place.get("label") or "Front view").strip()
+    fabric = _poncho_fabric_family(fabric_name)
+    if (fabric, label) in PONCHO_STATIC_PAGE_MAP:
+        return int(PONCHO_STATIC_PAGE_MAP[(fabric, label)])
+    key = str(place.get("key") or "front_view")
+    base = int(PONCHO_PAGE_MAP_BY_KEY.get(key, 0))
+    offset = {"navy": 0, "sage": 2, "bone": 4, "chocolate": 6}.get(fabric, 0)
+    return int(base + offset)
+
+
+def poncho_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | None:
+    """Return poncho Logo / graphic color fill for uploaded artwork.
+
+    - White / Black → catalog RGB
+    - Match uploaded art → ``None`` (keep native SVG colors)
+    """
+    from utils.catalog import logo_color_rgb
+
+    token = " ".join(str(logo_color_name or "").lower().replace("-", " ").split())
+    if not token or "match uploaded" in token:
+        return None
+    return logo_color_rgb(logo_color_name)
+
+
+def poncho_overlay_slots(page_index: int) -> dict[str, dict[str, Any]]:
+    """Photo mockup + Artwork plate + Graphic Sample stamp slots for a poncho page."""
+    idx = int(page_index)
+    photo = PONCHO_PHOTO_OVERLAYS.get(idx) or PONCHO_PHOTO_OVERLAYS[0]
+    gs = PONCHO_GS_OVERLAYS.get(idx) or PONCHO_GS_OVERLAYS[0]
+    return {
+        "photo": dict(photo),
+        "artwork": dict(PONCHO_ARTWORK_OVERLAY),
+        "gs": dict(gs),
+    }
+
+
+def poncho_logo_swatch_layout(page_index: int) -> dict[str, Any]:
+    """Active Logo/Graphic Colors chip layout for a poncho worksheet page."""
+    _ = page_index
+    return dict(PONCHO_LOGO_SWATCH_LAYOUT)
 
 
 def _resolve_local_front_photo(*candidates: Path) -> Path | None:
