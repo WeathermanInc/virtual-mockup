@@ -2061,13 +2061,15 @@ SUN_SHIRT_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
 }
 
 # Artwork callout card (right column) — wipe FULL fabric plate, stamp client mark.
-# Plate content bbox ~ (1350,624,456,746); cover oversized so Mubadala vectors/rings go.
+# Mubadala ink bbox spans ~ (1246,747)–(1747,1246) — left edge sticks past the
+# visible plate border (~1350), so cover must start ~1235 (not 1345) or the
+# round sample bleeds beside the client stamp.
 SUN_SHIRT_ARTWORK_OVERLAY: dict[str, Any] = {
-    "box": (1420.0, 760.0, 320.0, 480.0),
-    "cover": (1345.0, 618.0, 470.0, 760.0),
+    "box": (1410.0, 780.0, 360.0, 420.0),
+    "cover": (1235.0, 620.0, 640.0, 760.0),
     "erase": "plate",
     "rotate": 0.0,
-    "fit_pad": 0.16,
+    "fit_pad": 0.18,
 }
 
 # Sizing & Dimensions tech-pack sample on the flat drawing (upper left chest).

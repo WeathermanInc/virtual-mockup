@@ -843,12 +843,26 @@ class WorksheetExporter:
         page,
         box: tuple[float, float, float, float],
         rgb: tuple[int, int, int],
+        *,
+        remove_line_art: bool = False,
     ) -> None:
-        """Hard-remove page content inside ``box`` and fill with ``rgb``."""
+        """Hard-remove page content inside ``box`` and fill with ``rgb``.
+
+        When ``remove_line_art`` is True, also drop overlapping vector drawings
+        (needed for sun shirt Artwork plates where Paula's Mubadala is line art
+        that extends past the visible card edge).
+        """
         import fitz
 
         page.add_redact_annot(self._pdf_rect(box), fill=self._pdf_rgb(rgb))
-        page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_PIXELS)
+        if remove_line_art:
+            page.apply_redactions(
+                images=fitz.PDF_REDACT_IMAGE_PIXELS,
+                graphics=fitz.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
+                text=fitz.PDF_REDACT_TEXT_REMOVE,
+            )
+        else:
+            page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_PIXELS)
 
     def _pdf_heal_hat_photo_bitmap(
         self,
@@ -1503,16 +1517,20 @@ class WorksheetExporter:
                 continue
             cover = slot.get("cover") or box
             if key == "draw" or slot.get("wipe") == "fabric_circle":
-                # Sample local hoodie-body fill, then redact — never page-white
-                # (white wipe reads as a solid container square on navy sheets).
-                self._pdf_cover_poncho_draw_mark(page, cover, fabric)
+                # Local body sample (Paula fill ≠ catalog NRF) + strip vectors so
+                # no white/catalog-color square frames the chest stamp.
+                self._pdf_wipe_sun_shirt_draw_mark(page, cover, fabric)
             elif key == "artwork":
-                # Full plate wipe into fabric so Paula's Mubadala cannot remain.
+                # Cover must include the full Mubadala circle (ink from ~x=1246).
+                # Redact line art + paint an opaque fabric plate so nothing ghosts.
                 wipe_rgb = tuple(int(v) for v in fabric)
                 cx, cy, cw, ch = cover
-                pad = 6.0
+                pad = 4.0
                 wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
-                self._pdf_redact_fill(page, wiped, wipe_rgb)
+                self._pdf_redact_fill(
+                    page, wiped, wipe_rgb, remove_line_art=True
+                )
+                self._pdf_fill_rect(page, wiped, wipe_rgb)
             else:
                 wipe_rgb = slot.get("wipe_rgb") or fabric
                 cx, cy, cw, ch = cover
@@ -1650,6 +1668,64 @@ class WorksheetExporter:
         except Exception:
             doc.update_stream(target, buf.getvalue())
         return True
+
+    def _pdf_wipe_sun_shirt_draw_mark(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+        fabric_rgb: tuple[int, int, int],
+    ) -> None:
+        """Clear tech-pack chest sample into local hoodie-body fill.
+
+        Catalog NRF RGB often mismatches Paula's flat body (e.g. Navy 411 catalog
+        26,39,68 vs sheet ~11,32,57), so a catalog rect reads as a container box.
+        Sample the rim, redact with line-art removal, then stamp.
+        """
+        import fitz
+        import numpy as np
+
+        rect = self._pdf_rect(box)
+        if rect.width < 2 or rect.height < 2:
+            return
+        pad_pt = max(10.0, min(rect.width, rect.height) * 0.2)
+        sample = fitz.Rect(
+            rect.x0 - pad_pt,
+            rect.y0 - pad_pt,
+            rect.x1 + pad_pt,
+            rect.y1 + pad_pt,
+        )
+        zoom = 3.0
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=sample, alpha=False)
+        rgb = (
+            np.frombuffer(pix.samples, dtype=np.uint8)
+            .reshape(pix.height, pix.width, 3)
+            .copy()
+        )
+        hh, ww = int(rgb.shape[0]), int(rgb.shape[1])
+        r = rgb[:, :, 0].astype(np.int16)
+        g = rgb[:, :, 1].astype(np.int16)
+        b = rgb[:, :, 2].astype(np.int16)
+        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        band = max(3, int(pad_pt * zoom * 0.85))
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        # Skip sample mark ink and near-white page.
+        red = (r > 120) & (g < 130) & (b < 130) & (r > g + 15)
+        bright = lum >= 230
+        fabric_rim = rim & ~red & ~bright
+        if fabric_rim.any():
+            med = np.median(rgb[fabric_rim].astype(np.float32), axis=0)
+            fill = (int(med[0]), int(med[1]), int(med[2]))
+        else:
+            fill = tuple(int(v) for v in fabric_rgb)
+        # Do NOT use REMOVE_IF_TOUCHED here — the hoodie body is one large path
+        # that "touches" the chest rect and would wipe the whole garment white.
+        # Redact pixels + opaque fill on top covers the sample without killing paths.
+        self._pdf_redact_fill(page, box, fill, remove_line_art=False)
+        self._pdf_fill_rect(page, box, fill)
 
     def _pdf_overlay_sun_shirt_logo_swatch(
         self,
