@@ -1086,7 +1086,8 @@ class WorksheetExporter:
         Photo path: Paula's chest/back samples are vector drawings on top of the
         photo (not baked pixels), so clear with a photo-fabric clone then stamp.
         Artwork: wipe the FULL fabric card so nested navy rings cannot remain.
-        GS / Front tech-pack draw: solid wipe + stamp.
+        Front GS: solid plate wipe. Front draw / Back body sample: local
+        fabric-circle wipe so no catalog-color rect frames the logo.
         """
         slots = poncho_overlay_slots(page_index)
         fabric = job.fabric_rgb
@@ -1174,11 +1175,12 @@ class WorksheetExporter:
         box: tuple[float, float, float, float],
         fabric_rgb: tuple[int, int, int],
     ) -> None:
-        """Clear tech-pack sample into the local line-drawing body color.
+        """Clear tech-pack / back-body sample into local line-drawing fill.
 
-        Samples Paula's flat fill from the cover rim (catalog RGB often mismatches
-        the sheet), then redacts the sample. The transparent client mark stamps
-        next — fabric shows between glyphs with no white backing box.
+        Catalog fabric RGB often mismatches Paula's flat body, so a rectangular
+        wipe reads as a darker container box. Sample body color from a ring
+        outside the baked mark, redact, then stamp a hard circle of that fill
+        so no square edge remains under the transparent client logo.
         """
         import fitz
         import numpy as np
@@ -1186,8 +1188,16 @@ class WorksheetExporter:
         rect = self._pdf_rect(box)
         if rect.width < 2 or rect.height < 2:
             return
-        zoom = 4.0
-        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=rect, alpha=False)
+        # Expand sample clip so the rim sits on clean body, not on the mark ring.
+        pad_pt = max(12.0, min(rect.width, rect.height) * 0.18)
+        sample = fitz.Rect(
+            rect.x0 - pad_pt,
+            rect.y0 - pad_pt,
+            rect.x1 + pad_pt,
+            rect.y1 + pad_pt,
+        )
+        zoom = 3.0
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=sample, alpha=False)
         rgb = (
             np.frombuffer(pix.samples, dtype=np.uint8)
             .reshape(pix.height, pix.width, 3)
@@ -1198,7 +1208,8 @@ class WorksheetExporter:
         g = rgb[:, :, 1].astype(np.int16)
         b = rgb[:, :, 2].astype(np.int16)
         lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        band = max(2, min(hh, ww) // 8)
+        # Outer band of the expanded clip = poncho body; exclude mark ink.
+        band = max(3, int(pad_pt * zoom * 0.85))
         rim = np.zeros((hh, ww), dtype=bool)
         rim[:band, :] = True
         rim[-band:, :] = True
@@ -1206,12 +1217,16 @@ class WorksheetExporter:
         rim[:, -band:] = True
         red = (r > 120) & (g < 130) & (b < 130) & (r > g + 15)
         bright = lum >= 200
-        fabric_rim = rim & ~red & ~bright
+        # Also skip near-white plate rings baked into the sample.
+        fabric_rim = rim & ~red & ~bright & (lum < 190)
         if fabric_rim.any():
             med = np.median(rgb[fabric_rim].astype(np.float32), axis=0)
             fill = (int(med[0]), int(med[1]), int(med[2]))
         else:
             fill = tuple(int(v) for v in fabric_rgb)
+
+        # Redact into sampled body color only — a hard circle overlay left a
+        # 1px ring, and catalog RGB left a visible square. Matched fill blends.
         self._pdf_redact_fill(page, box, fill)
 
     def _pdf_cover_poncho_photo_mark(

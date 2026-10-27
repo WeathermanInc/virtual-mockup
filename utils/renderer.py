@@ -1851,30 +1851,40 @@ PONCHO_GS_OVERLAYS: dict[int, dict[str, Any]] = {
         "erase": "plate",
         "rotate": 0.0,
     },
-    # Back worksheets (odd)
+    # Back worksheets (odd) — sample sits ON the tech-pack body (not a side plate).
+    # wipe=fabric_circle samples local body fill so no catalog-color rect shows.
+    # cover oversized past Paula's outer ring (~184 pt) so no ghost circle remains.
     1: {
-        "box": (1029.0, 2317.0, 167.0, 167.0),
-        "cover": (1018.0, 2306.0, 190.0, 190.0),
-        "erase": "plate",
+        "box": (1048.0, 2338.0, 128.0, 128.0),
+        "cover": (1012.0, 2300.0, 200.0, 200.0),
+        "erase": "draw",
         "rotate": 0.0,
+        "fit_pad": 0.08,
+        "wipe": "fabric_circle",
     },
     3: {
-        "box": (1029.0, 2317.0, 167.0, 167.0),
-        "cover": (1018.0, 2306.0, 190.0, 190.0),
-        "erase": "plate",
+        "box": (1048.0, 2338.0, 128.0, 128.0),
+        "cover": (1012.0, 2300.0, 200.0, 200.0),
+        "erase": "draw",
         "rotate": 0.0,
+        "fit_pad": 0.08,
+        "wipe": "fabric_circle",
     },
     5: {
-        "box": (1029.0, 2317.0, 167.0, 167.0),
-        "cover": (1018.0, 2306.0, 190.0, 190.0),
-        "erase": "plate",
+        "box": (1048.0, 2338.0, 128.0, 128.0),
+        "cover": (1012.0, 2300.0, 200.0, 200.0),
+        "erase": "draw",
         "rotate": 0.0,
+        "fit_pad": 0.08,
+        "wipe": "fabric_circle",
     },
     7: {
-        "box": (1029.0, 2317.0, 167.0, 167.0),
-        "cover": (1018.0, 2306.0, 190.0, 190.0),
-        "erase": "plate",
+        "box": (1048.0, 2338.0, 128.0, 128.0),
+        "cover": (1012.0, 2300.0, 200.0, 200.0),
+        "erase": "draw",
         "rotate": 0.0,
+        "fit_pad": 0.08,
+        "wipe": "fabric_circle",
     },
 }
 
