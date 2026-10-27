@@ -1081,11 +1081,12 @@ class WorksheetExporter:
         mark: PILImage.Image,
         page_index: int,
     ) -> None:
-        """Stamp prepared client logo onto poncho photo + Artwork + Graphic Sample.
+        """Stamp prepared client logo onto poncho photo + Artwork + GS (+ Front draw).
 
         Photo path: Paula's chest/back samples are vector drawings on top of the
-        photo (not baked pixels), so clear with a fabric-matched circle then stamp.
-        Artwork/GS: solid fabric wipe + stamp.
+        photo (not baked pixels), so clear with a photo-fabric clone then stamp.
+        Artwork: wipe the FULL fabric card so nested navy rings cannot remain.
+        GS / Front tech-pack draw: solid wipe + stamp.
         """
         slots = poncho_overlay_slots(page_index)
         fabric = job.fabric_rgb
@@ -1094,6 +1095,8 @@ class WorksheetExporter:
         photo_box = photo.get("box")
         if photo_box:
             cover = photo.get("cover") or photo_box
+            # Clone pristine photo weave over the vector sample (do not redact the
+            # XObject first — that would flatten the patch to solid fabric).
             self._pdf_cover_poncho_photo_mark(page, cover)
             self._pdf_insert_mark(
                 page,
@@ -1105,16 +1108,17 @@ class WorksheetExporter:
                 crisp_threshold=160,
             )
 
-        for key in ("artwork", "gs"):
+        for key in ("artwork", "gs", "draw"):
             slot = slots.get(key) or {}
             box = slot.get("box")
             if not box:
                 continue
             cover = slot.get("cover") or box
+            wipe_rgb = slot.get("wipe_rgb") or fabric
             cx, cy, cw, ch = cover
-            pad = 2.0
+            pad = 4.0 if key == "artwork" else 2.0
             wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
-            self._pdf_redact_fill(page, wiped, fabric)
+            self._pdf_redact_fill(page, wiped, tuple(int(v) for v in wipe_rgb))
             self._pdf_insert_mark(
                 page,
                 box,

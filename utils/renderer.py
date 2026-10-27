@@ -1696,11 +1696,12 @@ PONCHO_PAGE_MAP_BY_KEY: dict[str, int] = {
 
 # Photo mockup sample-artwork boxes (PDF points) — Front/Back × colorways.
 # Measured from the baked Mubadala circular mark on each Ponchos-Mockups.pdf page.
+# cover is oversized so outer white/navy rings do not leave a ghost disc.
 PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Navy Front — upper-right chest
     0: {
         "box": (433.0, 768.5, 40.0, 40.0),
-        "cover": (420.0, 755.0, 66.0, 66.0),
+        "cover": (412.0, 748.0, 84.0, 84.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
@@ -1708,7 +1709,7 @@ PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Navy Back
     1: {
         "box": (1005.0, 820.0, 115.0, 115.0),
-        "cover": (990.0, 805.0, 145.0, 145.0),
+        "cover": (980.0, 795.0, 165.0, 165.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
@@ -1716,7 +1717,7 @@ PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Sage Front
     2: {
         "box": (434.0, 772.5, 40.0, 40.0),
-        "cover": (421.0, 759.0, 66.0, 66.0),
+        "cover": (413.0, 752.0, 84.0, 84.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
@@ -1724,7 +1725,7 @@ PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Sage Back
     3: {
         "box": (1005.0, 820.0, 115.0, 115.0),
-        "cover": (990.0, 805.0, 145.0, 145.0),
+        "cover": (980.0, 795.0, 165.0, 165.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
@@ -1732,7 +1733,7 @@ PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Bone Front
     4: {
         "box": (434.0, 766.5, 40.0, 40.0),
-        "cover": (421.0, 753.0, 66.0, 66.0),
+        "cover": (413.0, 746.0, 84.0, 84.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
@@ -1740,7 +1741,7 @@ PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Bone Back
     5: {
         "box": (1005.0, 820.0, 115.0, 115.0),
-        "cover": (990.0, 805.0, 145.0, 145.0),
+        "cover": (980.0, 795.0, 165.0, 165.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
@@ -1748,7 +1749,7 @@ PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Chocolate Front
     6: {
         "box": (433.0, 769.5, 40.0, 40.0),
-        "cover": (420.0, 756.0, 66.0, 66.0),
+        "cover": (412.0, 749.0, 84.0, 84.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
@@ -1756,20 +1757,59 @@ PONCHO_PHOTO_OVERLAYS: dict[int, dict[str, Any]] = {
     # Chocolate Back
     7: {
         "box": (1005.0, 820.0, 115.0, 115.0),
-        "cover": (990.0, 805.0, 145.0, 145.0),
+        "cover": (980.0, 795.0, 165.0, 165.0),
         "erase": "photo",
         "rotate": 0.0,
         "fit_pad": 0.04,
     },
 }
 
-# Artwork callout plate (right column) — shared geometry across all 8 pages.
+# Artwork callout card (right column) — wipe the FULL fabric plate so nested navy
+# circle rings cannot peek past a tight inset cover.
+# Card geometry from Paula: (1436, 625.9, 613.5, 742.4); outer sample ring ~500 pt.
 PONCHO_ARTWORK_OVERLAY: dict[str, Any] = {
-    "box": (1540.0, 795.0, 405.0, 405.0),
-    "cover": (1510.0, 765.0, 465.0, 465.0),
+    "box": (1516.0, 820.0, 453.0, 453.0),
+    "cover": (1436.0, 626.0, 614.0, 742.0),
     "erase": "plate",
     "rotate": 0.0,
-    "fit_pad": 0.10,
+    "fit_pad": 0.16,
+}
+
+# Sizing & Dimensions line-drawing sample (Front worksheets only).
+# Back worksheets put the sample inside the Graphic Sample plate instead.
+PONCHO_DRAW_OVERLAYS: dict[int, dict[str, Any]] = {
+    0: {
+        "box": (1048.0, 2245.0, 56.0, 56.0),
+        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe_rgb": (255, 255, 255),
+    },
+    2: {
+        "box": (1048.0, 2245.0, 56.0, 56.0),
+        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe_rgb": (255, 255, 255),
+    },
+    4: {
+        "box": (1048.0, 2245.0, 56.0, 56.0),
+        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe_rgb": (255, 255, 255),
+    },
+    6: {
+        "box": (1048.0, 2245.0, 56.0, 56.0),
+        "cover": (1038.0, 2232.0, 80.0, 80.0),
+        "erase": "draw",
+        "rotate": 0.0,
+        "fit_pad": 0.06,
+        "wipe_rgb": (255, 255, 255),
+    },
 }
 
 # Logo/Graphic Colors block — wipe Paula's three hardcoded chips, stamp active ink.
@@ -1885,15 +1925,19 @@ def poncho_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | 
 
 
 def poncho_overlay_slots(page_index: int) -> dict[str, dict[str, Any]]:
-    """Photo mockup + Artwork plate + Graphic Sample stamp slots for a poncho page."""
+    """Photo mockup + Artwork plate + Graphic Sample (+ Front draw) stamp slots."""
     idx = int(page_index)
     photo = PONCHO_PHOTO_OVERLAYS.get(idx) or PONCHO_PHOTO_OVERLAYS[0]
     gs = PONCHO_GS_OVERLAYS.get(idx) or PONCHO_GS_OVERLAYS[0]
-    return {
+    slots: dict[str, dict[str, Any]] = {
         "photo": dict(photo),
         "artwork": dict(PONCHO_ARTWORK_OVERLAY),
         "gs": dict(gs),
     }
+    draw = PONCHO_DRAW_OVERLAYS.get(idx)
+    if draw:
+        slots["draw"] = dict(draw)
+    return slots
 
 
 def poncho_logo_swatch_layout(page_index: int) -> dict[str, Any]:
