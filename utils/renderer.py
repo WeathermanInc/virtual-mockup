@@ -413,12 +413,17 @@ class MockupRenderer:
         logo: Image.Image,
         knockout: bool | str = True,
         fill_rgb: tuple[int, int, int] | None = None,
+        *,
+        hard_edge: bool = False,
     ) -> Image.Image:
         """Isolate the mark and fill it with White C, Black C, or a given print color.
 
         White artwork (Pantone White C / knockout white) is forced to pure ``#FFFFFF``
         using the alpha channel only — no luminance recolor or blend filters that
         can edge-bleed or tint white client SVGs.
+
+        ``hard_edge`` drops soft SVG AA fringe (hat photo stamps) so white ink
+        does not read as a spray/halo on dark fabric.
         """
         img = logo.convert("RGBA")
         if knockout is True:
@@ -428,12 +433,14 @@ class MockupRenderer:
         else:
             mode = str(knockout or "none")
         if fill_rgb is None and mode not in {"white", "black"}:
+            if hard_edge:
+                return self._harden_mark_alpha(img)
             return img
 
         arr = np.array(img)
         rgb = arr[:, :, :3].astype(np.float32)
         alpha = arr[:, :, 3].astype(np.float32) / 255.0
-        opaque = alpha > 0.08
+        opaque = alpha > (0.35 if hard_edge else 0.08)
         if not np.any(opaque):
             return img
 
@@ -454,9 +461,13 @@ class MockupRenderer:
             out[:, :, 0] = 255
             out[:, :, 1] = 255
             out[:, :, 2] = 255
-            hard = np.where(ink & (alpha >= 0.28), 255.0, 0.0)
-            soft = np.where(ink & (alpha >= 0.08) & (alpha < 0.28), alpha * 255.0, 0.0)
-            out[:, :, 3] = np.clip(np.maximum(hard, soft), 0, 255).astype(np.uint8)
+            if hard_edge:
+                # Binary alpha — no soft fringe / white spray on navy hat photos.
+                out[:, :, 3] = np.where(ink & (alpha >= 0.40), 255, 0).astype(np.uint8)
+            else:
+                hard = np.where(ink & (alpha >= 0.28), 255.0, 0.0)
+                soft = np.where(ink & (alpha >= 0.08) & (alpha < 0.28), alpha * 255.0, 0.0)
+                out[:, :, 3] = np.clip(np.maximum(hard, soft), 0, 255).astype(np.uint8)
             prepared = Image.fromarray(out)
             bbox = prepared.getchannel("A").getbbox()
             return prepared.crop(bbox) if bbox else prepared
@@ -479,10 +490,25 @@ class MockupRenderer:
         out[:, :, 0] = int(fill[0])
         out[:, :, 1] = int(fill[1])
         out[:, :, 2] = int(fill[2])
-        out[:, :, 3] = np.clip(np.where(ink, alpha, 0.0) * 255.0, 0, 255).astype(np.uint8)
+        if hard_edge:
+            out[:, :, 3] = np.where(ink & (alpha >= 0.40), 255, 0).astype(np.uint8)
+        else:
+            out[:, :, 3] = np.clip(np.where(ink, alpha, 0.0) * 255.0, 0, 255).astype(
+                np.uint8
+            )
         prepared = Image.fromarray(out)
         bbox = prepared.getchannel("A").getbbox()
         return prepared.crop(bbox) if bbox else prepared
+
+    @staticmethod
+    def _harden_mark_alpha(logo: Image.Image, threshold: int = 140) -> Image.Image:
+        """Binary-ize alpha so soft AA cannot spray onto dark fabric."""
+        img = logo.convert("RGBA")
+        arr = np.array(img)
+        arr[:, :, 3] = np.where(arr[:, :, 3] < int(threshold), 0, 255).astype(np.uint8)
+        out = Image.fromarray(arr, "RGBA")
+        bbox = out.getchannel("A").getbbox()
+        return out.crop(bbox) if bbox else out
 
     @staticmethod
     def _drop_border_background(ink: np.ndarray) -> np.ndarray:
@@ -1098,16 +1124,20 @@ def fit_logo_uniform(
     max_h: int,
     *,
     crisp: bool = False,
+    crisp_threshold: int = 96,
 ) -> Image.Image:
     """Scale logo with ``min(max_w/w, max_h/h)`` so kerning and aspect stay intact.
 
     When ``crisp`` is True, alpha is hardened after resize so LANCZOS fringe
-    does not feather the mark into the plate (Artwork callout).
+    does not feather the mark into the plate (Artwork callout). Hat photo stamps
+    pass a high ``crisp_threshold`` and use NEAREST scale so soft AA cannot
+    inflate into opaque white spray on navy fabric.
     """
     img = logo.convert("RGBA")
     if img.width < 1 or img.height < 1:
         return img
     scale = min(max(1, int(max_w)) / img.width, max(1, int(max_h)) / img.height)
+    hard = bool(crisp) and int(crisp_threshold) >= 140
     if scale >= 0.999 and img.width <= max_w and img.height <= max_h:
         out = img
     else:
@@ -1116,12 +1146,16 @@ def fit_logo_uniform(
         if nh > max_h:
             nh = max(1, int(max_h))
             nw = max(1, int(round(nh * img.width / img.height)))
-        out = img.resize((nw, nh), Image.Resampling.LANCZOS)
+        # NEAREST preserves binary alpha; LANCZOS reintroduces soft fringe.
+        resample = Image.Resampling.NEAREST if hard else Image.Resampling.LANCZOS
+        out = img.resize((nw, nh), resample)
     if crisp:
         arr = np.array(out)
         alpha = arr[:, :, 3]
-        # Drop soft fringe; keep near-opaque ink fully solid.
-        arr[:, :, 3] = np.where(alpha < 96, 0, 255).astype(np.uint8)
+        cut = max(1, min(250, int(crisp_threshold)))
+        # Drop soft fringe; keep near-opaque ink fully solid (no mid-alpha spray).
+        solid = alpha >= cut
+        arr[:, :, 3] = np.where(solid, 255, 0).astype(np.uint8)
         out = Image.fromarray(arr, "RGBA")
     return out
 
@@ -1596,7 +1630,7 @@ def resolve_hat_page_index(
 def hat_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | None:
     """Return hat Logo / graphic color fill for uploaded artwork.
 
-    - Pantone 2767 C / 1795 C / White → catalog RGB
+    - White / Black → catalog RGB
     - Match uploaded art → ``None`` (keep native SVG colors)
     """
     from utils.catalog import logo_color_rgb

@@ -128,16 +128,14 @@ def fabric_sheet_label(name: str) -> str:
 
 
 def logo_sheet_label(name: str) -> str:
-    """Logo/Graphic Colors label — Pantone White/Black C, hat inks, or Match art."""
+    """Logo/Graphic Colors label — Pantone White/Black C, hat White/Black, or Match art."""
     token = " ".join(str(name or "").lower().replace("-", " ").split())
     if "match uploaded" in token:
         return "Match uploaded art"
-    if "2767" in token:
-        return "Pantone 2767 C"
-    if "1795" in token:
-        return "Pantone 1795 C"
     if token == "white":
         return "White"
+    if token == "black":
+        return "Black"
     if "white" in token:
         return "Pantone White C"
     if "black" in token:
@@ -372,10 +370,10 @@ def default_logo_color_for_fabric(
     """Suggested Logo / graphic color for a fabric colorway.
 
     Umbrella / backpack / poncho: light canopies → Pantone Black C, else White C.
-    Hats: light outers → Pantone 2767 C, else White.
+    Hats: light outers → Black, else White.
     """
     fam = str(family or "umbrella")
     light = is_light_fabric(fabric_name)
     if fam == "hat":
-        return "Pantone 2767 C" if light else "White"
+        return "Black" if light else "White"
     return "Pantone Black C" if light else "Pantone White C"

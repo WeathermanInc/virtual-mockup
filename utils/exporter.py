@@ -538,7 +538,8 @@ class WorksheetExporter:
                     PILImage.Resampling.LANCZOS,
                 )
             buf = BytesIO()
-            img.save(buf, format="JPEG", quality=quality, optimize=True)
+            # PNG avoids JPEG mosquito noise that reads as white spray around logos.
+            img.save(buf, format="PNG", optimize=True)
             title = self._page_title("hat", 1)
             return [(title, buf.getvalue())]
         except Exception:
@@ -568,8 +569,9 @@ class WorksheetExporter:
         fill = hat_logo_fill_rgb(job.logo_color_name)
         mark = None
         if logo is not None:
+            # Hard edges kill soft SVG AA that reads as white spray on navy photos.
             mark = self.renderer.prepare_logo(
-                logo, job.resolved_knockout(), fill_rgb=fill
+                logo, job.resolved_knockout(), fill_rgb=fill, hard_edge=True
             )
 
         page_index = resolve_hat_page_index(job.panel_config, job.fabric_name)
@@ -639,6 +641,7 @@ class WorksheetExporter:
                 rotate=float(photo.get("rotate") or 0.0),
                 fit_pad=float(photo.get("fit_pad") or 0.02),
                 crisp=True,
+                crisp_threshold=160,
             )
 
         gs = slots.get("gs") or {}
@@ -658,6 +661,7 @@ class WorksheetExporter:
                 rotate=float(gs.get("rotate") or 0.0),
                 fit_pad=0.10,
                 crisp=True,
+                crisp_threshold=128,
             )
 
     def _pdf_overlay_hat_logo_swatch(
@@ -796,9 +800,11 @@ class WorksheetExporter:
         # Scrub any leftover bright/red crumbs to local fabric.
         hr, hg, hb = healed_rgb[:, :, 0], healed_rgb[:, :, 1], healed_rgb[:, :, 2]
         hlum = 0.2126 * hr + 0.7152 * hg + 0.0722 * hb
+        # Scrub bright/red crumbs — leftover sample AA reads as white spray under the stamp.
         crumb = (mask > 0) & (
-            (hlum >= 145)
-            | ((hr > 120) & (hg < 125) & (hb < 125) & (hr > hg + 20))
+            (hlum >= 120)
+            | ((hr > 110) & (hg < 130) & (hb < 130) & (hr > hg + 15))
+            | (np.abs(healed_rgb.astype(np.float32) - med).sum(axis=2) > 28)
         )
         healed_rgb[crumb] = med.astype(np.uint8)
         arr[y0:y1, x0:x1] = healed_rgb
@@ -1006,6 +1012,7 @@ class WorksheetExporter:
         rotate: float = 0.0,
         fit_pad: float = 0.0,
         crisp: bool = False,
+        crisp_threshold: int = 96,
     ) -> PILImage.Image | None:
         """Fit/rotate a prepared mark into a PDF-point box; returns RGBA at ~2× for sharpness."""
         _x, _y, w, h = box
@@ -1023,7 +1030,9 @@ class WorksheetExporter:
         # Render at template DPI so vector pages stay crisp when zoomed.
         px_w = max(1, int(round(w * (1.0 - pad) * SCALE)))
         px_h = max(1, int(round(h * (1.0 - pad) * SCALE)))
-        return fit_logo_uniform(art, px_w, px_h, crisp=crisp)
+        return fit_logo_uniform(
+            art, px_w, px_h, crisp=crisp, crisp_threshold=crisp_threshold
+        )
 
     def _pdf_insert_mark(
         self,
@@ -1034,11 +1043,17 @@ class WorksheetExporter:
         rotate: float = 0.0,
         fit_pad: float = 0.0,
         crisp: bool = False,
+        crisp_threshold: int = 96,
     ) -> None:
         if mark is None:
             return
         fitted = self._pdf_fitted_mark(
-            mark, box, rotate=rotate, fit_pad=fit_pad, crisp=crisp
+            mark,
+            box,
+            rotate=rotate,
+            fit_pad=fit_pad,
+            crisp=crisp,
+            crisp_threshold=crisp_threshold,
         )
         if fitted is None:
             return

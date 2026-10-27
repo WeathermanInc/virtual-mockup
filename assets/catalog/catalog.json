@@ -47,32 +47,6 @@
       ]
     },
     {
-      "name": "Pantone 2767 C",
-      "rgb": [
-        0,
-        32,
-        91
-      ],
-      "pantone": "2767 C",
-      "knockout": "black",
-      "families": [
-        "hat"
-      ]
-    },
-    {
-      "name": "Pantone 1795 C",
-      "rgb": [
-        213,
-        0,
-        50
-      ],
-      "pantone": "1795 C",
-      "knockout": "none",
-      "families": [
-        "hat"
-      ]
-    },
-    {
       "name": "White",
       "rgb": [
         255,
@@ -81,6 +55,19 @@
       ],
       "pantone": "White",
       "knockout": "white",
+      "families": [
+        "hat"
+      ]
+    },
+    {
+      "name": "Black",
+      "rgb": [
+        45,
+        41,
+        38
+      ],
+      "pantone": "Black",
+      "knockout": "black",
       "families": [
         "hat"
       ]
