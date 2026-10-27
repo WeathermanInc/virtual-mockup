@@ -116,6 +116,9 @@ _dx, _dy, _dw, _dh = _BACKPACK_DRAW_BOX
 # Generous cover so baked sample marks are fully cleared for either placement.
 _BACKPACK_DRAW_COVER = (_dx - 55.0, _dy - 45.0, _dw + 110.0, _dh + 90.0)
 
+# Paula navy project-chip rectangle (shared geometry on Venture + Hat worksheets).
+_PAULA_HEADER_CHIP = (1309.0, 59.5, 596.0, 152.5)
+
 BACKPACK_PAGE_SPEC: dict[int, dict] = {
     1: {
         "size_pts": (2125.98, 3259.84),
@@ -143,7 +146,9 @@ BACKPACK_PAGE_SPEC: dict[int, dict] = {
                 "clear_default": True,
             },
         ],
-        "chip": (1308.0, 58.0, 597.0, 155.0),
+        # Cleared to HEADER_BG — do not paint a navy client chip over Paula.
+        "chip": _PAULA_HEADER_CHIP,
+        "clear_chip": True,
         "header_fields": {
             "request_date": (1105, 42, 195, 42),
             "last_update": (1105, 90, 195, 42),
@@ -163,6 +168,25 @@ BACKPACK_PAGE_SPEC: dict[int, dict] = {
     },
 }
 
+# Trek All-Weather Hat — header overlays on Hats-Mockups.pdf (logos use hat_overlay_slots).
+HAT_PAGE_SPEC: dict[int, dict] = {
+    1: {
+        "size_pts": (2125.98, 3259.84),
+        "chip": _PAULA_HEADER_CHIP,
+        "clear_chip": True,
+        "header_fields": {
+            "request_date": (1110, 40, 185, 40),
+            "last_update": (1110, 88, 185, 40),
+            "project_owner": (1110, 136, 185, 40),
+            "print_order": (1110, 184, 185, 40),
+        },
+        "worksheet_number": "3",
+        # Below WORKSHEET label (y≈117); do not wipe PRODUCTION/WORKSHEET text.
+        "worksheet_number_box": (1998.0, 120.0, 70.0, 100.0),
+        "worksheet_number_pt": 93.0,
+    },
+}
+
 # Coordinates are PDF points at 72 dpi (page-1 = 2126×3260, golf = 2126×3544).
 # `box` is the fitted logo; `cover` is inpainted so original ink leaves no patch.
 PAGE_SPEC: dict[int, dict] = {
@@ -174,16 +198,22 @@ PAGE_SPEC: dict[int, dict] = {
             # Closed-sleeve wordmark — clone neighboring fabric after recolor (no rectangle).
             # Cover spans the Weatherman icon + wordmark; stop short of the ferrule.
             {"box": (670, 1410, 170, 24), "cover": (595, 1385, 305, 75), "erase": "sleeve"},
-            # Flat panel sample logo band.
-            {"box": (758, 2504, 610, 165), "cover": (742, 2488, 644, 200), "erase": "flat"},
+            # Flat panel sample logo band — cover includes Weatherman ghost below Proper.
+            {"box": (758, 2504, 610, 165), "cover": (742, 2475, 644, 280), "erase": "flat"},
         ],
         "chip": (1300, 50, 618, 168),
+        "clear_chip": True,
         "header_fields": {
-            "request_date": (1105, 48, 160, 30),
-            "last_update": (1105, 95, 160, 32),
-            "project_owner": (1105, 143, 160, 32),
-            "print_order": (1105, 190, 160, 32),
+            "request_date": (1105, 45, 190, 36),
+            "last_update": (1105, 92, 190, 36),
+            "project_owner": (1105, 140, 190, 36),
+            "print_order": (1105, 187, 190, 36),
         },
+        # White side gutters beside the panel (avoid dimension labels below).
+        "white_wipes": [
+            (420, 2480, 280, 400),
+            (1520, 2480, 280, 400),
+        ],
         "colors": {
             "logo_swatch": (59, 1877, 100, 44),
             "logo_label": (164, 1873, 270, 45),
@@ -356,11 +386,7 @@ class WorksheetExporter:
         if family == "backpack":
             return BACKPACK_PAGE_SPEC[page_no]
         if family == "hat":
-            # Same page size as Walk / Venture Dry Pack worksheets.
-            return BACKPACK_PAGE_SPEC.get(page_no) or {
-                "size_pts": (2125.98, 3259.84),
-                "logos": [],
-            }
+            return HAT_PAGE_SPEC.get(page_no) or HAT_PAGE_SPEC[1]
         return PAGE_SPEC[page_no]
 
     def _page_title(self, family: str, page_no: int) -> str:
@@ -585,10 +611,14 @@ class WorksheetExporter:
             src.close()
 
         page = doc[0]
+        spec = self._page_spec("hat", 1)
+        # Clear Paula's empty navy project chip; stamp sidebar metadata + worksheet #3.
+        self._pdf_clear_header_chip(page, spec)
+        self._pdf_overlay_header(page, spec, job)
+        self._pdf_overlay_worksheet_number(page, spec)
         if mark is not None:
             self._pdf_overlay_hat_logos(page, job, mark, page_index)
         # Sync Logo/Graphic Colors chip to the active sidebar print color.
-        # Header fields stay Paula's — never redrawn on this path.
         self._pdf_overlay_hat_logo_swatch(page, job, page_index)
 
         place = resolve_hat_placement(job.panel_config)
@@ -951,6 +981,11 @@ class WorksheetExporter:
         page = doc[0]
         spec = self._page_spec("backpack", 1)
 
+        # Wipe Paula's navy "Proper Brands …" project chip into header ground.
+        self._pdf_clear_header_chip(page, spec)
+        # Sidebar ticket fields (Paula values may be stale / option-specific).
+        self._pdf_overlay_header(page, spec, job)
+
         # In-place Proper fill on Front View + Sizing & Dimensions (ink-only).
         if fill is not None and fill != (255, 255, 255):
             self._pdf_recolor_baked_logos_inplace(page, job, fill)
@@ -1066,6 +1101,32 @@ class WorksheetExporter:
         rect = self._pdf_rect((ox, oy, fw, fh))
         page.insert_image(rect, stream=self._pdf_png_bytes(fitted), keep_proportion=True, overlay=True)
 
+    def _pdf_clear_header_chip(self, page, spec: dict) -> None:
+        """Remove Paula's navy project-chip rectangle (vectors + fill) into header ground."""
+        chip = spec.get("chip")
+        if not chip or not spec.get("clear_chip"):
+            return
+        # Slight pad so AA fringe of the navy rect does not remain.
+        x, y, w, h = chip
+        wipe = (x - 2.0, y - 2.0, w + 4.0, h + 4.0)
+        self._pdf_redact_fill(page, wipe, HEADER_BG)
+
+    def _pdf_overlay_worksheet_number(self, page, spec: dict) -> None:
+        """Stamp PRODUCTION WORKSHEET number (e.g. hat → 3) in the top-right badge zone."""
+        number = spec.get("worksheet_number")
+        box = spec.get("worksheet_number_box")
+        if not number or not box:
+            return
+        self._pdf_fill_rect(page, box, HEADER_BG)
+        x, y, w, h = box
+        page.insert_text(
+            (x + 4.0, y + h * 0.82),
+            str(number),
+            fontsize=float(spec.get("worksheet_number_pt") or 93.0),
+            fontname="helv",
+            color=self._pdf_rgb(NAVY),
+        )
+
     def _pdf_overlay_header(self, page, spec: dict, job: JobSpec) -> None:
         fields = spec.get("header_fields") or {}
         values = {
@@ -1076,7 +1137,8 @@ class WorksheetExporter:
         }
         for key, box in fields.items():
             text = str(values.get(key) or "—")
-            self._pdf_fill_rect(page, box, (255, 255, 255))
+            # Redact any baked Paula value text, then write sidebar ticket fields.
+            self._pdf_redact_fill(page, box, (255, 255, 255))
             x, y, _w, h = box
             # insert_text baseline ~0.75em from top of line box
             page.insert_text(
@@ -1088,8 +1150,9 @@ class WorksheetExporter:
             )
 
     def _pdf_overlay_chip(self, page, spec: dict, job: JobSpec) -> None:
+        """Legacy navy chip painter — unused when ``clear_chip`` is set on the spec."""
         chip = spec.get("chip")
-        if not chip:
+        if not chip or spec.get("clear_chip"):
             return
         self._pdf_fill_rect(page, chip, NAVY)
         x, y, _w, h = chip
@@ -1681,6 +1744,9 @@ class WorksheetExporter:
                     self._stamp_logo(page, slot, mark, fabric, erase=False)
             self._stamp_colors(page, spec, job)
             self._stamp_header(page, spec, job)
+            # Wipe residual ghost text/lines beside white page ground (umbrella panel).
+            for wipe in spec.get("white_wipes") or []:
+                self._fill_cover(page, wipe, (255, 255, 255))
             if family == "backpack":
                 self._stamp_backpack_dims(page, spec, job)
             return page
@@ -2240,29 +2306,35 @@ class WorksheetExporter:
                 if text in {"", "—"} and key == "print_order":
                     text = "—"
                 x, y, w, h = _pts(box)
-                draw.rectangle((x, y, x + w, y + h), fill=(255, 255, 255, 255))
+                # Pad wipe so baked AA fringe / ghost glyphs cannot bleed through.
+                draw.rectangle(
+                    (x - int(3 * SCALE), y - int(2 * SCALE), x + w + int(6 * SCALE), y + h + int(2 * SCALE)),
+                    fill=(255, 255, 255, 255),
+                )
                 # Uniform vertical padding — center on field midline.
                 draw.text((x + int(4 * SCALE), y + h * 0.5), text, font=font_meta, fill=NAVY + (255,), anchor="lm")
 
         chip_box = spec.get("chip")
         if chip_box:
             cx, cy, cw, ch = _pts(chip_box)
-            family = self._job_family(job) if hasattr(job, "family") else "umbrella"
-            if family == "backpack":
-                # Paula navy project chip: "Proper Brands 2026"
-                draw.rectangle((cx, cy, cx + cw, cy + ch), fill=NAVY + (255,))
-                chip_font = _font(False, int(34 * SCALE))
-                label = f"{(job.client or 'Client').strip()} {job.year}"
+            # Always clear Paula/sample navy chip into header ground (no client overlay).
+            draw.rectangle(
+                (cx - 2, cy - 2, cx + cw + 2, cy + ch + 2),
+                fill=HEADER_BG + (255,),
+            )
+            number = spec.get("worksheet_number")
+            num_box = spec.get("worksheet_number_box")
+            if number and num_box:
+                nx, ny, nw, nh = _pts(num_box)
+                draw.rectangle((nx, ny, nx + nw, ny + nh), fill=HEADER_BG + (255,))
+                num_font = _font(False, int(float(spec.get("worksheet_number_pt") or 93) * SCALE))
                 draw.text(
-                    (cx + int(24 * SCALE), cy + ch * 0.52),
-                    label,
-                    font=chip_font,
-                    fill=(255, 255, 255, 255),
-                    anchor="lm",
+                    (nx + int(4 * SCALE), ny + nh * 0.82),
+                    str(number),
+                    font=num_font,
+                    fill=NAVY + (255,),
+                    anchor="ls",
                 )
-            else:
-                # Umbrella: clear sample chip into header ground.
-                draw.rectangle((cx - 2, cy - 2, cx + cw + 2, cy + ch + 2), fill=HEADER_BG + (255,))
 
     def _paste_rotated_label(
         self,
