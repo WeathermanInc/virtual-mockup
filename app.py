@@ -35,7 +35,7 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 107
+STAMP_VERSION = 108
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho"]
@@ -67,6 +67,7 @@ try:
     from utils.project_guide import render_project_guide
     from utils.renderer import (
         JobSpec,
+        ponchos_pdf_path,
         resolve_backpack_v2_page_index,
         resolve_hat_page_index,
         resolve_poncho_page_index,
@@ -385,6 +386,8 @@ def _run_app() -> None:
         missing.append("logo color")
     if year is None:
         missing.append("worksheet year")
+    if family == "poncho" and ponchos_pdf_path() is None:
+        missing.append("Ponchos-Mockups.pdf (missing from deploy)")
 
     if missing:
         st.warning("Fill the job ticket to build a proof: " + ", ".join(missing) + ".")
@@ -467,27 +470,35 @@ def _run_app() -> None:
     left, right = st.columns([2, 1], vertical_alignment="top")
     with left:
         st.subheader("Production worksheet")
-        with st.spinner("Updating worksheet preview…"):
-            pages = _preview_pages(
-                STAMP_VERSION,
-                job.client,
-                job.panel_config,
-                job.panel_count,
-                tuple(job.product_keys),
-                job.family,
-                job.fabric_name,
-                job.logo_color_name,
-                job.request_date,
-                job.last_update,
-                job.project_owner,
-                job.print_order,
-                job.year,
-                job.knockout_mode,
-                job.knockout_white,
-                logo_fp,
-                logo_bytes,
-                logo_name,
-            )
+        try:
+            with st.spinner("Updating worksheet preview…"):
+                pages = _preview_pages(
+                    STAMP_VERSION,
+                    job.client,
+                    job.panel_config,
+                    job.panel_count,
+                    tuple(job.product_keys),
+                    job.family,
+                    job.fabric_name,
+                    job.logo_color_name,
+                    job.request_date,
+                    job.last_update,
+                    job.project_owner,
+                    job.print_order,
+                    job.year,
+                    job.knockout_mode,
+                    job.knockout_white,
+                    logo_fp,
+                    logo_bytes,
+                    logo_name,
+                )
+        except FileNotFoundError as exc:
+            st.error(str(exc))
+            pages = []
+        except Exception:  # noqa: BLE001 — surface render failures instead of silent umbrella fallback
+            st.error("Worksheet preview failed:")
+            st.code(traceback.format_exc(), language="text")
+            pages = []
         if not pages:
             st.warning("No official worksheet pages for the selected styles.")
         else:

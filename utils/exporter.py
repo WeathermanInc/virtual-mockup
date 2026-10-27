@@ -403,12 +403,18 @@ class WorksheetExporter:
         self._pages: dict[tuple[str, int], PILImage.Image] = {}
 
     def _job_family(self, job: JobSpec) -> str:
-        if getattr(job, "family", None):
-            return str(job.family)
+        """Resolve product family; prefer explicit job.family, else catalog styles.
+
+        Product keys win when they disagree with a stale default ``umbrella``
+        family so Poncho/Hat/Backpack never route to the Walk umbrella sheet.
+        """
         for key in job.product_keys:
             fam = style_family(key)
             if fam != "umbrella":
                 return fam
+        fam = str(getattr(job, "family", None) or "").strip()
+        if fam in {"backpack", "hat", "poncho", "umbrella"}:
+            return fam
         return "umbrella"
 
     def _page_spec(self, family: str, page_no: int) -> dict:
@@ -499,7 +505,8 @@ class WorksheetExporter:
             return self._preview_hat_pdf_template(
                 job, logo, max_width=max_width, quality=quality
             )
-        if family == "poncho" and ponchos_pdf_path() is not None:
+        # Poncho never falls through to the umbrella raster sheet.
+        if family == "poncho":
             return self._preview_poncho_pdf_template(
                 job, logo, max_width=max_width, quality=quality
             )
@@ -969,12 +976,16 @@ class WorksheetExporter:
         max_width: int = 1400,
         quality: int = 88,
     ) -> list[tuple[str, bytes]]:
-        """Rasterize the poncho PDF-template page for Streamlit preview."""
+        """Rasterize the poncho PDF-template page for Streamlit preview.
+
+        Never falls back to the umbrella raster sheet — that mis-routed Cloud
+        previews when ``Ponchos-Mockups.pdf`` was missing from the checkout.
+        """
         import fitz
 
+        pdf_bytes = self.render_poncho_with_pdf_template(job, logo)
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         try:
-            pdf_bytes = self.render_poncho_with_pdf_template(job, logo)
-            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             page = doc[0]
             zoom = max(1.0, float(max_width) / float(page.rect.width))
             pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
@@ -990,11 +1001,8 @@ class WorksheetExporter:
             img.save(buf, format="PNG", optimize=True)
             title = self._page_title("poncho", 1)
             return [(title, buf.getvalue())]
-        except Exception:
-            print("Exporter Error:", traceback.format_exc(), flush=True)
-            return self._preview_standard_canvas(
-                job, logo, max_width=max_width, quality=quality
-            )
+        finally:
+            doc.close()
 
     def render_poncho_with_pdf_template(
         self,
@@ -1012,7 +1020,11 @@ class WorksheetExporter:
 
         pdf_path = ponchos_pdf_path()
         if pdf_path is None:
-            return self.render_standard_canvas(job, logo)
+            raise FileNotFoundError(
+                "Ponchos-Mockups.pdf not found. Place it at the repo root "
+                "(or assets/templates/official/poncho/) so Stride Pullover "
+                "Poncho proofs can load Paula's static pages."
+            )
 
         fill = poncho_logo_fill_rgb(job.logo_color_name)
         mark = None
