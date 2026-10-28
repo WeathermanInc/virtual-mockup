@@ -710,12 +710,12 @@ class WorksheetExporter:
         job: JobSpec,
         logo: PILImage.Image | None,
     ) -> bytes:
-        """Trek All-Weather Hat — Paula page + client logo on Graphic Sample.
+        """Trek All-Weather Hat — Paula page + client logo on photo + GS.
 
         ``HAT_STATIC_PAGE_MAP`` supplies the Side/Front × Navy/Sage/Bone
         worksheet 1:1. When a logo is present, Paula's baked photo sample is
-        healed away (clean lifestyle crown) and the Graphic Sample box
-        (2.4 cm / 25 mm) is restamped in Logo / graphic color.
+        healed away and restamped (2.4 cm foreshortened) plus the Graphic
+        Sample box, both in Logo / graphic color.
         """
         import fitz
 
@@ -781,20 +781,30 @@ class WorksheetExporter:
         mark: PILImage.Image,
         page_index: int,
     ) -> None:
-        """Clear baked photo sample; stamp client logo on Graphic Sample only.
+        """Heal baked photo sample, then stamp client logo on photo + Graphic Sample.
 
-        Lifestyle photo keeps a clean crown (no artificial overlay stamp). Placement
-        is shown on the line drawing + GS plate instead.
+        Photo stamp uses ``HAT_PHOTO_OVERLAYS`` (Side/Front × fabric) at the
+        foreshortened 2.4 cm placement between vents. GS gets a solid fabric plate.
         """
         slots = hat_overlay_slots(page_index)
         fabric = job.fabric_rgb
 
         photo = slots.get("photo") or {}
-        photo_cover = photo.get("cover") or photo.get("box")
-        if photo_cover:
-            # Heal Paula's baked Mubadala off the photo — do not restamp here.
-            if not self._pdf_heal_hat_photo_bitmap(page, photo_cover):
-                self._pdf_inpaint_baked_hat_mark(page, photo_cover)
+        photo_box = photo.get("box")
+        if photo_box:
+            cover = photo.get("cover") or photo_box
+            # Heal Paula's baked Mubadala, then stamp the prepared (white/black) mark.
+            if not self._pdf_heal_hat_photo_bitmap(page, cover):
+                self._pdf_inpaint_baked_hat_mark(page, cover)
+            self._pdf_insert_mark(
+                page,
+                photo_box,
+                mark,
+                rotate=float(photo.get("rotate") or 0.0),
+                fit_pad=float(photo.get("fit_pad") or 0.04),
+                crisp=True,
+                crisp_threshold=160,
+            )
 
         gs = slots.get("gs") or {}
         gs_box = gs.get("box")
