@@ -2203,14 +2203,14 @@ SUN_SHIRT_FABRIC_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
     "bs01": {"swatch": (58.0, 1880.0, 85.0, 40.0)},
 }
 
-# Graphic Sample preview (41 × 41 mm) — white page wipe around circular mark.
+# Graphic Sample preview (41 × 41 mm) — wipe with active fabric (not page white)
+# so White logos stay visible on Iron Sage / Navy / etc.
 SUN_SHIRT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
     idx: {
         "box": (1594.0, 2240.0, 116.0, 116.0),
         "cover": (1588.0, 2234.0, 128.0, 128.0),
         "erase": "plate",
         "rotate": 0.0,
-        "wipe_rgb": (255, 255, 255),
         "fit_pad": 0.08,
     }
     for idx in range(8)
