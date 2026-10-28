@@ -1580,6 +1580,15 @@ class WorksheetExporter:
                 crisp_threshold=160,
             )
 
+        # One Artwork-plate sample shared with GS so the 41 mm callout matches.
+        artwork_slot = slots.get("artwork") or {}
+        artwork_cover = artwork_slot.get("cover") or artwork_slot.get("box")
+        artwork_fabric = (
+            self._pdf_sample_sun_shirt_artwork_fabric(page, artwork_cover, fabric)
+            if artwork_cover
+            else tuple(int(v) for v in fabric)
+        )
+
         for key in ("artwork", "gs", "draw"):
             slot = slots.get(key) or {}
             box = slot.get("box")
@@ -1590,18 +1599,17 @@ class WorksheetExporter:
                 # Local body sample (Paula fill ≠ catalog NRF) + strip vectors so
                 # no white/catalog-color square frames the chest stamp.
                 self._pdf_wipe_sun_shirt_draw_mark(page, cover, fabric)
-            elif key == "artwork":
-                # Cover must include the full Mubadala circle (ink from ~x=1246).
-                # Sample Paula plate fabric (not page-white / catalog mismatch),
-                # then redact line art + paint an opaque fabric plate.
-                wipe_rgb = self._pdf_sample_sun_shirt_artwork_fabric(
-                    page, cover, fabric
-                )
+            elif key == "artwork" or slot.get("wipe") == "match_artwork":
+                # Artwork + GS: same Paula plate RGB (not darker catalog NRF).
+                wipe_rgb = artwork_fabric
                 cx, cy, cw, ch = cover
-                pad = 4.0
+                pad = 4.0 if key == "artwork" else 2.0
                 wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
                 self._pdf_redact_fill(
-                    page, wiped, wipe_rgb, remove_line_art=True
+                    page,
+                    wiped,
+                    wipe_rgb,
+                    remove_line_art=(key == "artwork"),
                 )
                 self._pdf_fill_rect(page, wiped, wipe_rgb)
             else:

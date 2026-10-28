@@ -2203,8 +2203,10 @@ SUN_SHIRT_FABRIC_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
     "bs01": {"swatch": (58.0, 1880.0, 85.0, 40.0)},
 }
 
-# Graphic Sample preview (41 × 41 mm) — wipe with active fabric (not page white)
-# so White logos stay visible on Iron Sage / Navy / etc.
+# Graphic Sample preview (41 × 41 mm) — wipe with the same RGB as the Artwork
+# plate (Paula sheet sample), not catalog NRF. Sage NRF 310 catalog (125,154,121)
+# is darker than the Artwork/tech-draw body (~145,157,146); matching keeps the
+# 41 mm callout color-locked to the main Artwork preview.
 SUN_SHIRT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
     idx: {
         "box": (1594.0, 2240.0, 116.0, 116.0),
@@ -2212,6 +2214,7 @@ SUN_SHIRT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
         "erase": "plate",
         "rotate": 0.0,
         "fit_pad": 0.08,
+        "wipe": "match_artwork",
     }
     for idx in range(8)
 }
