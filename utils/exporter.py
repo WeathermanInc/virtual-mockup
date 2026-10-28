@@ -810,12 +810,12 @@ class WorksheetExporter:
         gs_box = gs.get("box")
         if gs_box:
             cover = gs.get("cover") or gs_box
-            # Wipe the FULL navy plate (not the inset stamp box) so fabric fill
-            # cannot read as a second blue rectangle behind the logo.
+            # Wipe Paula's OUTER plate (+ nested navy/white insets) to one fabric
+            # block — cover must include the outer ring or Sage shows dual squares.
             cx, cy, cw, ch = cover
             pad = 2.0
             wiped = (cx - pad, cy - pad, cw + 2 * pad, ch + 2 * pad)
-            self._pdf_redact_fill(page, wiped, fabric)
+            self._pdf_redact_fill(page, wiped, fabric, remove_line_art=True)
             self._pdf_insert_mark(
                 page,
                 gs_box,
@@ -952,51 +952,50 @@ class WorksheetExporter:
         b = crop[:, :, 2].astype(np.int16)
         lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
         band = max(2, min(hh, ww) // 8)
-        rim = np.zeros((hh, ww), dtype=bool)
-        rim[:band, :] = True
-        rim[-band:, :] = True
-        rim[:, :band] = True
-        rim[:, -band:] = True
-        if not rim.any():
-            return False
-        med = np.median(crop[rim].astype(np.float32), axis=0)
+        # Paula sample = red ring + navy disc + white glyphs (not broad fabric delta).
         red = (r > 120) & (g < 125) & (b < 125) & (r > g + 20) & (r > b + 20)
-        bright = lum >= 150
-        delta = np.linalg.norm(crop.astype(np.float32) - med, axis=2) > 16.0
-        ink = ((red | bright | delta).astype(np.uint8) * 255)
-        if not ink.any():
+        navy = (lum < 95) & (b > r + 8) & (b >= g - 5)
+        white = (lum >= 200) & ((crop.max(axis=2) - crop.min(axis=2)) < 40)
+        seed = (red | navy | white).astype(np.uint8) * 255
+        if not seed.any():
             return False
-        ink = cv2.dilate(
-            ink, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)), iterations=1
+        seed = cv2.dilate(
+            seed, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)), iterations=1
         )
-        cnts, _ = cv2.findContours(ink, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts, _ = cv2.findContours(seed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if not cnts:
             return False
         (cx, cy), radius = cv2.minEnclosingCircle(max(cnts, key=cv2.contourArea))
-        radius = float(radius) + max(2.0, min(hh, ww) * 0.08)
+        radius = float(radius) + max(1.5, min(hh, ww) * 0.04)
         mask = np.zeros((hh, ww), dtype=np.uint8)
         cv2.circle(mask, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1)
-        # Keep a fabric rim so TELEA has source weave.
         mask[:band, :] = 0
         mask[-band:, :] = 0
         mask[:, :band] = 0
         mask[:, -band:] = 0
         if not mask.any():
             return False
-        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
-        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
-        healed_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
-        # Scrub any leftover bright/red crumbs to local fabric.
-        hr, hg, hb = healed_rgb[:, :, 0], healed_rgb[:, :, 1], healed_rgb[:, :, 2]
-        hlum = 0.2126 * hr + 0.7152 * hg + 0.0722 * hb
-        # Scrub bright/red crumbs — leftover sample AA reads as white spray under the stamp.
-        crumb = (mask > 0) & (
-            (hlum >= 120)
-            | ((hr > 110) & (hg < 130) & (hb < 130) & (hr > hg + 15))
-            | (np.abs(healed_rgb.astype(np.float32) - med).sum(axis=2) > 28)
-        )
-        healed_rgb[crumb] = med.astype(np.uint8)
-        arr[y0:y1, x0:x1] = healed_rgb
+        # Fabric tone from the annulus just outside the logo — matches local lighting.
+        outer = cv2.dilate(mask, np.ones((9, 9), np.uint8), iterations=2)
+        ring = (outer > 0) & (mask == 0)
+        if int(ring.sum()) < 16:
+            rim = np.zeros((hh, ww), dtype=bool)
+            rim[:band, :] = True
+            rim[-band:, :] = True
+            rim[:, :band] = True
+            rim[:, -band:] = True
+            ring = rim
+        med = np.median(crop[ring].astype(np.float32), axis=0)
+        # Soft-fill the disc so the patch does not hard-edge into a visible plate.
+        yy, xx = np.ogrid[:hh, :ww]
+        dist = np.sqrt((xx - float(cx)) ** 2 + (yy - float(cy)) ** 2)
+        feather = max(3.0, radius * 0.22)
+        alpha = np.clip((radius - dist) / feather, 0.0, 1.0)
+        alpha = np.where(mask > 0, alpha, 0.0).astype(np.float32)
+        healed_rgb = crop.astype(np.float32)
+        for c in range(3):
+            healed_rgb[:, :, c] = alpha * float(med[c]) + (1.0 - alpha) * healed_rgb[:, :, c]
+        arr[y0:y1, x0:x1] = np.clip(healed_rgb, 0, 255).astype(np.uint8)
         out = PILImage.fromarray(arr, "RGB")
         buf = BytesIO()
         out.save(buf, format="PNG", optimize=True)

@@ -1580,42 +1580,43 @@ HAT_FABRIC_SWATCH_LAYOUTS: dict[str, dict[str, Any]] = {
 
 # Graphic Sample #1 preview boxes (PDF points) — enlarged 2.4 cm / 25 mm art.
 # Side worksheets share one GS plate; Front worksheets share another.
-# cover = full navy plate (Paula nested fills); wiping only the inset stamp box left a
-# fabric-tinted rectangle inside the plate ("blue container box"). box = logo stamp inset.
+# cover = Paula's OUTER plate (Side ~1049² / Front ~966²). Wiping only the inner
+# navy inset left the outer ring visible → nested dual-tone squares on Sage/Bone.
+# box = logo stamp inset inside the solid fabric fill.
 HAT_GS_OVERLAYS: dict[int, dict[str, Any]] = {
     0: {
         "box": (900.0, 2225.0, 674.0, 674.0),
-        "cover": (840.0, 2166.0, 794.0, 794.0),
+        "cover": (710.0, 2036.0, 1054.0, 1054.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     1: {
         "box": (935.0, 2263.0, 630.0, 630.0),
-        "cover": (882.0, 2210.0, 737.0, 737.0),
+        "cover": (765.0, 2093.0, 972.0, 972.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     2: {
         "box": (900.0, 2225.0, 674.0, 674.0),
-        "cover": (840.0, 2166.0, 794.0, 794.0),
+        "cover": (710.0, 2036.0, 1054.0, 1054.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     3: {
         "box": (935.0, 2263.0, 630.0, 630.0),
-        "cover": (882.0, 2210.0, 737.0, 737.0),
+        "cover": (765.0, 2093.0, 972.0, 972.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     4: {
         "box": (900.0, 2225.0, 674.0, 674.0),
-        "cover": (840.0, 2166.0, 794.0, 794.0),
+        "cover": (710.0, 2036.0, 1054.0, 1054.0),
         "erase": "plate",
         "rotate": 0.0,
     },
     5: {
         "box": (935.0, 2263.0, 630.0, 630.0),
-        "cover": (882.0, 2210.0, 737.0, 737.0),
+        "cover": (765.0, 2093.0, 972.0, 972.0),
         "erase": "plate",
         "rotate": 0.0,
     },
