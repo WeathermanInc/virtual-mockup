@@ -260,8 +260,8 @@ PAGE_SPEC: dict[int, dict] = {
             # Front canopy: heal original Proper (glyphs + bevels) after recolor.
             {"box": (485, 860, 176, 42), "cover": (475, 852, 200, 58), "erase": "photo"},
             # Closed-sleeve wordmark — clone neighboring fabric after recolor (no rectangle).
-            # Cover spans the Weatherman icon + wordmark; stop short of the ferrule.
-            {"box": (670, 1410, 170, 24), "cover": (595, 1385, 305, 75), "erase": "sleeve"},
+            # Box/cover stop short of the tip/ferrule so the stamp stays on sleeve fabric.
+            {"box": (620, 1410, 150, 24), "cover": (560, 1385, 260, 75), "erase": "sleeve"},
             # Flat panel sample — stamp in the 21.6×10 cm artwork band.
             # Cover clears baked Proper + Weatherman only; trap body is recolored
             # so outer borders and width/height dimension callouts stay intact.
