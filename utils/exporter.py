@@ -710,12 +710,12 @@ class WorksheetExporter:
         job: JobSpec,
         logo: PILImage.Image | None,
     ) -> bytes:
-        """Trek All-Weather Hat — Paula page + client logo on mockup + GS.
+        """Trek All-Weather Hat — Paula page + client logo on Graphic Sample.
 
         ``HAT_STATIC_PAGE_MAP`` supplies the Side/Front × Navy/Sage/Bone
-        worksheet 1:1. When a logo is present, it replaces Paula's baked sample
-        on the photo mockup and the Graphic Sample box (2.4 cm / 25 mm preview),
-        recolored by Logo / graphic color. Umbrella/backpack/poncho paths untouched.
+        worksheet 1:1. When a logo is present, Paula's baked photo sample is
+        healed away (clean lifestyle crown) and the Graphic Sample box
+        (2.4 cm / 25 mm) is restamped in Logo / graphic color.
         """
         import fitz
 
@@ -781,30 +781,20 @@ class WorksheetExporter:
         mark: PILImage.Image,
         page_index: int,
     ) -> None:
-        """Stamp prepared client logo onto hat photo mockup + Graphic Sample.
+        """Clear baked photo sample; stamp client logo on Graphic Sample only.
 
-        Photo path: heal baked sample into surrounding fabric (no disc / box),
-        then stamp the transparent mark. GS path: solid fabric wipe + stamp.
+        Lifestyle photo keeps a clean crown (no artificial overlay stamp). Placement
+        is shown on the line drawing + GS plate instead.
         """
         slots = hat_overlay_slots(page_index)
         fabric = job.fabric_rgb
 
         photo = slots.get("photo") or {}
-        photo_box = photo.get("box")
-        if photo_box:
-            cover = photo.get("cover") or photo_box
-            # Heal baked sample inside the embedded photo bitmap (no overlay disc).
-            if not self._pdf_heal_hat_photo_bitmap(page, cover):
-                self._pdf_inpaint_baked_hat_mark(page, cover)
-            self._pdf_insert_mark(
-                page,
-                photo_box,
-                mark,
-                rotate=float(photo.get("rotate") or 0.0),
-                fit_pad=float(photo.get("fit_pad") or 0.02),
-                crisp=True,
-                crisp_threshold=160,
-            )
+        photo_cover = photo.get("cover") or photo.get("box")
+        if photo_cover:
+            # Heal Paula's baked Mubadala off the photo — do not restamp here.
+            if not self._pdf_heal_hat_photo_bitmap(page, photo_cover):
+                self._pdf_inpaint_baked_hat_mark(page, photo_cover)
 
         gs = slots.get("gs") or {}
         gs_box = gs.get("box")
@@ -952,11 +942,21 @@ class WorksheetExporter:
         b = crop[:, :, 2].astype(np.int16)
         lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
         band = max(2, min(hh, ww) // 8)
-        # Paula sample = red ring + navy disc + white glyphs (not broad fabric delta).
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        if not rim.any():
+            return False
+        med = np.median(crop[rim].astype(np.float32), axis=0)
+        med_lum = float(0.2126 * med[0] + 0.7152 * med[1] + 0.0722 * med[2])
+        # Paula sample = red ring + white glyphs + navy disc darker than local fabric.
+        # Absolute navy (lum<95) matches Navy hat weave and wiped the whole crown.
         red = (r > 120) & (g < 125) & (b < 125) & (r > g + 20) & (r > b + 20)
-        navy = (lum < 95) & (b > r + 8) & (b >= g - 5)
         white = (lum >= 200) & ((crop.max(axis=2) - crop.min(axis=2)) < 40)
-        seed = (red | navy | white).astype(np.uint8) * 255
+        navy = (lum < med_lum - 18.0) & (b > r + 8) & (b >= g - 5)
+        seed = (red | white | navy).astype(np.uint8) * 255
         if not seed.any():
             return False
         seed = cv2.dilate(
@@ -966,36 +966,59 @@ class WorksheetExporter:
         if not cnts:
             return False
         (cx, cy), radius = cv2.minEnclosingCircle(max(cnts, key=cv2.contourArea))
-        radius = float(radius) + max(1.5, min(hh, ww) * 0.04)
-        mask = np.zeros((hh, ww), dtype=np.uint8)
-        cv2.circle(mask, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1)
-        mask[:band, :] = 0
-        mask[-band:, :] = 0
-        mask[:, :band] = 0
-        mask[:, -band:] = 0
-        if not mask.any():
+        # Pad past the red ring so no pink halo remains on the crown.
+        radius = float(radius) + max(3.0, min(hh, ww) * 0.10)
+        disc = np.zeros((hh, ww), dtype=np.uint8)
+        cv2.circle(
+            disc, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1
+        )
+        disc[:band, :] = 0
+        disc[-band:, :] = 0
+        disc[:, :band] = 0
+        disc[:, -band:] = 0
+        if not disc.any():
             return False
-        # Fabric tone from the annulus just outside the logo — matches local lighting.
-        outer = cv2.dilate(mask, np.ones((9, 9), np.uint8), iterations=2)
-        ring = (outer > 0) & (mask == 0)
-        if int(ring.sum()) < 16:
-            rim = np.zeros((hh, ww), dtype=bool)
-            rim[:band, :] = True
-            rim[-band:, :] = True
-            rim[:, :band] = True
-            rim[:, -band:] = True
-            ring = rim
-        med = np.median(crop[ring].astype(np.float32), axis=0)
-        # Soft-fill the disc so the patch does not hard-edge into a visible plate.
+        outer = cv2.dilate(disc, np.ones((9, 9), np.uint8), iterations=2)
+        ring = (outer > 0) & (disc == 0)
+        if int(ring.sum()) < 24:
+            ring = rim & (disc == 0)
+        ring_px = crop[ring]
+        if len(ring_px) < 8:
+            return False
+        local = np.median(ring_px.astype(np.float32), axis=0)
+        ring_std = np.maximum(ring_px.astype(np.float32).std(axis=0), 1.5)
+        ys, xs = np.where(disc > 0)
+        rng = np.random.RandomState(int(cx) * 1000 + int(cy))
+        noise = rng.normal(0.0, 1.0, size=(len(ys), 3)).astype(np.float32)
+        filled = np.clip(local + noise * ring_std * 0.55, 0, 255).astype(np.uint8)
+        healed_rgb = crop.copy()
+        healed_rgb[ys, xs] = filled
+        # Wide soft feather — hard disc edges read as a plate on Navy/Sage crowns.
         yy, xx = np.ogrid[:hh, :ww]
         dist = np.sqrt((xx - float(cx)) ** 2 + (yy - float(cy)) ** 2)
-        feather = max(3.0, radius * 0.22)
-        alpha = np.clip((radius - dist) / feather, 0.0, 1.0)
-        alpha = np.where(mask > 0, alpha, 0.0).astype(np.float32)
-        healed_rgb = crop.astype(np.float32)
+        feather = max(4.0, radius * 0.35)
+        alpha = np.clip((radius - dist) / feather, 0.0, 1.0).astype(np.float32)
+        alpha = np.where(disc > 0, alpha, 0.0)
+        out = crop.astype(np.float32)
         for c in range(3):
-            healed_rgb[:, :, c] = alpha * float(med[c]) + (1.0 - alpha) * healed_rgb[:, :, c]
-        arr[y0:y1, x0:x1] = np.clip(healed_rgb, 0, 255).astype(np.uint8)
+            out[:, :, c] = alpha * healed_rgb[:, :, c] + (1.0 - alpha) * out[:, :, c]
+        healed_rgb = np.clip(out, 0, 255).astype(np.uint8)
+        hr, hg, hb = (
+            healed_rgb[:, :, 0].astype(np.int16),
+            healed_rgb[:, :, 1].astype(np.int16),
+            healed_rgb[:, :, 2].astype(np.int16),
+        )
+        hlum = 0.2126 * hr + 0.7152 * hg + 0.0722 * hb
+        crumb = (
+            ((hr > 110) & (hg < 130) & (hb < 130) & (hr > hg + 15))
+            | (
+                (hlum >= med_lum + 40.0)
+                & ((healed_rgb.max(axis=2) - healed_rgb.min(axis=2)) < 45)
+            )
+        )
+        if crumb.any():
+            healed_rgb[crumb] = np.clip(local, 0, 255).astype(np.uint8)
+        arr[y0:y1, x0:x1] = healed_rgb
         out = PILImage.fromarray(arr, "RGB")
         buf = BytesIO()
         out.save(buf, format="PNG", optimize=True)
