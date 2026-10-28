@@ -27,7 +27,7 @@ related views).
    - **Backpack** — 1:1 Paula Venture Dry Pack pages via `BACKPACK_STATIC_PAGE_MAP` (fabric × placement); Artwork box + logo swatch follow Logo / graphic color; Front View / tech-pack Proper can recolor in place for Black C.
    - **Hat** — 1:1 Paula Trek All-Weather Hat pages via `HAT_STATIC_PAGE_MAP` (fabric × Side/Front) from `Hats-Mockups.pdf`.
    - **Poncho** — 1:1 Paula Stride Pullover Poncho pages via `PONCHO_STATIC_PAGE_MAP` (fabric × Front/Back) from `Ponchos-Mockups.pdf`; photo + Artwork + GS / tech-pack draw stamps; Logo inks White / Black / Match uploaded art.
-   - **Sun Shirt** — 1:1 Paula pages via `SUN_SHIRT_STATIC_PAGE_MAP` (product × fabric) from `Sun-Shirts-Mockups.pdf`; Front view upper-left chest only; photo heal + Artwork + GS (41 mm) + tech-pack draw; Logo inks White / Black / Match uploaded art.
+   - **Sun Shirt** — 1:1 Paula pages via `SUN_SHIRT_STATIC_PAGE_MAP` (product × fabric) from `Sun-Shirts-Mockups.pdf`; Front view upper-left chest only. Pipeline: lifestyle **photo heal** (fabric disc fill clears baked Mubadala before stamp) → **Artwork** plate (Paula sheet sample) → **Graphic Sample** 41 mm (`wipe: match_artwork`, same RGB as Artwork, not darker catalog NRF) → tech-pack **draw** (local body fabric circle). Logo inks White / Black / Match uploaded art.
 4. On-screen proof shows the official pages; **Generate** writes a PDF for download.
 
 ### Product families
@@ -38,7 +38,7 @@ related views).
 | Backpack | Venture Dry Pack (Style #: 40002) | Placements: Upper center / Center / Lower right center × Black / Steel Blue / Sage. |
 | Hat | Trek All-Weather Hat (Style #: 40001) | Placements: Side view / Front view × Navy (411) / Sage (311) / Bone (202). Logo inks: White, Black, Match uploaded art. |
 | Poncho | Stride Pullover Poncho (Style #: 23001) | Placements: Front view (upper right chest) / Back view × Navy (411) / Sage (310) / Bone (920) / Chocolate (201). Logo inks: White, Black, Match uploaded art. Worksheet **#4**. |
-| Sun Shirt | UPF 50+ Hooded (HS01), Bamboo UPF 20+ (BS01) | Placement: Front view (upper left chest) only. HS01: White / Navy / Sage / River Mist. BS01: White / Iron Sage / River Mist / Canyon Glow. Logo inks: White, Black, Match uploaded art. Worksheet **#5**. |
+| Sun Shirt | UPF 50+ Hooded (HS01), Bamboo UPF 20+ (BS01) | Placement: Front view (upper left chest) only. HS01: White / Navy / Sage / River Mist. BS01: White / Iron Sage / River Mist / Canyon Glow. Photo heal + Artwork/GS color-locked plate sample + tech-pack draw. Logo inks: White, Black, Match uploaded art. Worksheet **#5**. |
 
 Artwork bounds follow Weatherman production standards (e.g. 21.6 cm × 10 cm Walk/Golf panels; hat marks 2.4–2.5 cm; poncho Graphic Sample 7 × 7 cm; sun shirt Graphic Sample 41 × 41 mm).
 
@@ -239,6 +239,8 @@ timeline
     Oct 26 : Stride Pullover Poncho · Ponchos-Mockups.pdf map
   section Sun Shirts
     Oct 26 : HS01 / BS01 · Sun-Shirts-Mockups.pdf map
+    Oct 28 : Photo heal clears baked chest mark
+           : GS 41 mm match_artwork · same plate RGB as Artwork
 ```
 
 The same diagrams and live metrics appear in the Streamlit UI under
@@ -250,5 +252,6 @@ The same diagrams and live metrics appear in the Streamlit UI under
 
 See `.cursorrules` for production constraints: keep exact panel mappings and
 scale factors, keep UI decoupled from `utils/`, keep backpack/hat/poncho/sun shirt
-static page maps intact, and keep generated proofs aligned with official Front / Top /
+static page maps intact, keep sun shirt photo heal + Artwork/GS `match_artwork`
+plate sync, and keep generated proofs aligned with official Front / Top /
 Sleeve / Flat / Side / Hat Side-Front / Poncho Front-Back / Sun Shirt Front layouts.

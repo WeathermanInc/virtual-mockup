@@ -18,7 +18,7 @@ flowchart LR
   B --> C[Rasterize artwork]
   C --> D{Family}
   D -->|Umbrella| E[Erase · recolor · stamp]
-  D -->|Backpack / Hat / Poncho| F[Static Paula page map]
+  D -->|Backpack / Hat / Poncho / Sun Shirt| F[Static Paula page map]
   E --> G[On-screen proof]
   F --> G
   G --> H[PDF export]
@@ -92,6 +92,8 @@ timeline
     Oct 26 : Stride Pullover Poncho · Ponchos-Mockups.pdf map
   section Sun Shirts
     Oct 26 : HS01 / BS01 · Sun-Shirts-Mockups.pdf map
+    Oct 28 : Photo heal clears baked chest mark
+           : GS 41 mm match_artwork · same plate RGB as Artwork
 """
 
 
@@ -145,7 +147,7 @@ def render_project_guide(*, stamp_version: int) -> None:
 
         with timeline:
             st.markdown(
-                "Build arc from first Cloud harden through hats, NRF sync, and ponchos."
+                "Build arc from first Cloud harden through hats, ponchos, and sun shirts."
             )
             st.mermaid_chart(BUILD_TIMELINE)
             st.caption(

@@ -11,4 +11,5 @@
 - Ensure generated multi-view proofs mirror official production sheets (Front View, Top View, Sleeve, Flat Pattern, Hat Side/Front, Poncho Front/Back, and Sun Shirt Front layouts).
 - Keep `BACKPACK_STATIC_PAGE_MAP`, `HAT_STATIC_PAGE_MAP`, `PONCHO_STATIC_PAGE_MAP`, and `SUN_SHIRT_STATIC_PAGE_MAP` intact — serve Paula PDF pages 1:1; do not recalculate Front View / tech-pack coordinates on those paths.
 - Keep Backpack, Hat, Poncho, Sun Shirt, and Umbrella pipelines isolated (family-scoped fabrics, logo colors, and exporters).
+- Sun Shirt overlays: heal the lifestyle photo bitmap (fabric disc fill; branch on photo-rim luminance, not catalog NRF) before stamping; wipe Artwork from the Paula plate sample; keep Graphic Sample (`SUN_SHIRT_GS_OVERLAYS`) on `wipe: match_artwork` so the 41 mm callout shares that plate RGB (do not fall back to darker catalog Sage/Iron Sage for GS).
 - Reference sheets: @Proper Brands x WM Umbrella 2026 Mockup Designs.pdf @Proper Brands x WM Umbrella 2026 Mockup Designs v2.pdf @Hats-Mockups.pdf @Ponchos-Mockups.pdf @Sun-Shirts-Mockups.pdf
