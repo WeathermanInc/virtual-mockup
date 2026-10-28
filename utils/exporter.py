@@ -1626,15 +1626,15 @@ class WorksheetExporter:
         box: tuple[float, float, float, float],
         fabric_rgb: tuple[int, int, int],
     ) -> bool:
-        """Inpaint Paula's baked chest mark inside the photo XObject.
+        """Clear Paula's baked chest mark inside the photo XObject.
 
-        Unlike hat heal, white/light sun-shirt fabric must NOT be treated as ink
-        (hat uses lum>=150 which would flatten the whole cover into a visible
-        square). Targets saturated logo colors on light shirts and bright marks
-        on dark shirts only.
+        Branch on the *photo rim* luminance (not catalog NRF): Iron Sage NRF is
+        darker than the photographed weave, so catalog lum wrongly took the dark
+        path, treated fabric as bright ink, and left a TELEA ghost under the
+        client stamp. Fill the enclosing disc with local fabric + weave noise
+        (same approach as hat photo heal) so only the stamped logo remains.
         """
         import cv2
-        import fitz
         import numpy as np
 
         cover = self._pdf_rect(box)
@@ -1681,23 +1681,25 @@ class WorksheetExporter:
         if not rim.any():
             return False
         med = np.median(crop[rim].astype(np.float32), axis=0)
-        fabric_lum = float(
-            0.2126 * fabric_rgb[0] + 0.7152 * fabric_rgb[1] + 0.0722 * fabric_rgb[2]
-        )
-        # Mubadala sample: red ring + navy center (+ white glyphs on dark shirts).
+        med_lum = float(0.2126 * med[0] + 0.7152 * med[1] + 0.0722 * med[2])
+        _ = fabric_rgb  # API compat; branch uses photographed rim, not NRF.
+        # Mubadala sample: red ring + navy disc (+ white glyphs on dark shirts).
         red = (r > 120) & (g < 130) & (b < 130) & (r > g + 15) & (r > b + 15)
-        navy = (b > g + 10) & (b > r + 10) & (b < 160) & (lum < 140) & (lum > 20)
-        if fabric_lum >= 160:
-            # Light shirts — only colored logo ink (never bright fabric).
-            ink = ((red | navy).astype(np.uint8) * 255)
+        # Absolute navy matches Navy-shirt weave — only use on light/mid fabric.
+        navy_abs = (b > g + 10) & (b > r + 10) & (b < 160) & (lum < 140) & (lum > 20)
+        navy_rel = (lum < med_lum - 18.0) & (b > r + 8) & (b >= g - 5)
+        if med_lum >= 160.0:
+            # Light / mid shirts (White, Iron Sage, …) — never treat weave as ink.
+            ink = ((red | navy_abs | navy_rel).astype(np.uint8) * 255)
         else:
-            # Dark shirts — white/light glyphs + red accents.
-            bright = (lum >= 170) & (np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b) < 40)
-            ink = ((red | navy | bright).astype(np.uint8) * 255)
+            bright = (lum >= 170) & (
+                np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b) < 40
+            )
+            # Dark shirts: red ring + white glyphs + darker-than-rim navy only.
+            ink = ((red | bright | navy_rel).astype(np.uint8) * 255)
         if not ink.any():
-            # Fallback: chroma vs rim fabric.
             delta = np.linalg.norm(crop.astype(np.float32) - med, axis=2) > 35.0
-            if fabric_lum >= 160:
+            if med_lum >= 160.0:
                 ink = (delta & (lum < 200)).astype(np.uint8) * 255
             else:
                 ink = delta.astype(np.uint8) * 255
@@ -1710,28 +1712,60 @@ class WorksheetExporter:
         if not cnts:
             return False
         (cx, cy), radius = cv2.minEnclosingCircle(max(cnts, key=cv2.contourArea))
-        radius = float(radius) + max(2.0, min(hh, ww) * 0.06)
-        mask = np.zeros((hh, ww), dtype=np.uint8)
-        cv2.circle(mask, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1)
-        mask[:band, :] = 0
-        mask[-band:, :] = 0
-        mask[:, :band] = 0
-        mask[:, -band:] = 0
-        if not mask.any():
+        # Pad past the red ring; do not carve a rim band out of the disc — Iron
+        # Sage covers sit tight and band-zero left navy crumbs at the tips.
+        radius = float(radius) + max(3.0, min(hh, ww) * 0.10)
+        disc = np.zeros((hh, ww), dtype=np.uint8)
+        cv2.circle(
+            disc, (int(round(cx)), int(round(cy))), int(round(radius)), 255, -1
+        )
+        if not disc.any():
             return False
-        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
-        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
-        healed_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
-        # Scrub residual logo chroma only — do not flatten white fabric weave.
-        hr, hg, hb = healed_rgb[:, :, 0], healed_rgb[:, :, 1], healed_rgb[:, :, 2]
-        residual_red = (hr > 120) & (hg < 130) & (hb < 130) & (hr > hg + 15)
-        residual_navy = (hb > hg + 10) & (hb > hr + 10) & (hb < 160)
-        crumb = (mask > 0) & (residual_red | residual_navy)
-        if fabric_lum < 160:
-            hlum = 0.2126 * hr + 0.7152 * hg + 0.0722 * hb
-            crumb = crumb | ((mask > 0) & (hlum >= 170))
+        outer = cv2.dilate(disc, np.ones((9, 9), np.uint8), iterations=2)
+        ring = (outer > 0) & (disc == 0)
+        if int(ring.sum()) < 24:
+            ring = rim & (disc == 0)
+        ring_px = crop[ring]
+        if len(ring_px) < 8:
+            ring_px = crop[rim]
+        if len(ring_px) < 8:
+            return False
+        local = np.median(ring_px.astype(np.float32), axis=0)
+        ring_std = np.maximum(ring_px.astype(np.float32).std(axis=0), 1.5)
+        ys, xs = np.where(disc > 0)
+        rng = np.random.RandomState(int(cx) * 1000 + int(cy))
+        noise = rng.normal(0.0, 1.0, size=(len(ys), 3)).astype(np.float32)
+        filled = np.clip(local + noise * ring_std * 0.55, 0, 255).astype(np.uint8)
+        healed_rgb = crop.copy()
+        healed_rgb[ys, xs] = filled
+        yy, xx = np.ogrid[:hh, :ww]
+        dist = np.sqrt((xx - float(cx)) ** 2 + (yy - float(cy)) ** 2)
+        feather = max(3.0, radius * 0.22)
+        alpha = np.clip((radius - dist) / feather, 0.0, 1.0).astype(np.float32)
+        alpha = np.where(disc > 0, alpha, 0.0)
+        blended = crop.astype(np.float32)
+        for c in range(3):
+            blended[:, :, c] = (
+                alpha * healed_rgb[:, :, c] + (1.0 - alpha) * blended[:, :, c]
+            )
+        healed_rgb = np.clip(blended, 0, 255).astype(np.uint8)
+        hr = healed_rgb[:, :, 0].astype(np.int16)
+        hg = healed_rgb[:, :, 1].astype(np.int16)
+        hb = healed_rgb[:, :, 2].astype(np.int16)
+        hlum = 0.2126 * hr + 0.7152 * hg + 0.0722 * hb
+        crumb = (disc > 0) & (
+            ((hr > 110) & (hg < 130) & (hb < 130) & (hr > hg + 15))
+            | ((hb > hg + 10) & (hb > hr + 10) & (hb < 160) & (hlum < 140))
+            | (hlum < med_lum - 28.0)
+        )
+        if med_lum < 160.0:
+            crumb = crumb | (
+                (disc > 0)
+                & (hlum >= 170)
+                & ((healed_rgb.max(axis=2) - healed_rgb.min(axis=2)) < 45)
+            )
         if crumb.any():
-            healed_rgb[crumb] = med.astype(np.uint8)
+            healed_rgb[crumb] = np.clip(local, 0, 255).astype(np.uint8)
         arr[y0:y1, x0:x1] = healed_rgb
         out = PILImage.fromarray(arr, "RGB")
         buf = BytesIO()
