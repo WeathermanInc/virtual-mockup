@@ -46,6 +46,13 @@ FAMILY_KEYS = {
     "Poncho": "poncho",
     "Sun Shirt": "sun_shirt",
 }
+FAMILY_LABEL_BY_KEY = {v: k for k, v in FAMILY_KEYS.items()}
+# Shopify / public CTA: ?mode=customer&return=<url>&family=sun_shirt
+CUSTOMER_RETURN_HOST_SUFFIXES = (
+    "weatherman.com",
+    "myshopify.com",
+    "shopifypreview.com",
+)
 
 try:
     from skills.asset_logger import AssetLogger
@@ -166,9 +173,56 @@ def _clear_preview_cache() -> None:
         pass
 
 
+def _customer_mode_from_query() -> tuple[bool, str, str | None]:
+    """Return (customer_mode, safe_return_url, family_key) from ``st.query_params``."""
+    from urllib.parse import urlparse
+
+    qp = st.query_params
+    mode_raw = qp.get("mode")
+    if isinstance(mode_raw, list):
+        mode_raw = mode_raw[0] if mode_raw else ""
+    customer = str(mode_raw or "").strip().lower() == "customer"
+
+    ret_raw = qp.get("return")
+    if isinstance(ret_raw, list):
+        ret_raw = ret_raw[0] if ret_raw else ""
+    return_url = str(ret_raw or "").strip()
+    safe_return = ""
+    if return_url:
+        parsed = urlparse(return_url)
+        host = (parsed.hostname or "").lower()
+        if parsed.scheme in {"http", "https"} and any(
+            host == s or host.endswith("." + s) for s in CUSTOMER_RETURN_HOST_SUFFIXES
+        ):
+            safe_return = return_url
+
+    fam_raw = qp.get("family")
+    if isinstance(fam_raw, list):
+        fam_raw = fam_raw[0] if fam_raw else ""
+    fam_token = str(fam_raw or "").strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "umbrella": "umbrella",
+        "backpack": "backpack",
+        "hat": "hat",
+        "poncho": "poncho",
+        "sun_shirt": "sun_shirt",
+        "sunshirt": "sun_shirt",
+        "sun": "sun_shirt",
+    }
+    family_key = aliases.get(fam_token)
+    return customer, safe_return, family_key
+
+
 def _run_app() -> None:
     if WM_MARK.is_file():
         st.logo(str(WM_MARK), size="large")
+
+    customer_mode, return_url, family_preselect = _customer_mode_from_query()
+    if customer_mode and family_preselect:
+        fam_widget_key = f"family_{FORM_KEY}"
+        label = FAMILY_LABEL_BY_KEY.get(family_preselect)
+        if label and fam_widget_key not in st.session_state:
+            st.session_state[fam_widget_key] = label
 
     # Selected multiselect/segmented chips use theme.primaryColor (Weatherman coral).
     # Soften those to navy so they don't read as Streamlit validation errors.
@@ -191,27 +245,57 @@ def _run_app() -> None:
 
     memory, logger, exporter = _init(STAMP_VERSION)
 
-    st.caption("Internal tool · Sales and operations · Production proofs")
-    st.title("Virtual mockup creator")
-    st.caption("On-screen proof is the official Weatherman production worksheet with this job stamped on it.")
+    if customer_mode:
+        st.caption("Custom order · Build a proof, then return to your inquiry form")
+        st.title("Build your mockup")
+        st.caption(
+            "Upload your logo, pick product and colors, download the PDF proof, "
+            "then upload that file on the Weatherman custom-order form."
+        )
+        if return_url:
+            st.info(
+                "When you finish, download the PDF and return to the order form to attach it under Artwork Upload."
+            )
+            st.link_button(
+                "Return to custom order form",
+                return_url,
+                icon=":material/arrow_back:",
+                width="content",
+            )
+    else:
+        st.caption("Internal tool · Sales and operations · Production proofs")
+        st.title("Virtual mockup creator")
+        st.caption("On-screen proof is the official Weatherman production worksheet with this job stamped on it.")
 
     with st.sidebar:
-        st.subheader("Job ticket")
-        client = st.text_input("Client", value="", placeholder="Client name", key=f"client_{FORM_KEY}") or ""
-        owner = st.text_input("Project owner", value="", placeholder="Initials", key=f"owner_{FORM_KEY}") or ""
-        print_order = st.text_input("Print order", value="", placeholder="Printer / PO", key=f"po_{FORM_KEY}") or ""
-        request_date = st.text_input(
-            "Request date",
+        st.subheader("Build your mockup" if customer_mode else "Job ticket")
+        client = st.text_input(
+            "Company / organization" if customer_mode else "Client",
             value="",
-            placeholder="MM/DD/YYYY",
-            key=f"req_{FORM_KEY}",
+            placeholder="Company or client name",
+            key=f"client_{FORM_KEY}",
         ) or ""
-        last_update = st.text_input(
-            "Last update",
-            value="",
-            placeholder="MM/DD/YYYY",
-            key=f"upd_{FORM_KEY}",
-        ) or ""
+        if customer_mode:
+            owner = "WEB"
+            print_order = "Shopify custom order"
+            today_s = date.today().strftime("%m/%d/%Y")
+            request_date = today_s
+            last_update = today_s
+        else:
+            owner = st.text_input("Project owner", value="", placeholder="Initials", key=f"owner_{FORM_KEY}") or ""
+            print_order = st.text_input("Print order", value="", placeholder="Printer / PO", key=f"po_{FORM_KEY}") or ""
+            request_date = st.text_input(
+                "Request date",
+                value="",
+                placeholder="MM/DD/YYYY",
+                key=f"req_{FORM_KEY}",
+            ) or ""
+            last_update = st.text_input(
+                "Last update",
+                value="",
+                placeholder="MM/DD/YYYY",
+                key=f"upd_{FORM_KEY}",
+            ) or ""
 
         family_label = st.segmented_control(
             "Product family",
@@ -372,7 +456,7 @@ def _run_app() -> None:
         if "logo_uploader_id" not in st.session_state:
             st.session_state["logo_uploader_id"] = 0
         upload = st.file_uploader(
-            "Client logo (SVG, AI, CDR, PDF, EPS)",
+            "Your logo (SVG, AI, CDR, PDF, EPS)" if customer_mode else "Client logo (SVG, AI, CDR, PDF, EPS)",
             type=ext_list,
             key=f"client_logo_upload_{FORM_KEY}_{st.session_state['logo_uploader_id']}",
         )
@@ -385,7 +469,7 @@ def _run_app() -> None:
             "Worksheet year",
             min_value=2020,
             max_value=2040,
-            value=None,
+            value=date.today().year if customer_mode else None,
             step=1,
             format="%d",
             placeholder="Year",
@@ -396,7 +480,7 @@ def _run_app() -> None:
 
     missing = []
     if not client.strip():
-        missing.append("client")
+        missing.append("company / client")
     if not family:
         missing.append("product family")
     if not product_keys:
@@ -423,8 +507,10 @@ def _run_app() -> None:
         missing.append("Sun-Shirts-Mockups.pdf (missing from deploy)")
 
     if missing:
-        st.warning("Fill the job ticket to build a proof: " + ", ".join(missing) + ".")
-        render_project_guide(stamp_version=STAMP_VERSION)
+        prompt = "Fill in the sidebar to build a proof" if customer_mode else "Fill the job ticket to build a proof"
+        st.warning(prompt + ": " + ", ".join(missing) + ".")
+        if not customer_mode:
+            render_project_guide(stamp_version=STAMP_VERSION)
         return
 
     resolved_knockout = knockout_mode
@@ -605,7 +691,7 @@ def _run_app() -> None:
         if not logo:
             st.caption("No upload yet — Generate exports the worksheet with logo slots cleared.")
         generate = st.button(
-            "Generate production worksheet PDF",
+            "Generate mockup PDF" if customer_mode else "Generate production worksheet PDF",
             type="primary",
             icon=":material/picture_as_pdf:",
             width="stretch",
@@ -654,13 +740,32 @@ def _run_app() -> None:
                 width="stretch",
                 key="download_worksheet_pdf",
             )
+            if customer_mode:
+                st.success(
+                    "Next: upload this PDF (and/or your original logo) under Artwork Upload on the custom-order form, then Submit."
+                )
+                if return_url:
+                    st.link_button(
+                        "Return to custom order form",
+                        return_url,
+                        type="primary",
+                        icon=":material/arrow_back:",
+                        width="stretch",
+                        key="return_after_download",
+                    )
 
-    st.caption(
-        "Catalog: Walk · Stick · Golf Essential / 62 / 68 · Trek · Travel · Collapsible · Kids · "
-        "Venture Dry Pack · Trek All-Weather Hat · Stride Pullover Poncho. "
-        "Artwork bound 21.6 × 10 cm (Walk/Golf). Logos: SVG, AI, CDR, PDF, EPS."
-    )
-    render_project_guide(stamp_version=STAMP_VERSION)
+    if customer_mode:
+        st.caption(
+            "Need help? Email custom@weatherman.com. "
+            "Accepted logos: SVG, AI, CDR, PDF, EPS."
+        )
+    else:
+        st.caption(
+            "Catalog: Walk · Stick · Golf Essential / 62 / 68 · Trek · Travel · Collapsible · Kids · "
+            "Venture Dry Pack · Trek All-Weather Hat · Stride Pullover Poncho. "
+            "Artwork bound 21.6 × 10 cm (Walk/Golf). Logos: SVG, AI, CDR, PDF, EPS."
+        )
+        render_project_guide(stamp_version=STAMP_VERSION)
 
 
 

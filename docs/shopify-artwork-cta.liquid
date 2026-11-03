@@ -1,0 +1,408 @@
+{% comment %}
+  Weatherman · Dual-path Artwork CTA + Vector Upload Guard v4
+  Paste into a Custom Liquid section on template custom-2026-2,
+  ABOVE Section 4: Artwork Upload (Qikify / bcontact form).
+
+  Path A — Upload vector via the form field below (guarded to .ai .eps .cdr .pdf .svg).
+  Path B — Create a mockup (Streamlit ?mode=customer), download PDF, reattach below.
+
+  QA: VM Corporate Gifting and Custom Orders (Hidden), template custom-2026-2.
+  Before go-live on NEW Corporate Gifting:
+  1. Set mockup_return to this page’s stable storefront URL.
+  2. Confirm Streamlit Community Cloud app is Public.
+{% endcomment %}
+
+{% assign mockup_app = 'https://virtual-mockup-85kxgyfvpa82a669bqjuqg.streamlit.app' %}
+{% comment %} Prefer a stable /pages/... handle for return= once VM is Visible-but-unlisted. {% endcomment %}
+{% assign mockup_return = 'https://csfw7ylm5v4xqt8p-86720348463.shopifypreview.com/pages?preview_key=969b7098a0171bccfe6ed35420643970' %}
+
+<style>
+  .wm-mockup-cta {
+    margin: 1.25rem 0 1.75rem;
+    padding: 1.25rem 1.35rem;
+    background: #f8f7f2;
+    border: 1px solid #e5e2dc;
+    border-radius: 4px;
+    font-family: inherit;
+    color: #111;
+  }
+  .wm-mockup-cta h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .wm-mockup-cta p {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+  .wm-mockup-cta ol {
+    margin: 0 0 1rem;
+    padding-left: 1.25rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .wm-mockup-cta a.wm-mockup-btn {
+    display: inline-block;
+    background: #ef4e23;
+    color: #fff !important;
+    text-decoration: none !important;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.7rem 1.15rem;
+    border-radius: 2px;
+    border: none;
+  }
+  .wm-mockup-cta a.wm-mockup-btn:hover {
+    background: #d9441c;
+    color: #fff !important;
+  }
+  .wm-mockup-cta .wm-mockup-note {
+    margin: 0.85rem 0 0;
+    font-size: 0.85rem;
+    color: #444;
+  }
+</style>
+
+<div class="wm-mockup-cta">
+  <h3>Artwork — choose one</h3>
+  <p>
+    <strong>Option A — Upload your vector logo.</strong>
+    Use the Artwork Upload field below. Accepted: .AI, .EPS, .CDR, .PDF, or .SVG
+    (PNG, JPG, and other raster types are blocked).
+  </p>
+  <p>
+    <strong>Option B — Create a live visual mockup.</strong>
+    Open our Virtual Mockup Creator, stamp your logo on Weatherman gear, download the PDF proof,
+    then upload that PDF (and/or your original vector logo) in Artwork Upload below.
+  </p>
+  <ol>
+    <li>Click <em>Create a mockup</em> (opens in a new tab).</li>
+    <li>Upload your vector logo, pick product and colors, generate the PDF.</li>
+    <li>Download the PDF, return here, and attach it under Artwork Upload.</li>
+    <li>Finish the rest of this form and Submit.</li>
+  </ol>
+  <a
+    class="wm-mockup-btn"
+    href="{{ mockup_app }}/?mode=customer&amp;return={{ mockup_return | url_encode }}"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    Create a mockup
+  </a>
+  <p class="wm-mockup-note">
+    After you download your proof, come back to this tab to upload files and submit your inquiry.
+    Mockup PDFs are accepted by the Artwork field (.PDF).
+  </p>
+</div>
+
+<script>
+/**
+ * Vector Upload Guard v4
+ * Blocks non-vector uploads on Qikify forms (theme-only; does not edit Qikify).
+ *
+ * Error UI is attached to document.body (fixed), so Qikify's re-render cannot wipe it.
+ *
+ * Allowed: .ai .eps .cdr .pdf .svg
+ */
+(function () {
+  'use strict';
+
+  if (window.__vectorUploadGuardV4) return;
+  window.__vectorUploadGuardV4 = true;
+
+  var ALLOWED = ['ai', 'eps', 'cdr', 'pdf', 'svg'];
+  var ACCEPT = '.' + ALLOWED.join(',.');
+  var MSG =
+    'Please upload a vector file (.ai, .eps, .cdr, .pdf, or .svg). PNG, JPG, TXT, and other file types cannot be used.';
+  var MARK = 'data-vector-upload-guard';
+  var ERROR_ID = 'vector-upload-guard-error';
+
+  var showErrorPending = false;
+
+  function ext(name) {
+    if (!name || name.indexOf('.') === -1) return '';
+    return name.split('.').pop().toLowerCase().trim();
+  }
+
+  function allowedName(name) {
+    return ALLOWED.indexOf(ext(name)) !== -1;
+  }
+
+  function allowedFile(file) {
+    return !!(file && allowedName(file.name));
+  }
+
+  function fileInput() {
+    return document.querySelector('input[type="file"]');
+  }
+
+  function paintError() {
+    if (!showErrorPending) return;
+
+    var input = fileInput();
+    var top = 100;
+    if (input) {
+      var rect = input.getBoundingClientRect();
+      top = Math.max(12, Math.round(rect.bottom + 10));
+    }
+
+    var el = document.getElementById(ERROR_ID);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = ERROR_ID;
+      el.setAttribute(MARK + '-error', 'true');
+      el.setAttribute('role', 'alert');
+      document.body.appendChild(el);
+    }
+
+    el.textContent = MSG;
+    el.style.cssText = [
+      'position:fixed',
+      'left:50%',
+      'transform:translateX(-50%)',
+      'top:' + top + 'px',
+      'z-index:2147483647',
+      'max-width:560px',
+      'width:calc(100% - 32px)',
+      'box-sizing:border-box',
+      'color:#b42318',
+      'background:#fef3f2',
+      'border:1px solid #fecdca',
+      'border-radius:8px',
+      'padding:12px 14px',
+      'font-size:14px',
+      'font-weight:700',
+      'line-height:1.4',
+      'font-family:system-ui,-apple-system,sans-serif',
+      'box-shadow:0 8px 24px rgba(0,0,0,.18)',
+      'pointer-events:none',
+      'display:block',
+    ].join(';');
+
+    if (input && typeof input.scrollIntoView === 'function') {
+      try {
+        input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } catch (e) {
+        input.scrollIntoView(true);
+      }
+    }
+  }
+
+  function hideError() {
+    showErrorPending = false;
+    var el = document.getElementById(ERROR_ID);
+    if (el) el.remove();
+  }
+
+  function clearInput(input) {
+    try {
+      input.value = '';
+    } catch (e) {}
+  }
+
+  function hostFor(el) {
+    return (
+      (el &&
+        el.closest &&
+        el.closest(
+          '.bcontact-field, [class*="bcontact"], [class*="file"], [class*="upload"], form, div'
+        )) ||
+      (el && el.parentElement) ||
+      document.body
+    );
+  }
+
+  function clickRemoveNear(root) {
+    if (!root || !root.querySelectorAll) return false;
+    var candidates = root.querySelectorAll(
+      'button, a, span, i, svg, [role="button"], [class*="remove"], [class*="close"], [class*="delete"]'
+    );
+    for (var i = 0; i < candidates.length; i++) {
+      var el = candidates[i];
+      var label = (
+        (el.getAttribute &&
+          (el.getAttribute('aria-label') ||
+            el.getAttribute('title') ||
+            el.getAttribute('class'))) ||
+        ''
+      ).toLowerCase();
+      var text = (el.textContent || '').trim();
+      if (
+        text === '×' ||
+        text === 'x' ||
+        text === 'X' ||
+        label.indexOf('remove') !== -1 ||
+        label.indexOf('close') !== -1 ||
+        label.indexOf('delete') !== -1
+      ) {
+        try {
+          el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          return true;
+        } catch (e) {
+          try {
+            el.click();
+            return true;
+          } catch (e2) {}
+        }
+      }
+    }
+    return false;
+  }
+
+  function stripBadFileChips(root) {
+    var scope = root || document;
+    var nodes = scope.querySelectorAll('a, span, div, p, li, button');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (el.id === ERROR_ID) continue;
+      var text = (el.textContent || '').trim();
+      if (!text || text.length > 120) continue;
+      if (!/^[^\s\\/]+\.[a-z0-9]{2,5}$/i.test(text)) continue;
+      if (allowedName(text)) continue;
+
+      var wrap = hostFor(el);
+      clickRemoveNear(wrap) || clickRemoveNear(el.parentElement);
+      var input = wrap.querySelector('input[type="file"]');
+      if (input) clearInput(input);
+      showErrorPending = true;
+      paintError();
+    }
+  }
+
+  function enhance(input) {
+    if (!input || input.getAttribute(MARK) === '1') return;
+    input.setAttribute(MARK, '1');
+    try {
+      input.setAttribute('accept', ACCEPT);
+    } catch (e) {}
+  }
+
+  function enhanceAll(root) {
+    var list = (root || document).querySelectorAll('input[type="file"]');
+    for (var i = 0; i < list.length; i++) enhance(list[i]);
+  }
+
+  function reject(input) {
+    showErrorPending = true;
+    clearInput(input);
+    clickRemoveNear(hostFor(input));
+    paintError();
+    setTimeout(paintError, 50);
+    setTimeout(paintError, 200);
+    setTimeout(function () {
+      stripBadFileChips(document);
+      paintError();
+    }, 400);
+  }
+
+  function onChangeCapture(e) {
+    var input = e.target;
+    if (!input || input.tagName !== 'INPUT' || input.type !== 'file') return;
+    enhance(input);
+
+    var files = input.files;
+    if (!files || !files.length) return;
+
+    for (var i = 0; i < files.length; i++) {
+      if (!allowedFile(files[i])) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        reject(input);
+        return;
+      }
+    }
+
+    hideError();
+  }
+
+  function onDropCapture(e) {
+    var dt = e.dataTransfer;
+    if (!dt || !dt.files || !dt.files.length) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (
+      !t.closest('input[type="file"]') &&
+      !t.closest('[class*="file"]') &&
+      !t.closest('[class*="upload"]') &&
+      !t.closest('[class*="bcontact"]')
+    ) {
+      return;
+    }
+    for (var i = 0; i < dt.files.length; i++) {
+      if (!allowedFile(dt.files[i])) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        showErrorPending = true;
+        paintError();
+        setTimeout(function () {
+          stripBadFileChips(document);
+          paintError();
+        }, 150);
+        return;
+      }
+    }
+    hideError();
+  }
+
+  function onSubmitCapture(e) {
+    var form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+    var inputs = form.querySelectorAll('input[type="file"]');
+    for (var i = 0; i < inputs.length; i++) {
+      var files = inputs[i].files;
+      if (!files) continue;
+      for (var j = 0; j < files.length; j++) {
+        if (!allowedFile(files[j])) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          reject(inputs[i]);
+          return;
+        }
+      }
+    }
+  }
+
+  function onQikifyUploaded() {
+    setTimeout(function () {
+      stripBadFileChips(document);
+      paintError();
+    }, 0);
+    setTimeout(function () {
+      stripBadFileChips(document);
+      paintError();
+    }, 200);
+  }
+
+  function onScrollOrResize() {
+    if (showErrorPending) paintError();
+  }
+
+  function boot() {
+    enhanceAll(document);
+
+    document.addEventListener('change', onChangeCapture, true);
+    document.addEventListener('drop', onDropCapture, true);
+    document.addEventListener('submit', onSubmitCapture, true);
+    document.addEventListener('bcontact:fileUploaded', onQikifyUploaded, true);
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+
+    var obs = new MutationObserver(function () {
+      enhanceAll(document);
+      if (showErrorPending) {
+        if (!document.getElementById(ERROR_ID)) paintError();
+        stripBadFileChips(document);
+      }
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>

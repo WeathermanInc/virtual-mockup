@@ -94,6 +94,8 @@ timeline
     Oct 26 : HS01 / BS01 · Sun-Shirts-Mockups.pdf map
     Oct 28 : Photo heal clears baked chest mark
            : GS 41 mm match_artwork · same plate RGB as Artwork
+  section Shopify CTA
+    Nov 3 : Customer mode · download-and-reattach artwork bridge
 """
 
 

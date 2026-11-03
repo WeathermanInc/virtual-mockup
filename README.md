@@ -149,6 +149,50 @@ dependency changes or a dashboard reboot.
 
 ---
 
+## Shopify custom-order CTA
+
+Public customers on the corporate custom-order page can **upload a logo** (existing Artwork field) **or** **create a mockup** (this app), then attach the PDF proof back on the form.
+
+```mermaid
+flowchart LR
+  A[Shopify inquiry form] -->|Upload logo| B[Artwork file input]
+  A -->|Create a mockup| C[Streamlit customer mode]
+  C --> D[Download PDF proof]
+  D --> E[Upload PDF and or logo on form]
+  B --> F[Submit inquiry]
+  E --> F
+```
+
+### Query params (customer mode)
+
+| Param | Purpose |
+|-------|---------|
+| `mode=customer` | Simplified public UI (“Build your mockup”); hides internal job-ticket fields |
+| `return=<url>` | Safe return link after download (hosts: `weatherman.com`, `*.myshopify.com`, `*.shopifypreview.com`) |
+| `family=` | Optional preselect: `umbrella` · `backpack` · `hat` · `poncho` · `sun_shirt` |
+
+Example:
+
+`https://virtual-mockup-85kxgyfvpa82a669bqjuqg.streamlit.app/?mode=customer&return=https%3A%2F%2Fweatherman.com%2Fpages%2F…`
+
+Without `mode=customer`, the app stays the internal sales job ticket.
+
+### Theme snippet
+
+Paste [`docs/shopify-artwork-cta.liquid`](docs/shopify-artwork-cta.liquid) into a **Custom Liquid** section above Artwork Upload (Qikify / template `custom-2026-2`).
+
+The snippet includes:
+
+1. Dual-path UI card (Option A upload · Option B Create a mockup → `#EF4E23` CTA)
+2. **Vector Upload Guard v4** — theme-only script that restricts the Qikify file input to `.ai` `.eps` `.cdr` `.pdf` `.svg` (fixed error banner; does not edit Qikify)
+
+- **QA first** on Hidden page **VM Corporate Gifting and Custom Orders**; open via Admin → Preview.
+- Set `mockup_return` in the snippet to a stable storefront URL before promoting to **NEW Corporate Gifting and Custom Orders**.
+- Community Cloud app must remain **Public**. Preview/`preview_key` links can expire — re-Preview from Admin if needed.
+- If Guard v4 was already pasted elsewhere on the theme, remove the duplicate so `__vectorUploadGuardV4` only boots once (the snippet is idempotent either way).
+
+---
+
 ## Architecture diagrams
 
 ### Operator pipeline
@@ -241,6 +285,8 @@ timeline
     Oct 26 : HS01 / BS01 · Sun-Shirts-Mockups.pdf map
     Oct 28 : Photo heal clears baked chest mark
            : GS 41 mm match_artwork · same plate RGB as Artwork
+  section Shopify CTA
+    Nov 3 : Customer mode · download-and-reattach artwork bridge
 ```
 
 The same diagrams and live metrics appear in the Streamlit UI under
