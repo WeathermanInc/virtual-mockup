@@ -35,7 +35,7 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 121
+STAMP_VERSION = 122
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho", "Sun Shirt"]
@@ -112,21 +112,19 @@ def _clear_logo_keys() -> None:
 
 
 def _sync_logo_upload(upload) -> None:
-    """Keep logo_bytes/logo_name in lockstep with the active file_uploader.
+    """Persist uploader bytes into logo_bytes/logo_name (customer + ops).
 
-    Same path for customer + ops. Empty / cleared uploader forces logo = None
-    (no Proper / sample-mark fallback).
+    Only writes when a file is present. Clearing is explicit via the Clear
+    button — never drop the buffer when the widget briefly returns None on a
+    download/rerun click (that previously wiped art and broke PDF download).
     """
     if upload is None:
-        _clear_logo_keys()
         return
     data = upload.getvalue()
     name = str(getattr(upload, "name", None) or "").strip()
     if isinstance(data, (bytes, bytearray)) and len(data) > 0 and name:
         st.session_state["logo_bytes"] = bytes(data)
         st.session_state["logo_name"] = name
-        return
-    _clear_logo_keys()
 
 
 def _session_logo_payload() -> tuple[bytes | None, str | None]:
@@ -174,9 +172,6 @@ def _store_pdf_buffer(
         st.session_state["customer_pdf_name"] = str(out_name)
         st.session_state["customer_pdf_pages"] = list(page_labels)
         st.session_state["customer_pdf_fingerprint"] = job_fp
-        st.session_state["customer_pdf_gen"] = int(
-            st.session_state.get("customer_pdf_gen") or 0
-        ) + 1
 
 
 @st.cache_resource
@@ -232,11 +227,9 @@ def _pdf_buffer_ready(*, customer_mode: bool = False) -> tuple[bytes, str] | Non
 
 
 def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None) -> bool:
-    """Native download_button only — no on_click / callbacks that swallow the stream.
+    """Serve PDF via a stable native download_button (no on_click, no key churn).
 
-    Customer mode reads ``st.session_state.customer_pdf_bytes`` directly with a
-    unique key so the binary stream releases reliably.
-
+    Customer mode reads ``st.session_state.customer_pdf_bytes`` only.
     Returns True when a download control was rendered.
     """
     if customer_mode:
@@ -252,14 +245,15 @@ def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None
             )
         elif pages:
             st.caption(f"Ready to download · {len(pages)} pages: {' · '.join(pages)}")
-        gen = int(st.session_state.get("customer_pdf_gen") or 0)
+        # Fixed key + primary type — dynamic keys were swallowing Cloud download clicks.
         st.download_button(
-            "Download PDF",
+            label="Download PDF",
             data=pdf_bytes,
             file_name=pdf_name,
             mime="application/pdf",
+            type="primary",
             width="stretch",
-            key=f"customer_download_worksheet_pdf_{gen}",
+            key="customer_download_worksheet_pdf",
         )
         return True
 
@@ -274,10 +268,11 @@ def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None
     elif pages:
         st.caption(f"Ready to download · {len(pages)} pages: {' · '.join(pages)}")
     st.download_button(
-        "Download PDF",
+        label="Download PDF",
         data=pdf_bytes,
         file_name=pdf_name,
         mime="application/pdf",
+        type="primary",
         width="stretch",
         key="ops_download_worksheet_pdf",
     )
@@ -940,8 +935,7 @@ def _run_app() -> None:
                     "mode": "customer" if customer_mode else "ops",
                 },
             )
-            # Show Download on a clean run (not the Generate click).
-            st.rerun()
+            st.success("Mockup PDF ready — use Download PDF below.")
 
         if _render_worksheet_download(customer_mode=customer_mode, job_fp=job_fp):
             if customer_mode:

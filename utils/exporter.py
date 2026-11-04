@@ -2376,8 +2376,10 @@ class WorksheetExporter:
         if cover:
             self._pdf_clear_backpack_front_photo(page, cover, fabric)
         if mark is not None and box:
-            # Mild rotate + wider box (see BACKPACK_PDF_FRONT_OVERLAYS) so wide
-            # client marks land on Proper's measured center at readable size.
+            # Opaque fabric plate under the stamp so Proper cannot ghost through,
+            # then drop the client mark on Proper's measured upper-center cluster.
+            plate = self._pdf_sample_fill(page, box, fallback=fabric)
+            self._pdf_opaque_wipe(page, box, plate)
             self._pdf_insert_mark(
                 page,
                 box,

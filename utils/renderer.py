@@ -166,79 +166,77 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 )
 
 # Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
-# Boxes are centered on Paula's baked Proper glyph cluster (measured), widened so
-# landscape client marks (diamond + wordmark) keep similar visual weight.
-# rotate stays mild — large CCW angles expand the AABB and shrink wide logos.
+# Centers match Paula's baked Proper glyph cluster. Boxes are wide enough for
+# landscape client marks. rotate=0 — perspective is baked into the photo; extra
+# CCW rotation was shifting wide logos down/left of Proper.
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     "upper_center": {
         "black": {
-            "box": (575.0, 904.0, 220.0, 66.0),
-            "cover": (555.0, 885.0, 260.0, 100.0),
+            "box": (575.0, 910.0, 220.0, 60.0),
+            "cover": (555.0, 890.0, 260.0, 95.0),
             "erase": "photo",
-            "rotate": 3.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
         "steel": {
-            "box": (586.0, 905.0, 220.0, 68.0),
-            "cover": (566.0, 886.0, 260.0, 102.0),
+            "box": (586.0, 912.0, 220.0, 60.0),
+            "cover": (566.0, 892.0, 260.0, 95.0),
             "erase": "photo",
-            "rotate": 3.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
         "sage": {
-            # Proper cluster ≈ (600,893)–(760,965); widen for ABR-style marks.
-            "box": (560.0, 898.0, 240.0, 72.0),
-            "cover": (540.0, 878.0, 280.0, 108.0),
+            # Proper ≈ (600,893)–(760,965); stamp centered on that cluster.
+            "box": (590.0, 905.0, 200.0, 58.0),
+            "cover": (565.0, 885.0, 250.0, 95.0),
             "erase": "photo",
-            "rotate": 3.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
     },
     "center": {
         "black": {
-            "box": (561.0, 973.0, 220.0, 68.0),
-            "cover": (541.0, 954.0, 260.0, 102.0),
+            "box": (561.0, 980.0, 220.0, 60.0),
+            "cover": (541.0, 960.0, 260.0, 95.0),
             "erase": "photo",
-            "rotate": 3.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
         "steel": {
-            "box": (580.0, 986.0, 220.0, 66.0),
-            "cover": (560.0, 967.0, 260.0, 100.0),
+            "box": (580.0, 990.0, 220.0, 60.0),
+            "cover": (560.0, 970.0, 260.0, 95.0),
             "erase": "photo",
-            "rotate": 3.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
         "sage": {
-            "box": (555.0, 968.0, 240.0, 72.0),
-            "cover": (535.0, 948.0, 280.0, 108.0),
+            "box": (575.0, 975.0, 200.0, 58.0),
+            "cover": (550.0, 955.0, 250.0, 95.0),
             "erase": "photo",
-            "rotate": 3.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
     },
     "lower_right_center": {
         "black": {
-            # Toward right seam of the front panel; cover clears Paula's baked mark
-            # without extending onto the white studio backdrop.
             "box": (655.0, 1175.0, 130.0, 42.0),
             "cover": (600.0, 1155.0, 210.0, 75.0),
             "erase": "photo",
-            "rotate": 2.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
         "steel": {
             "box": (640.0, 1170.0, 130.0, 42.0),
             "cover": (590.0, 1150.0, 210.0, 75.0),
             "erase": "photo",
-            "rotate": 2.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
         "sage": {
             "box": (640.0, 1170.0, 130.0, 42.0),
             "cover": (590.0, 1150.0, 210.0, 75.0),
             "erase": "photo",
-            "rotate": 2.0,
+            "rotate": 0.0,
             "fit_pad": 0.02,
         },
     },
