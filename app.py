@@ -103,6 +103,60 @@ def _logo_fingerprint(logo_bytes: bytes | None, logo_name: str | None) -> str:
     return f"{logo_name or 'logo'}:{len(logo_bytes)}:{digest}"
 
 
+def _sync_logo_upload(upload) -> None:
+    """Persist uploader bytes into stable session keys (same for customer + ops)."""
+    if upload is None:
+        return
+    data = upload.getvalue()
+    name = str(getattr(upload, "name", None) or "").strip()
+    if isinstance(data, (bytes, bytearray)) and len(data) > 0 and name:
+        st.session_state["logo_bytes"] = bytes(data)
+        st.session_state["logo_name"] = name
+
+
+def _session_logo_payload() -> tuple[bytes | None, str | None]:
+    """Unified logo buffer — identical for customer and internal modes."""
+    logo_bytes = st.session_state.get("logo_bytes")
+    logo_name = st.session_state.get("logo_name")
+    if not isinstance(logo_bytes, (bytes, bytearray)) or len(logo_bytes) == 0:
+        return None, None
+    name = str(logo_name or "").strip()
+    if not name:
+        return None, None
+    return bytes(logo_bytes), name
+
+
+def _load_session_logo(*, logo_color_name: str, logo_hex: str):
+    """Rasterize session artwork or return None (blank slots — no Proper fallback)."""
+    logo_bytes, logo_name = _session_logo_payload()
+    if logo_bytes is None or logo_name is None:
+        return None
+    color_override = None if logo_color_name == "Match uploaded art" else logo_hex
+    return load_artwork(logo_bytes, logo_name, color_override=color_override)
+
+
+def _store_pdf_buffer(
+    payload: bytes,
+    out_name: str,
+    *,
+    page_labels: list[str],
+    job_fp: str,
+    customer_mode: bool,
+) -> None:
+    """Write PDF bytes under stable session keys for download_button."""
+    data = bytes(payload)
+    st.session_state["pdf_bytes"] = data
+    st.session_state["pdf_name"] = str(out_name)
+    st.session_state["pdf_pages"] = list(page_labels)
+    st.session_state["pdf_fingerprint"] = job_fp
+    if customer_mode:
+        # Mirror for customer-mode download resilience across query/mode flaps.
+        st.session_state["customer_pdf_bytes"] = data
+        st.session_state["customer_pdf_name"] = str(out_name)
+        st.session_state["customer_pdf_pages"] = list(page_labels)
+        st.session_state["customer_pdf_fingerprint"] = job_fp
+
+
 @st.cache_resource
 def _init(version: int = STAMP_VERSION) -> tuple[StateMemory, AssetLogger, WorksheetExporter]:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -229,12 +283,16 @@ def _preview_pages(
         knockout_white=knockout_white,
     )
     job.knockout_mode = knockout_mode
+    # Same rule as Export: no upload → logo=None (blank slots, never Proper).
     logo = None
     if logo_bytes and logo_name:
         color_override = (
             None if logo_color_name == "Match uploaded art" else job.logo_hex
         )
-        logo = load_artwork(logo_bytes, logo_name, color_override=color_override)
+        try:
+            logo = load_artwork(logo_bytes, logo_name, color_override=color_override)
+        except VectorLoadError:
+            logo = None
     return exporter.preview_jpegs(job, logo)
 
 
@@ -642,14 +700,11 @@ def _run_app() -> None:
         }
     )
 
+    # Unified logo path for customer + ops — never fall back to Proper brand marks.
+    _sync_logo_upload(upload)
+    logo_bytes, logo_name = _session_logo_payload()
     logo = None
-    if upload is not None:
-        st.session_state["logo_bytes"] = upload.getvalue()
-        st.session_state["logo_name"] = upload.name
-    logo_bytes = st.session_state.get("logo_bytes")
-    logo_name = st.session_state.get("logo_name")
-
-    if logo_bytes and logo_name:
+    if logo_bytes is not None and logo_name is not None:
         stamp = date.today().isoformat()
         saved = LOGO_DIR / f"{job.client.replace(' ', '_')}_{stamp}_{Path(logo_name).name}"
         if st.session_state.get("_saved_logo") != saved.name:
@@ -666,18 +721,23 @@ def _run_app() -> None:
                 print(f"[vm] logo save skipped: {exc}", flush=True)
                 st.session_state["_saved_logo"] = saved.name
         try:
-            color_override = (
-                None if job.logo_color_name == "Match uploaded art" else job.logo_hex
+            logo = _load_session_logo(
+                logo_color_name=job.logo_color_name,
+                logo_hex=job.logo_hex,
             )
-            logo = load_artwork(logo_bytes, logo_name, color_override=color_override)
             st.success(f"Using uploaded artwork: `{logo_name}` · {job.logo_color_name}")
         except VectorLoadError as exc:
+            logo = None
             st.error(str(exc))
             # Keep rendering Export/download if a PDF was already generated.
             if _pdf_buffer_ready() is None:
                 return
     else:
-        st.info("No client logo uploaded. Official Proper marks are removed; upload SVG/AI/CDR/PDF/EPS to stamp.")
+        logo = None
+        st.info(
+            "No client logo uploaded. Artwork slots stay blank "
+            "(no Proper / sample marks); upload SVG/AI/CDR/PDF/EPS to stamp."
+        )
 
     logo_fp = _logo_fingerprint(logo_bytes, logo_name)
     job_fp = (
@@ -808,16 +868,13 @@ def _run_app() -> None:
                 built = exporter.build_pdf(job, logo)
             out_name = worksheet_filename(job.client, job.year, job.family)
             payload = bytes(built)
-            # Canonical buffer — download_button always reads pdf_bytes.
-            st.session_state["pdf_bytes"] = payload
-            st.session_state["pdf_name"] = out_name
-            st.session_state["pdf_pages"] = page_labels
-            st.session_state["pdf_fingerprint"] = job_fp
-            if customer_mode:
-                st.session_state["customer_pdf_bytes"] = payload
-                st.session_state["customer_pdf_name"] = out_name
-                st.session_state["customer_pdf_pages"] = page_labels
-                st.session_state["customer_pdf_fingerprint"] = job_fp
+            _store_pdf_buffer(
+                payload,
+                out_name,
+                page_labels=page_labels,
+                job_fp=job_fp,
+                customer_mode=customer_mode,
+            )
             try:
                 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
                 (OUTPUT_DIR / out_name).write_bytes(payload)

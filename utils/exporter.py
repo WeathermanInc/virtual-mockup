@@ -747,8 +747,8 @@ class WorksheetExporter:
         self._pdf_clear_header_chip(page, spec)
         self._pdf_overlay_header(page, spec, job)
         self._pdf_overlay_worksheet_number(page, spec)
-        if mark is not None:
-            self._pdf_overlay_hat_logos(page, job, mark, page_index)
+        # Always heal/wipe baked sample marks; stamp only when client logo exists.
+        self._pdf_overlay_hat_logos(page, job, mark, page_index)
         # Sync Fabric Colors outer chip + Logo/Graphic Colors to sidebar picks.
         self._pdf_overlay_hat_fabric_swatch(page, job, page_index)
         self._pdf_overlay_hat_logo_swatch(page, job, page_index)
@@ -778,11 +778,12 @@ class WorksheetExporter:
         self,
         page,
         job: JobSpec,
-        mark: PILImage.Image,
+        mark: PILImage.Image | None,
         page_index: int,
     ) -> None:
         """Heal baked photo sample, then stamp client logo on photo + Graphic Sample.
 
+        When ``mark`` is None, slots stay as clean fabric placeholders (no Proper).
         Photo stamp uses ``HAT_PHOTO_OVERLAYS`` (Side/Front × fabric) at the
         foreshortened 2.4 cm placement between vents. GS gets a solid fabric plate.
         """
@@ -1193,8 +1194,8 @@ class WorksheetExporter:
         self._pdf_clear_header_chip(page, spec)
         self._pdf_overlay_header(page, spec, job)
         self._pdf_overlay_worksheet_number(page, spec)
-        if mark is not None:
-            self._pdf_overlay_poncho_logos(page, job, mark, page_index)
+        # Heal/wipe baked samples even with no upload; stamp only when mark exists.
+        self._pdf_overlay_poncho_logos(page, job, mark, page_index)
         self._pdf_overlay_poncho_logo_swatch(page, job, page_index)
 
         place = resolve_poncho_placement(job.panel_config)
@@ -1223,11 +1224,12 @@ class WorksheetExporter:
         self,
         page,
         job: JobSpec,
-        mark: PILImage.Image,
+        mark: PILImage.Image | None,
         page_index: int,
     ) -> None:
         """Stamp prepared client logo onto poncho photo + Artwork + GS (+ Front draw).
 
+        When ``mark`` is None, baked samples are wiped to clean fabric placeholders.
         Photo path: Paula's chest/back samples are vector drawings on top of the
         photo (not baked pixels), so clear with a photo-fabric clone then stamp.
         Artwork: wipe the FULL fabric card so nested navy rings cannot remain.
@@ -1513,8 +1515,8 @@ class WorksheetExporter:
                 self._pdf_clear_header_chip(page, spec)
                 self._pdf_overlay_header(page, spec, job)
                 self._pdf_overlay_worksheet_number(page, spec)
-                if mark is not None:
-                    self._pdf_overlay_sun_shirt_logos(page, job, mark, page_index)
+                # Heal/wipe baked samples even with no upload; stamp only when mark exists.
+                self._pdf_overlay_sun_shirt_logos(page, job, mark, page_index)
                 self._pdf_overlay_sun_shirt_fabric_swatch(page, job, page_index)
                 self._pdf_overlay_sun_shirt_logo_swatch(page, job, page_index)
         finally:
@@ -1552,11 +1554,12 @@ class WorksheetExporter:
         self,
         page,
         job: JobSpec,
-        mark: PILImage.Image,
+        mark: PILImage.Image | None,
         page_index: int,
     ) -> None:
         """Stamp prepared client logo onto sun shirt photo + Artwork + GS + draw.
 
+        When ``mark`` is None, baked samples are wiped to clean fabric placeholders.
         Photo path: heal baked sample inside the embedded photo bitmap (no disc).
         Artwork / GS: solid wipe then stamp. Draw: local fabric-circle wipe.
         """
@@ -2008,16 +2011,18 @@ class WorksheetExporter:
         # Sidebar ticket fields (Paula values may be stale / option-specific).
         self._pdf_overlay_header(page, spec, job)
 
-        # In-place Proper fill on Front View + Sizing & Dimensions (ink-only).
-        if fill is not None and fill != (255, 255, 255):
+        # Only recolor baked Proper ink when a client logo is present; otherwise
+        # leave Front View / tech-pack marks uncleared via recolor (artwork card
+        # below becomes the blank fabric placeholder).
+        if mark is not None and fill is not None and fill != (255, 255, 255):
             self._pdf_recolor_baked_logos_inplace(page, job, fill)
 
-        # Artwork preview box — fabric-colored plate + client mark.
+        # Artwork preview box — fabric plate always; stamp only when mark exists.
         art_slot = next(
             (s for s in spec.get("logos") or [] if str(s.get("erase") or "") == "artwork"),
             None,
         )
-        if art_slot and mark is not None:
+        if art_slot:
             self._pdf_overlay_artwork_card(page, art_slot, mark, job)
 
         # Logo/Graphic Colors swatch + label only (fabric swatch stays Paula's).
