@@ -166,32 +166,34 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 )
 
 # Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
-# ``box`` is the Proper badge footprint (measured glyph cluster + pad) — client
-# marks contain-fit into this same area so they match Proper's visual weight.
-# ``cover`` is a slightly larger heal zone. fit_pad=0 so art fills the badge.
+# ``box`` = Proper badge footprint; ``cover`` = heal zone; ``rotate`` = PIL CCW
+# degrees matching Paula's baked Proper panel tilt (Options #1–#9 foreshortening).
+# ``rotate_after_fit``: fit into the badge first, then tilt — avoids the shrink
+# that rotate-before-fit caused on wide client marks.
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     "upper_center": {
         "black": {
-            # Proper badge on Options #1 — foreshortened ~13.3×3.7 cm panel zone.
             "box": (555.0, 895.0, 260.0, 85.0),
             "cover": (535.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 14.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
         "steel": {
             "box": (565.0, 897.0, 260.0, 85.0),
             "cover": (545.0, 877.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 14.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
         "sage": {
-            # Proper glyphs ≈ (600,893)–(760,965); badge fills the upper panel band.
             "box": (560.0, 888.0, 270.0, 90.0),
             "cover": (540.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 14.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
     },
@@ -200,45 +202,50 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (540.0, 965.0, 260.0, 85.0),
             "cover": (520.0, 945.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 14.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
         "steel": {
             "box": (560.0, 975.0, 260.0, 85.0),
             "cover": (540.0, 955.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 14.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
         "sage": {
             "box": (555.0, 960.0, 270.0, 90.0),
             "cover": (535.0, 940.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 14.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
     },
     "lower_right_center": {
         "black": {
-            # Smaller Proper pocket mark (7.2×2.0 cm artwork).
             "box": (640.0, 1168.0, 155.0, 52.0),
             "cover": (600.0, 1148.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 12.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
         "steel": {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 12.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
         "sage": {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": 12.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
     },

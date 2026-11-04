@@ -2072,8 +2072,13 @@ class WorksheetExporter:
         fit_pad: float = 0.0,
         crisp: bool = False,
         crisp_threshold: int = 96,
+        rotate_after_fit: bool = False,
     ) -> PILImage.Image | None:
-        """Fit/rotate a prepared mark into a PDF-point box; returns RGBA at ~2× for sharpness."""
+        """Fit/rotate a prepared mark into a PDF-point box; returns RGBA at ~2× for sharpness.
+
+        ``rotate_after_fit`` (backpack Front View): scale into the badge first,
+        then apply the Proper panel tilt so wide marks keep badge size.
+        """
         _x, _y, w, h = box
         if w < 1 or h < 1:
             return None
@@ -2083,15 +2088,23 @@ class WorksheetExporter:
             art = art.crop(bbox)
         if art.width < 1 or art.height < 1:
             return None
-        if rotate:
-            art = art.rotate(float(rotate), expand=True, resample=PILImage.Resampling.BICUBIC)
+        angle = float(rotate or 0.0)
+        if angle and not rotate_after_fit:
+            art = art.rotate(angle, expand=True, resample=PILImage.Resampling.BICUBIC)
         pad = max(0.0, min(0.45, float(fit_pad)))
         # Render at template DPI so vector pages stay crisp when zoomed.
         px_w = max(1, int(round(w * (1.0 - pad) * SCALE)))
         px_h = max(1, int(round(h * (1.0 - pad) * SCALE)))
-        return fit_logo_uniform(
+        fitted = fit_logo_uniform(
             art, px_w, px_h, crisp=crisp, crisp_threshold=crisp_threshold
         )
+        if angle and rotate_after_fit:
+            # Panel tilt after fit — expand so corners stay intact; placement
+            # centers on the badge so size matches Proper's foreshortened mark.
+            fitted = fitted.rotate(
+                angle, expand=True, resample=PILImage.Resampling.BICUBIC
+            )
+        return fitted
 
     def _pdf_insert_mark(
         self,
@@ -2103,6 +2116,7 @@ class WorksheetExporter:
         fit_pad: float = 0.0,
         crisp: bool = False,
         crisp_threshold: int = 96,
+        rotate_after_fit: bool = False,
     ) -> None:
         if mark is None:
             return
@@ -2113,15 +2127,16 @@ class WorksheetExporter:
             fit_pad=fit_pad,
             crisp=crisp,
             crisp_threshold=crisp_threshold,
+            rotate_after_fit=rotate_after_fit,
         )
         if fitted is None:
             return
         x, y, w, h = box
-        # Center the fitted bitmap inside the target box.
+        # Center on the badge (rotated marks may extend slightly past the box).
         fw = fitted.width / SCALE
         fh = fitted.height / SCALE
-        ox = x + max(0.0, (w - fw) / 2.0)
-        oy = y + max(0.0, (h - fh) / 2.0)
+        cx, cy = x + w / 2.0, y + h / 2.0
+        ox, oy = cx - fw / 2.0, cy - fh / 2.0
         rect = self._pdf_rect((ox, oy, fw, fh))
         page.insert_image(rect, stream=self._pdf_png_bytes(fitted), keep_proportion=True, overlay=True)
 
@@ -2390,6 +2405,7 @@ class WorksheetExporter:
                 fit_pad=float(front.get("fit_pad") or 0.0),
                 crisp=True,
                 crisp_threshold=128,
+                rotate_after_fit=bool(front.get("rotate_after_fit")),
             )
 
         # Lower placements: also clear leftover upper-center Proper (no restamp).
