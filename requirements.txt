@@ -1,6 +1,7 @@
 # Wheels only — Cloud has no headers to compile Pillow/numpy from source.
-# Community Cloud is currently provisioning Python 3.14; keep ranges that
-# publish cp314 wheels (numpy needs >=2.3 on 3.14).
+# Prefer Python 3.12 in Community Cloud Advanced settings (3.14 cold-starts are
+# slower for OpenCV). Ranges below still publish cp314 wheels when Cloud defaults
+# to 3.14 (numpy needs >=2.3 on 3.14).
 --only-binary=:all:
 streamlit>=1.48.0,<1.62
 pillow>=10.2.0
@@ -8,6 +9,7 @@ opencv-python-headless>=4.9.0,<5
 reportlab>=4.1.0,<5
 numpy>=2.3.0,<2.6
 pymupdf>=1.24.0,<1.27
+# Explicit pins Streamlit may pull transitively — keep wheels-only friendly.
 pandas>=2.2.0,<3.0.0
 pyarrow>=15.0.0
 pydeck>=0.9.0

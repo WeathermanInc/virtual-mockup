@@ -123,6 +123,16 @@ Cloud does **not** require these; it uses PyMuPDF from `requirements.txt`.
 source fails on Cloud (no zlib/JPEG headers). Do not remove `--only-binary=:all:`
 without adding apt build packages.
 
+**Python version:** In Community Cloud → app ⋮ → Settings → **Advanced settings**,
+prefer **Python 3.12** (not 3.14). Cold OpenCV/PyMuPDF import is much faster on
+3.12; changing Python requires delete + redeploy (runtime.txt is ignored).
+
+**Blank blue spinner after “Uvicorn server started”:** Uvicorn only means the
+server process is up — the first browser session still imports OpenCV/exporter.
+`app.py` now paints a loading spinner, then lazy-imports those deps. Check Cloud
+logs for `[vm] importing app dependencies…` / `[vm] dependencies ready in …s`.
+If that line never appears, reboot the app or redeploy on Python 3.12.
+
 ### Keep-awake
 
 Workflow **Keep Streamlit awake** (`.github/workflows/keepalive.yml`) opens the

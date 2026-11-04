@@ -10,6 +10,7 @@ in a red error box instead of the generic white crash screen.
 from __future__ import annotations
 
 import hashlib
+import time
 import traceback
 from datetime import date
 from pathlib import Path
@@ -35,7 +36,7 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 115
+STAMP_VERSION = 116
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho", "Sun Shirt"]
@@ -54,44 +55,114 @@ CUSTOMER_RETURN_HOST_SUFFIXES = (
     "shopifypreview.com",
 )
 
-try:
-    from skills.asset_logger import AssetLogger
-    from skills.state_memory import StateMemory
-    from utils.catalog import (
-        backpack_placement_labels,
-        default_logo_color_for_fabric,
-        fabric_caption,
-        fabrics_for_styles,
-        hat_placement_labels,
-        logo_color_names,
-        logo_knockout_mode,
-        poncho_placement_labels,
-        product_specs,
-        resolve_backpack_placement,
-        resolve_hat_placement,
-        resolve_poncho_placement,
-        resolve_sun_shirt_placement,
-        style_labels,
-        sun_shirt_placement_labels,
-    )
-    from utils.exporter import WorksheetExporter, worksheet_filename
-    from utils.project_guide import render_project_guide
-    from utils.renderer import (
-        JobSpec,
-        ponchos_pdf_path,
-        resolve_backpack_v2_page_index,
-        resolve_hat_page_index,
-        resolve_poncho_page_index,
-        resolve_sun_shirt_page_index,
-        sun_shirts_pdf_path,
-    )
-    from utils.vectors import SUPPORTED_EXTS, VectorLoadError, load_artwork
-except Exception:  # noqa: BLE001 — surface Cloud import crashes on-screen
-    _import_tb = traceback.format_exc()
-    print(_import_tb, flush=True)
-    st.error("Fatal Error During Module Import:")
-    st.code(_import_tb, language="text")
-    st.stop()
+# Heavy deps (OpenCV / PyMuPDF / exporter) load lazily so Cloud can paint UI
+# before the first cold import. Names are filled by ``_ensure_deps``.
+AssetLogger = None  # type: ignore[assignment]
+StateMemory = None  # type: ignore[assignment]
+WorksheetExporter = None  # type: ignore[assignment]
+JobSpec = None  # type: ignore[assignment]
+VectorLoadError = Exception  # type: ignore[assignment]
+SUPPORTED_EXTS: tuple[str, ...] = ()
+_DEPS_READY = False
+
+
+def _ensure_deps() -> None:
+    """Import imaging/PDF stack once; safe to call on every rerun."""
+    global _DEPS_READY
+    global AssetLogger, StateMemory, WorksheetExporter, JobSpec, VectorLoadError
+    global SUPPORTED_EXTS
+    global backpack_placement_labels, default_logo_color_for_fabric, fabric_caption
+    global fabrics_for_styles, hat_placement_labels, logo_color_names, logo_knockout_mode
+    global poncho_placement_labels, product_specs, resolve_backpack_placement
+    global resolve_hat_placement, resolve_poncho_placement, resolve_sun_shirt_placement
+    global style_labels, sun_shirt_placement_labels, worksheet_filename, render_project_guide
+    global ponchos_pdf_path, resolve_backpack_v2_page_index, resolve_hat_page_index
+    global resolve_poncho_page_index, resolve_sun_shirt_page_index, sun_shirts_pdf_path
+    global load_artwork
+
+    if _DEPS_READY:
+        return
+
+    print("[vm] importing app dependencies…", flush=True)
+    t0 = time.perf_counter()
+    try:
+        from skills.asset_logger import AssetLogger as _AssetLogger
+        from skills.state_memory import StateMemory as _StateMemory
+        from utils.catalog import (
+            backpack_placement_labels as _backpack_placement_labels,
+            default_logo_color_for_fabric as _default_logo_color_for_fabric,
+            fabric_caption as _fabric_caption,
+            fabrics_for_styles as _fabrics_for_styles,
+            hat_placement_labels as _hat_placement_labels,
+            logo_color_names as _logo_color_names,
+            logo_knockout_mode as _logo_knockout_mode,
+            poncho_placement_labels as _poncho_placement_labels,
+            product_specs as _product_specs,
+            resolve_backpack_placement as _resolve_backpack_placement,
+            resolve_hat_placement as _resolve_hat_placement,
+            resolve_poncho_placement as _resolve_poncho_placement,
+            resolve_sun_shirt_placement as _resolve_sun_shirt_placement,
+            style_labels as _style_labels,
+            sun_shirt_placement_labels as _sun_shirt_placement_labels,
+        )
+        from utils.exporter import (
+            WorksheetExporter as _WorksheetExporter,
+            worksheet_filename as _worksheet_filename,
+        )
+        from utils.project_guide import render_project_guide as _render_project_guide
+        from utils.renderer import (
+            JobSpec as _JobSpec,
+            ponchos_pdf_path as _ponchos_pdf_path,
+            resolve_backpack_v2_page_index as _resolve_backpack_v2_page_index,
+            resolve_hat_page_index as _resolve_hat_page_index,
+            resolve_poncho_page_index as _resolve_poncho_page_index,
+            resolve_sun_shirt_page_index as _resolve_sun_shirt_page_index,
+            sun_shirts_pdf_path as _sun_shirts_pdf_path,
+        )
+        from utils.vectors import (
+            SUPPORTED_EXTS as _SUPPORTED_EXTS,
+            VectorLoadError as _VectorLoadError,
+            load_artwork as _load_artwork,
+        )
+    except Exception:  # noqa: BLE001 — surface Cloud import crashes on-screen
+        _import_tb = traceback.format_exc()
+        print(_import_tb, flush=True)
+        st.error("Fatal Error During Module Import:")
+        st.code(_import_tb, language="text")
+        st.stop()
+
+    AssetLogger = _AssetLogger
+    StateMemory = _StateMemory
+    WorksheetExporter = _WorksheetExporter
+    JobSpec = _JobSpec
+    VectorLoadError = _VectorLoadError
+    SUPPORTED_EXTS = tuple(_SUPPORTED_EXTS)
+    backpack_placement_labels = _backpack_placement_labels
+    default_logo_color_for_fabric = _default_logo_color_for_fabric
+    fabric_caption = _fabric_caption
+    fabrics_for_styles = _fabrics_for_styles
+    hat_placement_labels = _hat_placement_labels
+    logo_color_names = _logo_color_names
+    logo_knockout_mode = _logo_knockout_mode
+    poncho_placement_labels = _poncho_placement_labels
+    product_specs = _product_specs
+    resolve_backpack_placement = _resolve_backpack_placement
+    resolve_hat_placement = _resolve_hat_placement
+    resolve_poncho_placement = _resolve_poncho_placement
+    resolve_sun_shirt_placement = _resolve_sun_shirt_placement
+    style_labels = _style_labels
+    sun_shirt_placement_labels = _sun_shirt_placement_labels
+    worksheet_filename = _worksheet_filename
+    render_project_guide = _render_project_guide
+    ponchos_pdf_path = _ponchos_pdf_path
+    resolve_backpack_v2_page_index = _resolve_backpack_v2_page_index
+    resolve_hat_page_index = _resolve_hat_page_index
+    resolve_poncho_page_index = _resolve_poncho_page_index
+    resolve_sun_shirt_page_index = _resolve_sun_shirt_page_index
+    sun_shirts_pdf_path = _sun_shirts_pdf_path
+    load_artwork = _load_artwork
+    _DEPS_READY = True
+    print(f"[vm] dependencies ready in {time.perf_counter() - t0:.1f}s", flush=True)
 
 
 def _logo_fingerprint(logo_bytes: bytes | None, logo_name: str | None) -> str:
@@ -771,6 +842,20 @@ def _run_app() -> None:
 
 def main() -> None:
     try:
+        # Paint a spinner before cold OpenCV/PyMuPDF import. Without this, Cloud
+        # leaves a blank blue circle after "Uvicorn server started" while the
+        # first script run blocks on imports (especially on Python 3.14).
+        if not _DEPS_READY:
+            st.title("Virtual mockup creator")
+            st.caption("Starting up — loading imaging libraries…")
+            with st.spinner(
+                "Loading OpenCV / PyMuPDF / worksheet engine "
+                "(first open after deploy can take up to a minute)…"
+            ):
+                _ensure_deps()
+            st.rerun()
+
+        _ensure_deps()
         _run_app()
     except Exception:  # noqa: BLE001 — Cloud "Oh no" hides the real traceback
         _tb = traceback.format_exc()
@@ -779,11 +864,11 @@ def main() -> None:
         st.code(_tb, language="text")
 
 
-# Streamlit executes the entry file as __main__. Also run when a ScriptRunContext
-# exists so bootstrap import-as-module cannot skip the UI / error box.
+# Streamlit executes the entry file as __main__.
 if __name__ == "__main__":
     main()
 else:
+    # Defensive: some Cloud bootstraps import the module with a ScriptRunContext.
     try:
         from streamlit.runtime.scriptrunner import get_script_run_ctx
 
