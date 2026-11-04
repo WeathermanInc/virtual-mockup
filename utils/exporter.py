@@ -2011,11 +2011,13 @@ class WorksheetExporter:
         # Sidebar ticket fields (Paula values may be stale / option-specific).
         self._pdf_overlay_header(page, spec, job)
 
-        # Only recolor baked Proper ink when a client logo is present; otherwise
-        # leave Front View / tech-pack marks uncleared via recolor (artwork card
-        # below becomes the blank fabric placeholder).
-        if mark is not None and fill is not None and fill != (255, 255, 255):
-            self._pdf_recolor_baked_logos_inplace(page, job, fill)
+        if mark is not None:
+            # In-place Proper fill on Front View + GS when a client logo is present.
+            if fill is not None and fill != (255, 255, 255):
+                self._pdf_recolor_baked_logos_inplace(page, job, fill)
+        else:
+            # No upload — wipe Paula's baked Proper from photo + Graphic Sample.
+            self._pdf_wipe_backpack_baked_logos(page, job)
 
         # Artwork preview box — fabric plate always; stamp only when mark exists.
         art_slot = next(
@@ -2361,6 +2363,48 @@ class WorksheetExporter:
             ys1.append(y + h)
         x0, y0 = min(xs0), min(ys0)
         return (x0, y0, max(xs1) - x0, max(ys1) - y0)
+
+    def _pdf_wipe_backpack_baked_logos(self, page, job: JobSpec) -> None:
+        """Remove Paula's baked Proper marks when no client logo is uploaded.
+
+        Heals the Front View photo slot and opaque-wipes Graphic Sample + the
+        bottom Weatherman ghost so proofs stay blank instead of showing Proper.
+        """
+        place = resolve_backpack_placement(job.panel_config)
+        place_key = str(place.get("key") or "upper_center")
+        fabric = tuple(int(v) for v in job.fabric_rgb)
+
+        front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
+        cover = front.get("cover") or front.get("box")
+        if cover:
+            fx, fy, fw, fh = (float(v) for v in cover)
+            padded = (fx - 14.0, fy - 12.0, fw + 28.0, fh + 24.0)
+            try:
+                # force_full: white Proper on Sage/Steel must not leave glyph crumbs.
+                self._pdf_heal_region(page, padded, force_full=True)
+            except Exception:
+                fill = self._pdf_sample_fill(page, padded, fallback=fabric)
+                self._pdf_opaque_wipe(page, padded, fill)
+
+        art_w, art_h = backpack_artwork_cm(place_key)
+        center = backpack_pdf_draw_center(place_key)
+        draw_box = _cm_box(*center, art_w, art_h)
+        self._pdf_clear_backpack_gs_vector(page, place_key, draw_box, fabric)
+
+        # Also clear upper-center sample leftovers when using a lower placement.
+        if place_key != "upper_center":
+            upper = backpack_pdf_baked_gs_cover("upper_center")
+            if upper:
+                fill = self._pdf_sample_fill(page, upper, fallback=fabric)
+                self._pdf_opaque_wipe(page, upper, fill)
+            upper_front = get_backpack_pdf_front_slot(job.fabric_name, "upper_center")
+            u_cover = upper_front.get("cover") or upper_front.get("box")
+            if u_cover:
+                try:
+                    self._pdf_heal_region(page, u_cover, force_full=True)
+                except Exception:
+                    fill = self._pdf_sample_fill(page, u_cover, fallback=fabric)
+                    self._pdf_opaque_wipe(page, u_cover, fill)
 
     def _pdf_clear_backpack_gs_vector(
         self,
