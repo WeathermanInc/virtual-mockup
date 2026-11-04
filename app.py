@@ -842,10 +842,13 @@ def _run_app() -> None:
 
 def main() -> None:
     try:
-        # Paint a spinner before cold OpenCV/PyMuPDF import. Without this, Cloud
-        # leaves a blank blue circle after "Uvicorn server started" while the
-        # first script run blocks on imports (especially on Python 3.14).
-        if not _DEPS_READY:
+        # Gate on session_state — NOT module globals. Cloud reloads app.py on
+        # each run, which resets ``_DEPS_READY`` and caused an infinite
+        # ``st.rerun()`` loop (imports finish in 0.0s, then rerun forever).
+        if "deps_loaded" not in st.session_state:
+            st.session_state.deps_loaded = False
+
+        if not st.session_state.deps_loaded:
             st.title("Virtual mockup creator")
             st.caption("Starting up — loading imaging libraries…")
             with st.spinner(
@@ -853,6 +856,7 @@ def main() -> None:
                 "(first open after deploy can take up to a minute)…"
             ):
                 _ensure_deps()
+            st.session_state.deps_loaded = True
             st.rerun()
 
         _ensure_deps()
