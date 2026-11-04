@@ -2372,20 +2372,22 @@ class WorksheetExporter:
 
         front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
         cover = front.get("cover") or front.get("box")
+        # Stamp into the Proper badge footprint (same visual area as Paula's mark).
         box = front.get("box") or cover
-        if cover:
-            self._pdf_clear_backpack_front_photo(page, cover, fabric)
+        if cover or box:
+            # Heal only Proper ink (not a full-cover force wipe — that left a
+            # flat rectangular plate behind the client mark).
+            clear_zone = cover or box
+            self._pdf_clear_backpack_front_photo(
+                page, clear_zone, fabric, force_full=mark is None
+            )
         if mark is not None and box:
-            # Opaque fabric plate under the stamp so Proper cannot ghost through,
-            # then drop the client mark on Proper's measured upper-center cluster.
-            plate = self._pdf_sample_fill(page, box, fallback=fabric)
-            self._pdf_opaque_wipe(page, box, plate)
             self._pdf_insert_mark(
                 page,
                 box,
                 mark,
                 rotate=float(front.get("rotate") or 0.0),
-                fit_pad=float(front.get("fit_pad") or 0.02),
+                fit_pad=float(front.get("fit_pad") or 0.0),
                 crisp=True,
                 crisp_threshold=128,
             )
@@ -2424,29 +2426,36 @@ class WorksheetExporter:
         page,
         cover: tuple[float, float, float, float],
         fabric: tuple[int, int, int],
+        *,
+        force_full: bool = False,
     ) -> None:
         """Erase baked Proper from the Front View lifestyle photo.
 
-        Prefers in-place XObject heal (no plate). Falls back to a local-fabric
-        opaque wipe over the cover if the photo image cannot be rewritten.
+        Prefers in-place XObject heal (no plate). ``force_full`` only when no
+        client mark will be stamped — otherwise ink-only heal avoids a flat
+        rectangular badge behind the logo.
         """
         fx, fy, fw, fh = (float(v) for v in cover)
-        padded = (fx - 16.0, fy - 14.0, fw + 32.0, fh + 28.0)
-        if self._pdf_heal_backpack_front_photo_bitmap(page, padded):
+        padded = (fx - 12.0, fy - 10.0, fw + 24.0, fh + 20.0)
+        if self._pdf_heal_backpack_front_photo_bitmap(
+            page, padded, force_full=force_full
+        ):
             return
-        # Overlay heal as a second chance (composites over vectors/images).
-        try:
-            self._pdf_heal_region(page, padded, force_full=True)
-            return
-        except Exception:
-            pass
-        fill = self._pdf_sample_fill(page, padded, fallback=fabric)
-        self._pdf_opaque_wipe(page, padded, fill)
+        if force_full:
+            try:
+                self._pdf_heal_region(page, padded, force_full=True)
+                return
+            except Exception:
+                pass
+            fill = self._pdf_sample_fill(page, padded, fallback=fabric)
+            self._pdf_opaque_wipe(page, padded, fill)
 
     def _pdf_heal_backpack_front_photo_bitmap(
         self,
         page,
         box: tuple[float, float, float, float],
+        *,
+        force_full: bool = False,
     ) -> bool:
         """Inpaint white Proper glyphs inside the Front View photo XObject."""
         import cv2
@@ -2503,7 +2512,9 @@ class WorksheetExporter:
         pale = (lum >= max(110.0, med_lum + 35.0)) & (chroma < 70.0) & (med_lum < 90.0)
         mask = (bright | pale).astype(np.uint8) * 255
         if int(mask.sum()) < 255 * 20:
-            # No strong ink — still wipe the whole cover (force-clear Proper).
+            if not force_full:
+                return False
+            # No client stamp — wipe the whole zone so Proper cannot remain.
             mask[:, :] = 255
         mask = cv2.dilate(mask, np.ones((5, 5), np.uint8), iterations=2)
         bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)

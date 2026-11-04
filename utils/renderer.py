@@ -166,78 +166,80 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 )
 
 # Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
-# Centers match Paula's baked Proper glyph cluster. Boxes are wide enough for
-# landscape client marks. rotate=0 — perspective is baked into the photo; extra
-# CCW rotation was shifting wide logos down/left of Proper.
+# ``box`` is the Proper badge footprint (measured glyph cluster + pad) — client
+# marks contain-fit into this same area so they match Proper's visual weight.
+# ``cover`` is a slightly larger heal zone. fit_pad=0 so art fills the badge.
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     "upper_center": {
         "black": {
-            "box": (575.0, 910.0, 220.0, 60.0),
-            "cover": (555.0, 890.0, 260.0, 95.0),
+            # Proper badge on Options #1 — foreshortened ~13.3×3.7 cm panel zone.
+            "box": (555.0, 895.0, 260.0, 85.0),
+            "cover": (535.0, 875.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
         "steel": {
-            "box": (586.0, 912.0, 220.0, 60.0),
-            "cover": (566.0, 892.0, 260.0, 95.0),
+            "box": (565.0, 897.0, 260.0, 85.0),
+            "cover": (545.0, 877.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
         "sage": {
-            # Proper ≈ (600,893)–(760,965); stamp centered on that cluster.
-            "box": (590.0, 905.0, 200.0, 58.0),
-            "cover": (565.0, 885.0, 250.0, 95.0),
+            # Proper glyphs ≈ (600,893)–(760,965); badge fills the upper panel band.
+            "box": (560.0, 888.0, 270.0, 90.0),
+            "cover": (540.0, 868.0, 310.0, 125.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
     },
     "center": {
         "black": {
-            "box": (561.0, 980.0, 220.0, 60.0),
-            "cover": (541.0, 960.0, 260.0, 95.0),
+            "box": (540.0, 965.0, 260.0, 85.0),
+            "cover": (520.0, 945.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
         "steel": {
-            "box": (580.0, 990.0, 220.0, 60.0),
-            "cover": (560.0, 970.0, 260.0, 95.0),
+            "box": (560.0, 975.0, 260.0, 85.0),
+            "cover": (540.0, 955.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
         "sage": {
-            "box": (575.0, 975.0, 200.0, 58.0),
-            "cover": (550.0, 955.0, 250.0, 95.0),
+            "box": (555.0, 960.0, 270.0, 90.0),
+            "cover": (535.0, 940.0, 310.0, 125.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
     },
     "lower_right_center": {
         "black": {
-            "box": (655.0, 1175.0, 130.0, 42.0),
-            "cover": (600.0, 1155.0, 210.0, 75.0),
+            # Smaller Proper pocket mark (7.2×2.0 cm artwork).
+            "box": (640.0, 1168.0, 155.0, 52.0),
+            "cover": (600.0, 1148.0, 220.0, 85.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
         "steel": {
-            "box": (640.0, 1170.0, 130.0, 42.0),
-            "cover": (590.0, 1150.0, 210.0, 75.0),
+            "box": (625.0, 1163.0, 155.0, 52.0),
+            "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
         "sage": {
-            "box": (640.0, 1170.0, 130.0, 42.0),
-            "cover": (590.0, 1150.0, 210.0, 75.0),
+            "box": (625.0, 1163.0, 155.0, 52.0),
+            "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
             "rotate": 0.0,
-            "fit_pad": 0.02,
+            "fit_pad": 0.0,
         },
     },
 }
