@@ -134,6 +134,23 @@ def _cm_box(center_x: float, center_y: float, width_cm: float, height_cm: float)
     return (center_x - w / 2.0, center_y - h / 2.0, w, h)
 
 
+def _aspect_fit_box(
+    outer: tuple[float, float, float, float],
+    aspect: float,
+) -> tuple[float, float, float, float]:
+    """Largest axis-aligned box with ``aspect`` (w/h) centered inside ``outer``."""
+    x, y, w, h = (float(v) for v in outer)
+    if w < 1.0 or h < 1.0 or aspect <= 1e-6:
+        return (x, y, w, h)
+    if (w / h) > aspect:
+        nh = h
+        nw = h * aspect
+    else:
+        nw = w
+        nh = w / aspect
+    return (x + (w - nw) / 2.0, y + (h - nh) / 2.0, nw, nh)
+
+
 # Venture Dry Pack artwork bounds — defaults to upper_center (Options #1–#3).
 # Active placement dims are resolved per job in _compose_page.
 _BACKPACK_ART_W_CM = 13.3
@@ -2118,6 +2135,7 @@ class WorksheetExporter:
         crisp: bool = False,
         crisp_threshold: int = 96,
         rotate_after_fit: bool = False,
+        fit_inside_box: bool = False,
     ) -> None:
         if mark is None:
             return
@@ -2133,9 +2151,14 @@ class WorksheetExporter:
         if fitted is None:
             return
         x, y, w, h = box
-        # Center on the badge (rotated marks may extend slightly past the box).
         fw = fitted.width / SCALE
         fh = fitted.height / SCALE
+        # rotate_after_fit expands the RGBA canvas; without a uniform shrink-to-box
+        # the Front View stamp reads wider than the Graphic Sample fit.
+        if fit_inside_box and fw > 1e-6 and fh > 1e-6:
+            scale = min(w / fw, h / fh)
+            fw *= scale
+            fh *= scale
         cx, cy = x + w / 2.0, y + h / 2.0
         ox, oy = cx - fw / 2.0, cy - fh / 2.0
         rect = self._pdf_rect((ox, oy, fw, fh))
@@ -2388,8 +2411,10 @@ class WorksheetExporter:
 
         front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
         cover = front.get("cover") or front.get("box")
-        # Stamp into the Proper badge footprint (same visual area as Paula's mark).
+        # Proper badge footprint — heal zone; stamp box is aspect-matched to GS below.
         box = front.get("box") or cover
+        art_w, art_h = backpack_artwork_cm(place_key)
+        art_aspect = (art_w / art_h) if art_h > 1e-6 else 1.0
         if cover or box:
             # Heal only Proper ink (not a full-cover force wipe — that left a
             # flat rectangular plate behind the client mark).
@@ -2399,19 +2424,21 @@ class WorksheetExporter:
             )
         if mark is not None and box:
             # Same Proper panel tilt for every uploaded mark (SVG/PNG/AI): PIL CCW
-            # degrees from BACKPACK_PDF_FRONT_OVERLAYS (upper ≈ −15°, down-right on
-            # the lifestyle photo). Fit badge first, then rotate — do not derive a
-            # separate angle from the client vector's own bounds.
+            # degrees from BACKPACK_PDF_FRONT_OVERLAYS. Fit into a Graphic Sample
+            # artwork-aspect box (13.3×3.7 cm ratio) with the same fit_pad, then
+            # tilt and shrink-to-box so Front View does not read wider/stretched.
             angle = float(front.get("rotate") if front.get("rotate") is not None else 0.0)
+            stamp_box = _aspect_fit_box(box, art_aspect)
             self._pdf_insert_mark(
                 page,
-                box,
+                stamp_box,
                 mark,
                 rotate=angle,
-                fit_pad=float(front.get("fit_pad") or 0.0),
+                fit_pad=0.08,
                 crisp=True,
                 crisp_threshold=128,
                 rotate_after_fit=True,
+                fit_inside_box=True,
             )
 
         # Lower placements: also clear leftover upper-center Proper (no restamp).
@@ -2425,7 +2452,6 @@ class WorksheetExporter:
             if u_cover:
                 self._pdf_clear_backpack_front_photo(page, u_cover, fabric)
 
-        art_w, art_h = backpack_artwork_cm(place_key)
         center = backpack_pdf_draw_center(place_key)
         draw_box = _cm_box(*center, art_w, art_h)
         self._pdf_clear_backpack_gs_vector(page, place_key, draw_box, fabric)

@@ -35,7 +35,7 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 126
+STAMP_VERSION = 127
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank2"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho", "Sun Shirt"]
@@ -160,14 +160,19 @@ def _store_pdf_buffer(
     job_fp: str,
     customer_mode: bool,
 ) -> None:
-    """Write PDF bytes under stable session keys for download_button."""
+    """Write PDF bytes under stable session keys for download_button.
+
+    Always mirrors into ``customer_pdf_*`` when ``customer_mode`` is set so the
+    Download PDF widget can read a dedicated buffer on every rerun.
+    """
     data = bytes(payload)
     st.session_state["pdf_bytes"] = data
     st.session_state["pdf_name"] = str(out_name)
     st.session_state["pdf_pages"] = list(page_labels)
     st.session_state["pdf_fingerprint"] = job_fp
-    if customer_mode:
-        # Dedicated customer buffer — download_button reads this key only.
+    # Customer download reads these keys only — write them whenever Generate
+    # runs in customer mode (sticky), never gate on later widget state.
+    if customer_mode or bool(st.session_state.get("_customer_mode")):
         st.session_state["customer_pdf_bytes"] = data
         st.session_state["customer_pdf_name"] = str(out_name)
         st.session_state["customer_pdf_pages"] = list(page_labels)
@@ -226,17 +231,18 @@ def _pdf_buffer_ready(*, customer_mode: bool = False) -> tuple[bytes, str] | Non
     return _ops_pdf_ready() or _customer_pdf_ready()
 
 
-def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None) -> bool:
-    """Serve PDF via a stable native download_button (no on_click, no key churn).
+def _render_customer_download(*, job_fp: str | None = None) -> bool:
+    """Always mount the customer Download PDF control (stable key, no conditionals).
 
-    Customer mode reads ``st.session_state.customer_pdf_bytes`` only.
-    Returns True when a download control was rendered.
+    The widget stays on every customer-mode rerun — including validation-miss
+    paths — so the browser can release the stream. Disabled until Generate
+    stores ``customer_pdf_bytes``.
     """
-    if customer_mode:
-        ready = _customer_pdf_ready()
-        if ready is None:
-            return False
-        pdf_bytes, pdf_name = ready
+    ready = _customer_pdf_ready()
+    pdf_bytes = ready[0] if ready else b"%PDF-1.4"
+    pdf_name = ready[1] if ready else "weatherman-mockup.pdf"
+    has_pdf = ready is not None
+    if has_pdf:
         pages = st.session_state.get("customer_pdf_pages") or []
         fp = st.session_state.get("customer_pdf_fingerprint")
         if job_fp and fp and fp != job_fp:
@@ -245,17 +251,25 @@ def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None
             )
         elif pages:
             st.caption(f"Ready to download · {len(pages)} pages: {' · '.join(pages)}")
-        # Fixed key + primary type — dynamic keys were swallowing Cloud download clicks.
-        st.download_button(
-            label="Download PDF",
-            data=pdf_bytes,
-            file_name=pdf_name,
-            mime="application/pdf",
-            type="primary",
-            width="stretch",
-            key="customer_download_worksheet_pdf",
-        )
-        return True
+    else:
+        st.caption("Generate a mockup PDF first to enable download.")
+    st.download_button(
+        label="Download PDF",
+        data=pdf_bytes,
+        file_name=pdf_name,
+        mime="application/pdf",
+        type="primary",
+        width="stretch",
+        disabled=not has_pdf,
+        key="customer_download_pdf",
+    )
+    return has_pdf
+
+
+def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None) -> bool:
+    """Serve PDF via a stable native download_button (no on_click, no key churn)."""
+    if customer_mode:
+        return _render_customer_download(job_fp=job_fp)
 
     ready = _ops_pdf_ready()
     if ready is None:
@@ -690,20 +704,21 @@ def _run_app() -> None:
     if missing:
         prompt = "Fill in the sidebar to build a proof" if customer_mode else "Fill the job ticket to build a proof"
         st.warning(prompt + ": " + ", ".join(missing) + ".")
-        # Still render Download when bytes exist — a click rerun that briefly fails
-        # validation must not skip the widget or the browser never receives the file.
-        if customer_mode and _render_worksheet_download(customer_mode=True):
-            st.success(
-                "Next: upload this PDF (and/or your original logo) under Artwork Upload on the custom-order form, then Submit."
-            )
-            if return_url:
-                st.link_button(
-                    "Return to custom order form",
-                    return_url,
-                    type="secondary",
-                    width="stretch",
-                    key="return_after_download_missing",
+        # Always mount Download PDF in customer mode — a click rerun that briefly
+        # fails validation must not skip the widget or the browser never receives the file.
+        if customer_mode:
+            if _render_customer_download():
+                st.success(
+                    "Next: upload this PDF (and/or your original logo) under Artwork Upload on the custom-order form, then Submit."
                 )
+                if return_url:
+                    st.link_button(
+                        "Return to custom order form",
+                        return_url,
+                        type="secondary",
+                        width="stretch",
+                        key="return_after_download_missing",
+                    )
         if not customer_mode:
             render_project_guide(stamp_version=STAMP_VERSION)
         return
@@ -909,6 +924,7 @@ def _run_app() -> None:
                 built = exporter.build_pdf(job, logo)
             out_name = worksheet_filename(job.client, job.year, job.family)
             payload = bytes(built)
+            # Persist before any UI below — customer Download reads session keys only.
             _store_pdf_buffer(
                 payload,
                 out_name,
@@ -937,8 +953,10 @@ def _run_app() -> None:
             )
             st.success("Mockup PDF ready — use Download PDF below.")
 
-        if _render_worksheet_download(customer_mode=customer_mode, job_fp=job_fp):
-            if customer_mode:
+        # Download stays outside the generate-branch so the widget is mounted every
+        # rerun (customer: fixed key=customer_download_pdf, never skipped).
+        if customer_mode:
+            if _render_customer_download(job_fp=job_fp):
                 st.success(
                     "Next: upload this PDF (and/or your original logo) under Artwork Upload on the custom-order form, then Submit."
                 )
@@ -950,6 +968,8 @@ def _run_app() -> None:
                         width="stretch",
                         key="return_after_download",
                     )
+        elif _render_worksheet_download(customer_mode=False, job_fp=job_fp):
+            pass
         else:
             st.caption("Generate a mockup PDF first to enable download.")
 
