@@ -183,13 +183,14 @@ Paste [`docs/shopify-artwork-cta.liquid`](docs/shopify-artwork-cta.liquid) into 
 
 The snippet includes:
 
-1. Dual-path UI card (Option A upload · Option B Create a mockup → `#EF4E23` CTA)
-2. **Vector Upload Guard v4** — theme-only script that restricts the Qikify file input to `.ai` `.eps` `.cdr` `.pdf` `.svg` (fixed error banner; does not edit Qikify)
+1. **DOM auto-injector** — finds Qikify “Artwork Upload” / `input[type=file]` and inserts the dual-path card (`.wm-mockup-cta`) above it at runtime (sidebar Custom Liquid placement is fine; `MutationObserver` re-anchors after Qikify re-renders)
+2. Dual-path UI (Option A upload · Option B Create a mockup → `#EF4E23` CTA, `?mode=customer`)
+3. **Vector Upload Guard v4** — theme-only script that restricts the Qikify file input to `.ai` `.eps` `.cdr` `.pdf` `.svg` (fixed error banner; does not edit Qikify)
 
 - **QA first** on Hidden page **VM Corporate Gifting and Custom Orders**; open via Admin → Preview.
 - Set `mockup_return` in the snippet to a stable storefront URL before promoting to **NEW Corporate Gifting and Custom Orders**.
 - Community Cloud app must remain **Public**. Preview/`preview_key` links can expire — re-Preview from Admin if needed.
-- If Guard v4 was already pasted elsewhere on the theme, remove the duplicate so `__vectorUploadGuardV4` only boots once (the snippet is idempotent either way).
+- If Guard v4 / CTA injector was already pasted elsewhere on the theme, remove duplicates (both scripts are idempotent via `__vectorUploadGuardV4` / `__wmMockupCtaInjectorV1`).
 
 ---
 

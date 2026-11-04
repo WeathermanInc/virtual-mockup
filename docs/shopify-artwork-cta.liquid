@@ -1,10 +1,11 @@
 {% comment %}
-  Weatherman · Dual-path Artwork CTA + Vector Upload Guard v4
-  Paste into a Custom Liquid section on template custom-2026-2,
-  ABOVE Section 4: Artwork Upload (Qikify / bcontact form).
+  Weatherman · Dual-path Artwork CTA (DOM auto-inject) + Vector Upload Guard v4
+  Paste into ANY Custom Liquid / Custom HTML section on template custom-2026-2
+  (sidebar placement is fine). At runtime the CTA card injects itself above
+  Qikify Section 4: Artwork Upload / the file input.
 
-  Path A — Upload vector via the form field below (guarded to .ai .eps .cdr .pdf .svg).
-  Path B — Create a mockup (Streamlit ?mode=customer), download PDF, reattach below.
+  Path A — Upload vector via the form field (guarded to .ai .eps .cdr .pdf .svg).
+  Path B — Create a mockup (Streamlit ?mode=customer), download PDF, reattach.
 
   QA: VM Corporate Gifting and Custom Orders (Hidden), template custom-2026-2.
   Before go-live on NEW Corporate Gifting:
@@ -25,6 +26,9 @@
     border-radius: 4px;
     font-family: inherit;
     color: #111;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
   }
   .wm-mockup-cta h3 {
     margin: 0 0 0.5rem;
@@ -65,37 +69,238 @@
   }
 </style>
 
-<div class="wm-mockup-cta">
-  <h3>Artwork — choose one</h3>
-  <p>
-    <strong>Option A — Upload your vector logo.</strong>
-    Use the Artwork Upload field below. Accepted: .AI, .EPS, .CDR, .PDF, or .SVG
-    (PNG, JPG, and other raster types are blocked).
-  </p>
-  <p>
-    <strong>Option B — Create a live visual mockup.</strong>
-    Open our Virtual Mockup Creator, stamp your logo on Weatherman gear, download the PDF proof,
-    then upload that PDF (and/or your original vector logo) in Artwork Upload below.
-  </p>
-  <ol>
-    <li>Click <em>Create a mockup</em> (opens in a new tab).</li>
-    <li>Upload your vector logo, pick product and colors, generate the PDF.</li>
-    <li>Download the PDF, return here, and attach it under Artwork Upload.</li>
-    <li>Finish the rest of this form and Submit.</li>
-  </ol>
-  <a
-    class="wm-mockup-btn"
-    href="{{ mockup_app }}/?mode=customer&amp;return={{ mockup_return | url_encode }}"
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    Create a mockup
-  </a>
-  <p class="wm-mockup-note">
-    After you download your proof, come back to this tab to upload files and submit your inquiry.
-    Mockup PDFs are accepted by the Artwork field (.PDF).
-  </p>
-</div>
+{% comment %} Config for the injector (no visible markup — card is created in JS). {% endcomment %}
+<script
+  type="application/json"
+  id="wm-mockup-cta-config"
+>
+{
+  "app": {{ mockup_app | json }},
+  "returnUrl": {{ mockup_return | json }}
+}
+</script>
+
+<script>
+/**
+ * Weatherman Mockup CTA injector
+ * Finds Qikify Section 4 / file upload and inserts `.wm-mockup-cta` above it.
+ * Survives Qikify re-renders via MutationObserver (same resilience model as Guard v4).
+ */
+(function () {
+  'use strict';
+
+  if (window.__wmMockupCtaInjectorV1) return;
+  window.__wmMockupCtaInjectorV1 = true;
+
+  var CTA_ID = 'wm-mockup-cta-root';
+  var CTA_MARK = 'data-wm-mockup-cta';
+  var PLACE_RETRY_MS = 400;
+  var placeTimer = null;
+
+  function readConfig() {
+    var el = document.getElementById('wm-mockup-cta-config');
+    var fallback = {
+      app: 'https://virtual-mockup-85kxgyfvpa82a669bqjuqg.streamlit.app',
+      returnUrl: '',
+    };
+    if (!el) return fallback;
+    try {
+      var parsed = JSON.parse(el.textContent || '{}');
+      return {
+        app: String(parsed.app || fallback.app),
+        returnUrl: String(parsed.returnUrl || ''),
+      };
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function buildHref(cfg) {
+    var base = cfg.app.replace(/\/$/, '');
+    var href = base + '/?mode=customer';
+    if (cfg.returnUrl) {
+      href += '&return=' + encodeURIComponent(cfg.returnUrl);
+    }
+    return href;
+  }
+
+  function textOf(el) {
+    return (el.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function isOurCta(el) {
+    return !!(el && (el.id === CTA_ID || (el.closest && el.closest('#' + CTA_ID))));
+  }
+
+  /** Prefer Qikify / bcontact file inputs; fall back to first file input on the page. */
+  function findFileInput() {
+    var selectors = [
+      '[class*="bcontact"] input[type="file"]',
+      '.bcontact-field input[type="file"]',
+      'form [class*="upload"] input[type="file"]',
+      'form [class*="file"] input[type="file"]',
+      'input[type="file"]',
+    ];
+    for (var i = 0; i < selectors.length; i++) {
+      var list = document.querySelectorAll(selectors[i]);
+      for (var j = 0; j < list.length; j++) {
+        if (!isOurCta(list[j])) return list[j];
+      }
+    }
+    return null;
+  }
+
+  /** Heading / label for Section 4 Artwork Upload. */
+  function findArtworkHeading() {
+    var nodes = document.querySelectorAll(
+      'h1, h2, h3, h4, h5, h6, legend, label, p, span, div, strong'
+    );
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (isOurCta(el)) continue;
+      if (el.children && el.children.length > 4) continue;
+      var t = textOf(el);
+      if (!t || t.length > 80) continue;
+      if (
+        /^4[\.\):\-\s]+artwork\s*upload/i.test(t) ||
+        /^artwork\s*upload$/i.test(t) ||
+        /^optional:\s*upload logos/i.test(t)
+      ) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  function hostForFile(input) {
+    if (!input) return null;
+    return (
+      (input.closest &&
+        input.closest(
+          '.bcontact-field, [class*="bcontact-field"], [class*="upload"], [class*="file-upload"], [class*="file_field"], form > div, fieldset'
+        )) ||
+      input.parentElement
+    );
+  }
+
+  /**
+   * Element before which we insert the CTA.
+   * Prefer the upload field host; else the Artwork Upload heading block.
+   */
+  function findAnchor() {
+    var input = findFileInput();
+    if (input) {
+      var host = hostForFile(input);
+      if (host && host.parentNode) return host;
+      return input;
+    }
+    var heading = findArtworkHeading();
+    if (!heading) return null;
+    var block =
+      (heading.closest &&
+        heading.closest(
+          '.bcontact-field, [class*="bcontact"], [class*="field"], fieldset, section, form > div'
+        )) ||
+      heading;
+    return block.parentNode ? block : heading;
+  }
+
+  function buildCtaElement(cfg) {
+    var root = document.createElement('div');
+    root.id = CTA_ID;
+    root.className = 'wm-mockup-cta';
+    root.setAttribute(CTA_MARK, '1');
+    root.setAttribute('role', 'region');
+    root.setAttribute('aria-label', 'Artwork options');
+
+    root.innerHTML =
+      '<h3>Artwork — choose one</h3>' +
+      '<p><strong>Option A — Upload your vector logo.</strong> ' +
+      'Use the Artwork Upload field below. Accepted: .AI, .EPS, .CDR, .PDF, or .SVG ' +
+      '(PNG, JPG, and other raster types are blocked).</p>' +
+      '<p><strong>Option B — Create a live visual mockup.</strong> ' +
+      'Open our Virtual Mockup Creator, stamp your logo on Weatherman gear, download the PDF proof, ' +
+      'then upload that PDF (and/or your original vector logo) in Artwork Upload below.</p>' +
+      '<ol>' +
+      '<li>Click <em>Create a mockup</em> (opens in a new tab).</li>' +
+      '<li>Upload your vector logo, pick product and colors, generate the PDF.</li>' +
+      '<li>Download the PDF, return here, and attach it under Artwork Upload.</li>' +
+      '<li>Finish the rest of this form and Submit.</li>' +
+      '</ol>' +
+      '<a class="wm-mockup-btn" target="_blank" rel="noopener noreferrer">Create a mockup</a>' +
+      '<p class="wm-mockup-note">After you download your proof, come back to this tab to upload files and submit your inquiry. ' +
+      'Mockup PDFs are accepted by the Artwork field (.PDF).</p>';
+
+    var link = root.querySelector('a.wm-mockup-btn');
+    if (link) link.setAttribute('href', buildHref(cfg));
+    return root;
+  }
+
+  function alreadyCorrectlyPlaced(cta, anchor) {
+    return !!(cta && anchor && cta.nextElementSibling === anchor && cta.parentNode === anchor.parentNode);
+  }
+
+  function placeCta() {
+    var anchor = findAnchor();
+    if (!anchor || !anchor.parentNode) return false;
+
+    var cfg = readConfig();
+    var cta = document.getElementById(CTA_ID);
+
+    if (alreadyCorrectlyPlaced(cta, anchor)) {
+      var link = cta.querySelector('a.wm-mockup-btn');
+      if (link) link.setAttribute('href', buildHref(cfg));
+      return true;
+    }
+
+    if (!cta) {
+      cta = buildCtaElement(cfg);
+    } else {
+      var existingLink = cta.querySelector('a.wm-mockup-btn');
+      if (existingLink) existingLink.setAttribute('href', buildHref(cfg));
+    }
+
+    try {
+      anchor.parentNode.insertBefore(cta, anchor);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function schedulePlace() {
+    if (placeTimer) return;
+    placeTimer = setTimeout(function () {
+      placeTimer = null;
+      placeCta();
+    }, PLACE_RETRY_MS);
+  }
+
+  function boot() {
+    placeCta();
+    // Qikify often mounts fields after first paint / step changes.
+    setTimeout(placeCta, 200);
+    setTimeout(placeCta, 800);
+    setTimeout(placeCta, 2000);
+
+    var obs = new MutationObserver(function () {
+      var anchor = findAnchor();
+      var cta = document.getElementById(CTA_ID);
+      if (!anchor) return;
+      if (!cta || !alreadyCorrectlyPlaced(cta, anchor)) schedulePlace();
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+
+    document.addEventListener('bcontact:fileUploaded', schedulePlace, true);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
 
 <script>
 /**
