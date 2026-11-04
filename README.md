@@ -128,10 +128,10 @@ prefer **Python 3.12** (not 3.14). Cold OpenCV/PyMuPDF import is much faster on
 3.12; changing Python requires delete + redeploy (runtime.txt is ignored).
 
 **Blank blue spinner after “Uvicorn server started”:** Uvicorn only means the
-server process is up — the first browser session still imports OpenCV/exporter.
-`app.py` now paints a loading spinner, then lazy-imports those deps. Check Cloud
-logs for `[vm] importing app dependencies…` / `[vm] dependencies ready in …s`.
-If that line never appears, reboot the app or redeploy on Python 3.12.
+server process is up — the first browser session still runs `app.py` (including
+OpenCV/PyMuPDF import at module load). Prefer Python **3.12**, reboot after
+deploys, and avoid lazy-import + `st.rerun()` boot gates (they caused Cloud
+import loops).
 
 ### Keep-awake
 
