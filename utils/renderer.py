@@ -167,7 +167,10 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 
 # Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
 # ``box`` = Proper badge footprint; ``cover`` = heal zone; ``rotate`` = PIL CCW
-# degrees matching Paula's baked Proper panel tilt (Options #1–#9 foreshortening).
+# degrees matching Paula's baked Proper baseline (down-right on the lifestyle
+# photo → negative CCW). Measured from Proper ink: upper ≈ −15°, center ≈ −14.5°,
+# lower-right ≈ −6…−9°. Proper's min-area rect is ~1:1 top/bottom (no keystone),
+# so rotation alone matches the panel tilt — same path for uploaded vectors.
 # ``rotate_after_fit``: fit into the badge first, then tilt — avoids the shrink
 # that rotate-before-fit caused on wide client marks.
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
@@ -176,7 +179,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (555.0, 895.0, 260.0, 85.0),
             "cover": (535.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 14.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -184,7 +187,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (565.0, 897.0, 260.0, 85.0),
             "cover": (545.0, 877.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 14.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -192,7 +195,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (560.0, 888.0, 270.0, 90.0),
             "cover": (540.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 14.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -202,7 +205,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (540.0, 965.0, 260.0, 85.0),
             "cover": (520.0, 945.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 14.0,
+            "rotate": -14.5,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -210,7 +213,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (560.0, 975.0, 260.0, 85.0),
             "cover": (540.0, 955.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 14.0,
+            "rotate": -14.5,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -218,7 +221,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (555.0, 960.0, 270.0, 90.0),
             "cover": (535.0, 940.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 14.0,
+            "rotate": -14.5,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -228,7 +231,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (640.0, 1168.0, 155.0, 52.0),
             "cover": (600.0, 1148.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 12.0,
+            "rotate": -6.5,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -236,7 +239,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 12.0,
+            "rotate": -9.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -244,7 +247,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 12.0,
+            "rotate": -8.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },

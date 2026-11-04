@@ -151,12 +151,13 @@ BACKPACK_PAGE_SPEC: dict[int, dict] = {
     1: {
         "size_pts": (2125.98, 3259.84),
         "logos": [
-            # Front-view photo — calibrated upper pocket panel below zipper seam.
+            # Front-view photo — kept for spec parity; live stamps use
+            # BACKPACK_PDF_FRONT_OVERLAYS via _pdf_overlay_backpack_client_logos.
             {
                 "box": (556.5, 930.0, 135.0, 32.0),
                 "cover": (400, 790, 400, 280),
                 "erase": "photo",
-                "rotate": 2.5,
+                "rotate": -15.0,
             },
             # Artwork callout — full plate edge-to-edge solid fabric (no letterbox bands).
             {
@@ -2397,15 +2398,20 @@ class WorksheetExporter:
                 page, clear_zone, fabric, force_full=mark is None
             )
         if mark is not None and box:
+            # Same Proper panel tilt for every uploaded mark (SVG/PNG/AI): PIL CCW
+            # degrees from BACKPACK_PDF_FRONT_OVERLAYS (upper ≈ −15°, down-right on
+            # the lifestyle photo). Fit badge first, then rotate — do not derive a
+            # separate angle from the client vector's own bounds.
+            angle = float(front.get("rotate") if front.get("rotate") is not None else 0.0)
             self._pdf_insert_mark(
                 page,
                 box,
                 mark,
-                rotate=float(front.get("rotate") or 0.0),
+                rotate=angle,
                 fit_pad=float(front.get("fit_pad") or 0.0),
                 crisp=True,
                 crisp_threshold=128,
-                rotate_after_fit=bool(front.get("rotate_after_fit")),
+                rotate_after_fit=True,
             )
 
         # Lower placements: also clear leftover upper-center Proper (no restamp).
