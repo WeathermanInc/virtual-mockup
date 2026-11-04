@@ -103,25 +103,44 @@ def _logo_fingerprint(logo_bytes: bytes | None, logo_name: str | None) -> str:
     return f"{logo_name or 'logo'}:{len(logo_bytes)}:{digest}"
 
 
+def _clear_logo_keys() -> None:
+    """Explicitly drop uploaded logo buffers so exporters never see stale art."""
+    st.session_state["logo_bytes"] = None
+    st.session_state["logo_name"] = None
+    for key in ("logo_bytes", "logo_name", "_saved_logo"):
+        st.session_state.pop(key, None)
+
+
 def _sync_logo_upload(upload) -> None:
-    """Persist uploader bytes into stable session keys (same for customer + ops)."""
+    """Keep logo_bytes/logo_name in lockstep with the active file_uploader.
+
+    Same path for customer + ops. Empty / cleared uploader forces logo = None
+    (no Proper / sample-mark fallback).
+    """
     if upload is None:
+        _clear_logo_keys()
         return
     data = upload.getvalue()
     name = str(getattr(upload, "name", None) or "").strip()
     if isinstance(data, (bytes, bytearray)) and len(data) > 0 and name:
         st.session_state["logo_bytes"] = bytes(data)
         st.session_state["logo_name"] = name
+        return
+    _clear_logo_keys()
 
 
 def _session_logo_payload() -> tuple[bytes | None, str | None]:
     """Unified logo buffer — identical for customer and internal modes."""
     logo_bytes = st.session_state.get("logo_bytes")
     logo_name = st.session_state.get("logo_name")
+    if logo_bytes is None or logo_name is None:
+        return None, None
     if not isinstance(logo_bytes, (bytes, bytearray)) or len(logo_bytes) == 0:
+        _clear_logo_keys()
         return None, None
     name = str(logo_name or "").strip()
     if not name:
+        _clear_logo_keys()
         return None, None
     return bytes(logo_bytes), name
 
@@ -150,11 +169,14 @@ def _store_pdf_buffer(
     st.session_state["pdf_pages"] = list(page_labels)
     st.session_state["pdf_fingerprint"] = job_fp
     if customer_mode:
-        # Mirror for customer-mode download resilience across query/mode flaps.
+        # Dedicated customer buffer — download_button reads this key only.
         st.session_state["customer_pdf_bytes"] = data
         st.session_state["customer_pdf_name"] = str(out_name)
         st.session_state["customer_pdf_pages"] = list(page_labels)
         st.session_state["customer_pdf_fingerprint"] = job_fp
+        st.session_state["customer_pdf_gen"] = int(
+            st.session_state.get("customer_pdf_gen") or 0
+        ) + 1
 
 
 @st.cache_resource
@@ -165,10 +187,8 @@ def _init(version: int = STAMP_VERSION) -> tuple[StateMemory, AssetLogger, Works
 
 
 def _clear_artwork_state() -> None:
+    _clear_logo_keys()
     for key in (
-        "logo_bytes",
-        "logo_name",
-        "_saved_logo",
         "pdf_bytes",
         "pdf_name",
         "pdf_pages",
@@ -185,62 +205,82 @@ def _clear_artwork_state() -> None:
         pass
 
 
-def _pdf_buffer_ready() -> tuple[bytes, str] | None:
-    """Return (bytes, filename) when session has a non-empty generated PDF."""
-    raw = st.session_state.get("pdf_bytes")
-    name = st.session_state.get("pdf_name")
-    if not isinstance(raw, (bytes, bytearray)) or len(raw) == 0:
-        # Customer path also mirrored under customer_pdf_* — accept either.
-        raw = st.session_state.get("customer_pdf_bytes")
-        name = name or st.session_state.get("customer_pdf_name")
+def _customer_pdf_ready() -> tuple[bytes, str] | None:
+    """Uncached customer PDF payload from dedicated session keys."""
+    raw = st.session_state.get("customer_pdf_bytes")
+    name = st.session_state.get("customer_pdf_name")
     if not isinstance(raw, (bytes, bytearray)) or len(raw) == 0:
         return None
     file_name = str(name or "").strip() or "weatherman-mockup.pdf"
     return bytes(raw), file_name
 
 
+def _ops_pdf_ready() -> tuple[bytes, str] | None:
+    raw = st.session_state.get("pdf_bytes")
+    name = st.session_state.get("pdf_name")
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) == 0:
+        return None
+    file_name = str(name or "").strip() or "weatherman-mockup.pdf"
+    return bytes(raw), file_name
+
+
+def _pdf_buffer_ready(*, customer_mode: bool = False) -> tuple[bytes, str] | None:
+    """Return (bytes, filename) for the active mode's PDF buffer."""
+    if customer_mode:
+        return _customer_pdf_ready()
+    return _ops_pdf_ready() or _customer_pdf_ready()
+
+
 def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None) -> bool:
     """Native download_button only — no on_click / callbacks that swallow the stream.
 
+    Customer mode reads ``st.session_state.customer_pdf_bytes`` directly with a
+    unique key so the binary stream releases reliably.
+
     Returns True when a download control was rendered.
     """
-    ready = _pdf_buffer_ready()
+    if customer_mode:
+        ready = _customer_pdf_ready()
+        if ready is None:
+            return False
+        pdf_bytes, pdf_name = ready
+        pages = st.session_state.get("customer_pdf_pages") or []
+        fp = st.session_state.get("customer_pdf_fingerprint")
+        if job_fp and fp and fp != job_fp:
+            st.warning(
+                "Job ticket changed since the last PDF. Generate again to include the current styles."
+            )
+        elif pages:
+            st.caption(f"Ready to download · {len(pages)} pages: {' · '.join(pages)}")
+        gen = int(st.session_state.get("customer_pdf_gen") or 0)
+        st.download_button(
+            "Download PDF",
+            data=pdf_bytes,
+            file_name=pdf_name,
+            mime="application/pdf",
+            width="stretch",
+            key=f"customer_download_worksheet_pdf_{gen}",
+        )
+        return True
+
+    ready = _ops_pdf_ready()
     if ready is None:
         return False
     pdf_bytes, pdf_name = ready
-    pages = (
-        st.session_state.get("customer_pdf_pages")
-        if customer_mode
-        else st.session_state.get("pdf_pages")
-    ) or st.session_state.get("pdf_pages") or []
-    fp = (
-        st.session_state.get("customer_pdf_fingerprint")
-        if customer_mode
-        else st.session_state.get("pdf_fingerprint")
-    ) or st.session_state.get("pdf_fingerprint")
+    pages = st.session_state.get("pdf_pages") or []
+    fp = st.session_state.get("pdf_fingerprint")
     if job_fp and fp and fp != job_fp:
         st.warning("Job ticket changed since the last PDF. Generate again to include the current styles.")
     elif pages:
         st.caption(f"Ready to download · {len(pages)} pages: {' · '.join(pages)}")
-    # Fixed keys per mode — never share one widget identity across mode branches.
-    if customer_mode:
-        st.download_button(
-            "Download PDF",
-            data=pdf_bytes,
-            file_name=pdf_name,
-            mime="application/pdf",
-            width="stretch",
-            key="customer_download_worksheet_pdf",
-        )
-    else:
-        st.download_button(
-            "Download PDF",
-            data=pdf_bytes,
-            file_name=pdf_name,
-            mime="application/pdf",
-            width="stretch",
-            key="ops_download_worksheet_pdf",
-        )
+    st.download_button(
+        "Download PDF",
+        data=pdf_bytes,
+        file_name=pdf_name,
+        mime="application/pdf",
+        width="stretch",
+        key="ops_download_worksheet_pdf",
+    )
     return True
 
 
@@ -594,14 +634,18 @@ def _run_app() -> None:
         ext_list = [e.lstrip(".") for e in SUPPORTED_EXTS]
         if "logo_uploader_id" not in st.session_state:
             st.session_state["logo_uploader_id"] = 0
+        uploader_key = f"client_logo_upload_{FORM_KEY}_{st.session_state['logo_uploader_id']}"
         upload = st.file_uploader(
             "Your logo (SVG, AI, CDR, PDF, EPS)" if customer_mode else "Client logo (SVG, AI, CDR, PDF, EPS)",
             type=ext_list,
-            key=f"client_logo_upload_{FORM_KEY}_{st.session_state['logo_uploader_id']}",
+            key=uploader_key,
         )
         if st.button("Clear uploaded logo", width="stretch", key=f"clear_logo_{FORM_KEY}"):
-            _clear_artwork_state()
+            # Drop logo buffers + widget value; keep any generated PDF download intact.
+            _clear_logo_keys()
+            st.session_state.pop(uploader_key, None)
             st.session_state["logo_uploader_id"] = int(st.session_state["logo_uploader_id"]) + 1
+            _clear_preview_cache()
             st.rerun()
 
         year = st.number_input(
@@ -616,6 +660,9 @@ def _run_app() -> None:
         )
         if year is not None:
             year = int(year)
+
+    # Align logo_bytes with the uploader before any early return (clear / empty → None).
+    _sync_logo_upload(upload)
 
     missing = []
     if not client.strip():
@@ -701,7 +748,6 @@ def _run_app() -> None:
     )
 
     # Unified logo path for customer + ops — never fall back to Proper brand marks.
-    _sync_logo_upload(upload)
     logo_bytes, logo_name = _session_logo_payload()
     logo = None
     if logo_bytes is not None and logo_name is not None:
@@ -730,7 +776,7 @@ def _run_app() -> None:
             logo = None
             st.error(str(exc))
             # Keep rendering Export/download if a PDF was already generated.
-            if _pdf_buffer_ready() is None:
+            if _pdf_buffer_ready(customer_mode=customer_mode) is None:
                 return
     else:
         logo = None
