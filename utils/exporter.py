@@ -2376,14 +2376,16 @@ class WorksheetExporter:
         if cover:
             self._pdf_clear_backpack_front_photo(page, cover, fabric)
         if mark is not None and box:
+            # Mild rotate + wider box (see BACKPACK_PDF_FRONT_OVERLAYS) so wide
+            # client marks land on Proper's measured center at readable size.
             self._pdf_insert_mark(
                 page,
                 box,
                 mark,
                 rotate=float(front.get("rotate") or 0.0),
-                fit_pad=float(front.get("fit_pad") or 0.04),
+                fit_pad=float(front.get("fit_pad") or 0.02),
                 crisp=True,
-                crisp_threshold=160,
+                crisp_threshold=128,
             )
 
         # Lower placements: also clear leftover upper-center Proper (no restamp).
