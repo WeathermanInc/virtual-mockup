@@ -131,6 +131,65 @@ def _clear_artwork_state() -> None:
         pass
 
 
+def _pdf_buffer_ready() -> tuple[bytes, str] | None:
+    """Return (bytes, filename) when session has a non-empty generated PDF."""
+    raw = st.session_state.get("pdf_bytes")
+    name = st.session_state.get("pdf_name")
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) == 0:
+        # Customer path also mirrored under customer_pdf_* — accept either.
+        raw = st.session_state.get("customer_pdf_bytes")
+        name = name or st.session_state.get("customer_pdf_name")
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) == 0:
+        return None
+    file_name = str(name or "").strip() or "weatherman-mockup.pdf"
+    return bytes(raw), file_name
+
+
+def _render_worksheet_download(*, customer_mode: bool, job_fp: str | None = None) -> bool:
+    """Native download_button only — no on_click / callbacks that swallow the stream.
+
+    Returns True when a download control was rendered.
+    """
+    ready = _pdf_buffer_ready()
+    if ready is None:
+        return False
+    pdf_bytes, pdf_name = ready
+    pages = (
+        st.session_state.get("customer_pdf_pages")
+        if customer_mode
+        else st.session_state.get("pdf_pages")
+    ) or st.session_state.get("pdf_pages") or []
+    fp = (
+        st.session_state.get("customer_pdf_fingerprint")
+        if customer_mode
+        else st.session_state.get("pdf_fingerprint")
+    ) or st.session_state.get("pdf_fingerprint")
+    if job_fp and fp and fp != job_fp:
+        st.warning("Job ticket changed since the last PDF. Generate again to include the current styles.")
+    elif pages:
+        st.caption(f"Ready to download · {len(pages)} pages: {' · '.join(pages)}")
+    # Fixed keys per mode — never share one widget identity across mode branches.
+    if customer_mode:
+        st.download_button(
+            "Download PDF",
+            data=pdf_bytes,
+            file_name=pdf_name,
+            mime="application/pdf",
+            width="stretch",
+            key="customer_download_worksheet_pdf",
+        )
+    else:
+        st.download_button(
+            "Download PDF",
+            data=pdf_bytes,
+            file_name=pdf_name,
+            mime="application/pdf",
+            width="stretch",
+            key="ops_download_worksheet_pdf",
+        )
+    return True
+
+
 # No show_spinner: Cloud reboots kill the spinner thread and surface "Event loop is closed".
 @st.cache_data(max_entries=12)
 def _preview_pages(
@@ -531,6 +590,20 @@ def _run_app() -> None:
     if missing:
         prompt = "Fill in the sidebar to build a proof" if customer_mode else "Fill the job ticket to build a proof"
         st.warning(prompt + ": " + ", ".join(missing) + ".")
+        # Still render Download when bytes exist — a click rerun that briefly fails
+        # validation must not skip the widget or the browser never receives the file.
+        if customer_mode and _render_worksheet_download(customer_mode=True):
+            st.success(
+                "Next: upload this PDF (and/or your original logo) under Artwork Upload on the custom-order form, then Submit."
+            )
+            if return_url:
+                st.link_button(
+                    "Return to custom order form",
+                    return_url,
+                    type="secondary",
+                    width="stretch",
+                    key="return_after_download_missing",
+                )
         if not customer_mode:
             render_project_guide(stamp_version=STAMP_VERSION)
         return
@@ -601,10 +674,7 @@ def _run_app() -> None:
         except VectorLoadError as exc:
             st.error(str(exc))
             # Keep rendering Export/download if a PDF was already generated.
-            has_pdf = st.session_state.get("customer_pdf_bytes") or st.session_state.get(
-                "pdf_bytes"
-            )
-            if not has_pdf:
+            if _pdf_buffer_ready() is None:
                 return
     else:
         st.info("No client logo uploaded. Official Proper marks are removed; upload SVG/AI/CDR/PDF/EPS to stamp.")
@@ -738,17 +808,16 @@ def _run_app() -> None:
                 built = exporter.build_pdf(job, logo)
             out_name = worksheet_filename(job.client, job.year, job.family)
             payload = bytes(built)
-            # Dedicated keys for customer vs ops so Download survives mode/query flaps.
+            # Canonical buffer — download_button always reads pdf_bytes.
+            st.session_state["pdf_bytes"] = payload
+            st.session_state["pdf_name"] = out_name
+            st.session_state["pdf_pages"] = page_labels
+            st.session_state["pdf_fingerprint"] = job_fp
             if customer_mode:
                 st.session_state["customer_pdf_bytes"] = payload
                 st.session_state["customer_pdf_name"] = out_name
                 st.session_state["customer_pdf_pages"] = page_labels
                 st.session_state["customer_pdf_fingerprint"] = job_fp
-            else:
-                st.session_state["pdf_bytes"] = payload
-                st.session_state["pdf_name"] = out_name
-                st.session_state["pdf_pages"] = page_labels
-                st.session_state["pdf_fingerprint"] = job_fp
             try:
                 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
                 (OUTPUT_DIR / out_name).write_bytes(payload)
@@ -771,31 +840,7 @@ def _run_app() -> None:
             # Show Download on a clean run (not the Generate click).
             st.rerun()
 
-        # Read the mode-specific buffer so Download persists across reruns.
-        if customer_mode:
-            pdf_bytes = st.session_state.get("customer_pdf_bytes")
-            pdf_name = st.session_state.get("customer_pdf_name")
-            pdf_pages = st.session_state.get("customer_pdf_pages") or []
-            pdf_fp = st.session_state.get("customer_pdf_fingerprint")
-        else:
-            pdf_bytes = st.session_state.get("pdf_bytes")
-            pdf_name = st.session_state.get("pdf_name")
-            pdf_pages = st.session_state.get("pdf_pages") or []
-            pdf_fp = st.session_state.get("pdf_fingerprint")
-        if pdf_bytes and pdf_name:
-            if pdf_fp and pdf_fp != job_fp:
-                st.warning("Job ticket changed since the last PDF. Generate again to include the current styles.")
-            else:
-                st.caption(f"Ready to download · {len(pdf_pages)} pages: {' · '.join(pdf_pages)}")
-            st.download_button(
-                "Download PDF",
-                data=pdf_bytes,
-                file_name=str(pdf_name),
-                mime="application/pdf",
-                icon=":material/download:",
-                width="stretch",
-                key=f"download_worksheet_pdf_{'cust' if customer_mode else 'ops'}",
-            )
+        if _render_worksheet_download(customer_mode=customer_mode, job_fp=job_fp):
             if customer_mode:
                 st.success(
                     "Next: upload this PDF (and/or your original logo) under Artwork Upload on the custom-order form, then Submit."
@@ -805,10 +850,11 @@ def _run_app() -> None:
                         "Return to custom order form",
                         return_url,
                         type="secondary",
-                        icon=":material/arrow_back:",
                         width="stretch",
                         key="return_after_download",
                     )
+        else:
+            st.caption("Generate a mockup PDF first to enable download.")
 
     if customer_mode:
         st.caption(
