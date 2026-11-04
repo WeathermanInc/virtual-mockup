@@ -289,6 +289,15 @@ def _run_app() -> None:
         st.logo(str(WM_MARK), size="large")
 
     customer_mode, return_url, family_preselect = _customer_mode_from_query()
+    # Sticky for the browser session — download clicks must not lose ?mode=customer
+    # (if query params drop, an early "missing fields" return skips download_button
+    # and the click appears to do nothing).
+    if customer_mode:
+        st.session_state["_customer_mode"] = True
+        if return_url:
+            st.session_state["_customer_return"] = return_url
+    customer_mode = bool(st.session_state.get("_customer_mode") or customer_mode)
+    return_url = return_url or str(st.session_state.get("_customer_return") or "")
     if customer_mode and family_preselect:
         fam_widget_key = f"family_{FORM_KEY}"
         label = FAMILY_LABEL_BY_KEY.get(family_preselect)
@@ -629,18 +638,29 @@ def _run_app() -> None:
         stamp = date.today().isoformat()
         saved = LOGO_DIR / f"{job.client.replace(' ', '_')}_{stamp}_{Path(logo_name).name}"
         if st.session_state.get("_saved_logo") != saved.name:
-            saved.write_bytes(logo_bytes)
-            logger.log("logo_upload", {"client": job.client, "file": saved.name, "bytes": len(logo_bytes)})
-            st.session_state["_saved_logo"] = saved.name
+            try:
+                LOGO_DIR.mkdir(parents=True, exist_ok=True)
+                saved.write_bytes(logo_bytes)
+                logger.log(
+                    "logo_upload",
+                    {"client": job.client, "file": saved.name, "bytes": len(logo_bytes)},
+                )
+                st.session_state["_saved_logo"] = saved.name
+            except OSError as exc:
+                # Cloud FS hiccups must not block Generate / Download.
+                print(f"[vm] logo save skipped: {exc}", flush=True)
+                st.session_state["_saved_logo"] = saved.name
         try:
             color_override = (
                 None if job.logo_color_name == "Match uploaded art" else job.logo_hex
             )
             logo = load_artwork(logo_bytes, logo_name, color_override=color_override)
+            st.success(f"Using uploaded artwork: `{logo_name}` · {job.logo_color_name}")
         except VectorLoadError as exc:
             st.error(str(exc))
-            return
-        st.success(f"Using uploaded artwork: `{logo_name}` · {job.logo_color_name}")
+            # Keep rendering Export/download if a PDF was already generated.
+            if not st.session_state.get("pdf_bytes"):
+                return
     else:
         st.info("No client logo uploaded. Official Proper marks are removed; upload SVG/AI/CDR/PDF/EPS to stamp.")
 
@@ -766,17 +786,22 @@ def _run_app() -> None:
             type="primary",
             icon=":material/picture_as_pdf:",
             width="stretch",
+            key=f"generate_pdf_{'cust' if customer_mode else 'ops'}",
         )
         if generate:
             with st.spinner(f"Composing {len(page_plan)}-page worksheet…"):
                 pdf_bytes = exporter.build_pdf(job, logo)
             out_name = worksheet_filename(job.client, job.year, job.family)
-            out_path = OUTPUT_DIR / out_name
-            out_path.write_bytes(pdf_bytes)
-            st.session_state["pdf_bytes"] = pdf_bytes
+            # Session state is the source of truth for Download (Cloud FS is best-effort).
+            st.session_state["pdf_bytes"] = bytes(pdf_bytes)
             st.session_state["pdf_name"] = out_name
             st.session_state["pdf_pages"] = page_labels
             st.session_state["pdf_fingerprint"] = job_fp
+            try:
+                OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+                (OUTPUT_DIR / out_name).write_bytes(pdf_bytes)
+            except OSError as exc:
+                print(f"[vm] pdf disk write skipped: {exc}", flush=True)
             logger.log(
                 "pdf_export",
                 {
@@ -788,11 +813,14 @@ def _run_app() -> None:
                     "placement": panel_config,
                     "file": out_name,
                     "bytes": len(pdf_bytes),
+                    "mode": "customer" if customer_mode else "ops",
                 },
             )
-            st.success(f"Wrote `{out_name}` · {len(page_labels)} pages: {' · '.join(page_labels)}")
+            # Fresh run so Download is not tied to the Generate click context
+            # (otherwise customer-mode download clicks can no-op).
+            st.rerun()
 
-        # Keep download outside the Generate click so Streamlit can finish serving the file.
+        # Download outside Generate so the button is stable across clicks.
         pdf_bytes = st.session_state.get("pdf_bytes")
         pdf_name = st.session_state.get("pdf_name")
         pdf_pages = st.session_state.get("pdf_pages") or []
@@ -809,7 +837,10 @@ def _run_app() -> None:
                 mime="application/pdf",
                 icon=":material/download:",
                 width="stretch",
-                key="download_worksheet_pdf",
+                # ignore → serve file without a fragile full rerun path (customer mode
+                # previously lost the download when the post-click rerun skipped the widget).
+                on_click="ignore",
+                key=f"download_worksheet_pdf_{'cust' if customer_mode else 'ops'}",
             )
             if customer_mode:
                 st.success(
@@ -819,7 +850,7 @@ def _run_app() -> None:
                     st.link_button(
                         "Return to custom order form",
                         return_url,
-                        type="primary",
+                        type="secondary",
                         icon=":material/arrow_back:",
                         width="stretch",
                         key="return_after_download",
