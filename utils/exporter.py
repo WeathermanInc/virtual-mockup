@@ -1972,13 +1972,13 @@ class WorksheetExporter:
         job: JobSpec,
         logo: PILImage.Image | None,
     ) -> bytes:
-        """Venture Dry Pack — Paula page + dual ink-only Proper recolor + Artwork/swatch.
+        """Venture Dry Pack — Paula page + client logo on Front / GS / Artwork.
 
-        ``BACKPACK_STATIC_PAGE_MAP`` supplies the 1:1 page. When Logo / graphic
-        color is Black C, a transparent overlay recolors baked Proper ink on
-        Front View and the Sizing & Dimensions tech pack (no fabric rectangles).
-        Artwork card + Logo/Graphic Colors swatch still follow the sidebar.
-        Falls back to the raster pipeline if the v2 PDF is missing.
+        ``BACKPACK_STATIC_PAGE_MAP`` supplies the 1:1 page. Baked Proper is
+        always cleared from Front View + Graphic Sample; the uploaded mark is
+        stamped there (and on the Artwork card) when present. Logo/Graphic
+        Colors swatch follows the sidebar. Falls back to the raster pipeline
+        if the v2 PDF is missing.
         """
         import fitz
 
@@ -1990,7 +1990,7 @@ class WorksheetExporter:
         mark = None
         if logo is not None:
             mark = self.renderer.prepare_logo(
-                logo, job.resolved_knockout(), fill_rgb=fill
+                logo, job.resolved_knockout(), fill_rgb=fill, hard_edge=True
             )
 
         page_index = resolve_backpack_v2_page_index(job.panel_config, job.fabric_name)
@@ -2011,13 +2011,8 @@ class WorksheetExporter:
         # Sidebar ticket fields (Paula values may be stale / option-specific).
         self._pdf_overlay_header(page, spec, job)
 
-        if mark is not None:
-            # In-place Proper fill on Front View + GS when a client logo is present.
-            if fill is not None and fill != (255, 255, 255):
-                self._pdf_recolor_baked_logos_inplace(page, job, fill)
-        else:
-            # No upload — wipe Paula's baked Proper from photo + Graphic Sample.
-            self._pdf_wipe_backpack_baked_logos(page, job)
+        # Clear baked Proper; stamp client logo on Front View + Graphic Sample.
+        self._pdf_overlay_backpack_client_logos(page, job, mark)
 
         # Artwork preview box — fabric plate always; stamp only when mark exists.
         art_slot = next(
@@ -2364,27 +2359,34 @@ class WorksheetExporter:
         x0, y0 = min(xs0), min(ys0)
         return (x0, y0, max(xs1) - x0, max(ys1) - y0)
 
-    def _pdf_wipe_backpack_baked_logos(self, page, job: JobSpec) -> None:
-        """Remove Paula's baked Proper marks when no client logo is uploaded.
-
-        Front View Proper is baked into the photo XObject — heal that bitmap
-        in place. Graphic Sample + Weatherman ghost get opaque fabric wipes.
-        """
+    def _pdf_overlay_backpack_client_logos(
+        self,
+        page,
+        job: JobSpec,
+        mark: PILImage.Image | None,
+    ) -> None:
+        """Wipe baked Proper on Front + GS, then stamp the client mark when present."""
         place = resolve_backpack_placement(job.panel_config)
         place_key = str(place.get("key") or "upper_center")
         fabric = tuple(int(v) for v in job.fabric_rgb)
 
         front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
         cover = front.get("cover") or front.get("box")
+        box = front.get("box") or cover
         if cover:
             self._pdf_clear_backpack_front_photo(page, cover, fabric)
+        if mark is not None and box:
+            self._pdf_insert_mark(
+                page,
+                box,
+                mark,
+                rotate=float(front.get("rotate") or 0.0),
+                fit_pad=float(front.get("fit_pad") or 0.04),
+                crisp=True,
+                crisp_threshold=160,
+            )
 
-        art_w, art_h = backpack_artwork_cm(place_key)
-        center = backpack_pdf_draw_center(place_key)
-        draw_box = _cm_box(*center, art_w, art_h)
-        self._pdf_clear_backpack_gs_vector(page, place_key, draw_box, fabric)
-
-        # Also clear upper-center sample leftovers when using a lower placement.
+        # Lower placements: also clear leftover upper-center Proper (no restamp).
         if place_key != "upper_center":
             upper = backpack_pdf_baked_gs_cover("upper_center")
             if upper:
@@ -2394,6 +2396,24 @@ class WorksheetExporter:
             u_cover = upper_front.get("cover") or upper_front.get("box")
             if u_cover:
                 self._pdf_clear_backpack_front_photo(page, u_cover, fabric)
+
+        art_w, art_h = backpack_artwork_cm(place_key)
+        center = backpack_pdf_draw_center(place_key)
+        draw_box = _cm_box(*center, art_w, art_h)
+        self._pdf_clear_backpack_gs_vector(page, place_key, draw_box, fabric)
+        if mark is not None:
+            self._pdf_insert_mark(
+                page,
+                draw_box,
+                mark,
+                fit_pad=0.08,
+                crisp=True,
+                crisp_threshold=128,
+            )
+
+    def _pdf_wipe_backpack_baked_logos(self, page, job: JobSpec) -> None:
+        """Remove Paula's baked Proper marks when no client logo is uploaded."""
+        self._pdf_overlay_backpack_client_logos(page, job, mark=None)
 
     def _pdf_clear_backpack_front_photo(
         self,
