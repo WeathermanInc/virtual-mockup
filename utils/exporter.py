@@ -2367,8 +2367,8 @@ class WorksheetExporter:
     def _pdf_wipe_backpack_baked_logos(self, page, job: JobSpec) -> None:
         """Remove Paula's baked Proper marks when no client logo is uploaded.
 
-        Heals the Front View photo slot and opaque-wipes Graphic Sample + the
-        bottom Weatherman ghost so proofs stay blank instead of showing Proper.
+        Front View Proper is baked into the photo XObject — heal that bitmap
+        in place. Graphic Sample + Weatherman ghost get opaque fabric wipes.
         """
         place = resolve_backpack_placement(job.panel_config)
         place_key = str(place.get("key") or "upper_center")
@@ -2377,14 +2377,7 @@ class WorksheetExporter:
         front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
         cover = front.get("cover") or front.get("box")
         if cover:
-            fx, fy, fw, fh = (float(v) for v in cover)
-            padded = (fx - 14.0, fy - 12.0, fw + 28.0, fh + 24.0)
-            try:
-                # force_full: white Proper on Sage/Steel must not leave glyph crumbs.
-                self._pdf_heal_region(page, padded, force_full=True)
-            except Exception:
-                fill = self._pdf_sample_fill(page, padded, fallback=fabric)
-                self._pdf_opaque_wipe(page, padded, fill)
+            self._pdf_clear_backpack_front_photo(page, cover, fabric)
 
         art_w, art_h = backpack_artwork_cm(place_key)
         center = backpack_pdf_draw_center(place_key)
@@ -2400,11 +2393,118 @@ class WorksheetExporter:
             upper_front = get_backpack_pdf_front_slot(job.fabric_name, "upper_center")
             u_cover = upper_front.get("cover") or upper_front.get("box")
             if u_cover:
-                try:
-                    self._pdf_heal_region(page, u_cover, force_full=True)
-                except Exception:
-                    fill = self._pdf_sample_fill(page, u_cover, fallback=fabric)
-                    self._pdf_opaque_wipe(page, u_cover, fill)
+                self._pdf_clear_backpack_front_photo(page, u_cover, fabric)
+
+    def _pdf_clear_backpack_front_photo(
+        self,
+        page,
+        cover: tuple[float, float, float, float],
+        fabric: tuple[int, int, int],
+    ) -> None:
+        """Erase baked Proper from the Front View lifestyle photo.
+
+        Prefers in-place XObject heal (no plate). Falls back to a local-fabric
+        opaque wipe over the cover if the photo image cannot be rewritten.
+        """
+        fx, fy, fw, fh = (float(v) for v in cover)
+        padded = (fx - 16.0, fy - 14.0, fw + 32.0, fh + 28.0)
+        if self._pdf_heal_backpack_front_photo_bitmap(page, padded):
+            return
+        # Overlay heal as a second chance (composites over vectors/images).
+        try:
+            self._pdf_heal_region(page, padded, force_full=True)
+            return
+        except Exception:
+            pass
+        fill = self._pdf_sample_fill(page, padded, fallback=fabric)
+        self._pdf_opaque_wipe(page, padded, fill)
+
+    def _pdf_heal_backpack_front_photo_bitmap(
+        self,
+        page,
+        box: tuple[float, float, float, float],
+    ) -> bool:
+        """Inpaint white Proper glyphs inside the Front View photo XObject."""
+        import cv2
+        import numpy as np
+
+        cover = self._pdf_rect(box)
+        if cover.width < 2 or cover.height < 2:
+            return False
+        doc = page.parent
+        target = None
+        img_rect = None
+        for info in page.get_images(full=True):
+            xref = int(info[0])
+            for r in page.get_image_rects(xref):
+                if r.intersects(cover) and r.width > 200 and r.height > 100:
+                    if target is None or r.width * r.height > img_rect.width * img_rect.height:
+                        target = xref
+                        img_rect = r
+        if target is None or img_rect is None:
+            return False
+
+        meta = doc.extract_image(target)
+        pil = PILImage.open(BytesIO(meta["image"])).convert("RGB")
+        arr = np.array(pil)
+        ih, iw = arr.shape[:2]
+        sx = iw / float(img_rect.width)
+        sy = ih / float(img_rect.height)
+        x0 = int(max(0, (cover.x0 - img_rect.x0) * sx))
+        y0 = int(max(0, (cover.y0 - img_rect.y0) * sy))
+        x1 = int(min(iw, (cover.x1 - img_rect.x0) * sx))
+        y1 = int(min(ih, (cover.y1 - img_rect.y0) * sy))
+        if x1 - x0 < 4 or y1 - y0 < 4:
+            return False
+
+        crop = arr[y0:y1, x0:x1].copy()
+        hh, ww = crop.shape[:2]
+        r = crop[:, :, 0].astype(np.float32)
+        g = crop[:, :, 1].astype(np.float32)
+        b = crop[:, :, 2].astype(np.float32)
+        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        chroma = np.maximum(np.maximum(r, g), b) - np.minimum(np.minimum(r, g), b)
+        band = max(2, min(hh, ww) // 8)
+        rim = np.zeros((hh, ww), dtype=bool)
+        rim[:band, :] = True
+        rim[-band:, :] = True
+        rim[:, :band] = True
+        rim[:, -band:] = True
+        if not rim.any():
+            return False
+        med_lum = float(np.median(lum[rim]))
+        # Paula Proper = bright near-white ink on Black/Sage/Steel weave.
+        bright = (lum >= max(165.0, med_lum + 28.0)) & (chroma < 55.0)
+        # Black bag: slightly lower threshold so pale bevels are caught too.
+        pale = (lum >= max(110.0, med_lum + 35.0)) & (chroma < 70.0) & (med_lum < 90.0)
+        mask = (bright | pale).astype(np.uint8) * 255
+        if int(mask.sum()) < 255 * 20:
+            # No strong ink — still wipe the whole cover (force-clear Proper).
+            mask[:, :] = 255
+        mask = cv2.dilate(mask, np.ones((5, 5), np.uint8), iterations=2)
+        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
+        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
+        out_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
+        # Second pass: any leftover bright crumbs → rim fabric.
+        olum = (
+            0.2126 * out_rgb[:, :, 0].astype(np.float32)
+            + 0.7152 * out_rgb[:, :, 1].astype(np.float32)
+            + 0.0722 * out_rgb[:, :, 2].astype(np.float32)
+        )
+        ochroma = out_rgb.max(axis=2) - out_rgb.min(axis=2)
+        crumb = (olum >= max(170.0, med_lum + 30.0)) & (ochroma < 50)
+        if crumb.any():
+            local = np.median(crop[rim].astype(np.float32), axis=0)
+            out_rgb[crumb] = np.clip(local, 0, 255).astype(np.uint8)
+
+        arr[y0:y1, x0:x1] = out_rgb
+        buf = BytesIO()
+        PILImage.fromarray(arr, "RGB").save(buf, format="PNG", optimize=True)
+        try:
+            page.replace_image(target, stream=buf.getvalue())
+        except Exception:
+            doc.update_stream(target, buf.getvalue())
+        return True
 
     def _pdf_clear_backpack_gs_vector(
         self,
