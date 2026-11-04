@@ -111,7 +111,19 @@ def _init(version: int = STAMP_VERSION) -> tuple[StateMemory, AssetLogger, Works
 
 
 def _clear_artwork_state() -> None:
-    for key in ("logo_bytes", "logo_name", "_saved_logo", "pdf_bytes", "pdf_name", "pdf_pages", "pdf_fingerprint"):
+    for key in (
+        "logo_bytes",
+        "logo_name",
+        "_saved_logo",
+        "pdf_bytes",
+        "pdf_name",
+        "pdf_pages",
+        "pdf_fingerprint",
+        "customer_pdf_bytes",
+        "customer_pdf_name",
+        "customer_pdf_pages",
+        "customer_pdf_fingerprint",
+    ):
         st.session_state.pop(key, None)
     try:
         _preview_pages.clear()
@@ -589,7 +601,10 @@ def _run_app() -> None:
         except VectorLoadError as exc:
             st.error(str(exc))
             # Keep rendering Export/download if a PDF was already generated.
-            if not st.session_state.get("pdf_bytes"):
+            has_pdf = st.session_state.get("customer_pdf_bytes") or st.session_state.get(
+                "pdf_bytes"
+            )
+            if not has_pdf:
                 return
     else:
         st.info("No client logo uploaded. Official Proper marks are removed; upload SVG/AI/CDR/PDF/EPS to stamp.")
@@ -720,16 +735,23 @@ def _run_app() -> None:
         )
         if generate:
             with st.spinner(f"Composing {len(page_plan)}-page worksheet…"):
-                pdf_bytes = exporter.build_pdf(job, logo)
+                built = exporter.build_pdf(job, logo)
             out_name = worksheet_filename(job.client, job.year, job.family)
-            # Session state is the source of truth for Download (Cloud FS is best-effort).
-            st.session_state["pdf_bytes"] = bytes(pdf_bytes)
-            st.session_state["pdf_name"] = out_name
-            st.session_state["pdf_pages"] = page_labels
-            st.session_state["pdf_fingerprint"] = job_fp
+            payload = bytes(built)
+            # Dedicated keys for customer vs ops so Download survives mode/query flaps.
+            if customer_mode:
+                st.session_state["customer_pdf_bytes"] = payload
+                st.session_state["customer_pdf_name"] = out_name
+                st.session_state["customer_pdf_pages"] = page_labels
+                st.session_state["customer_pdf_fingerprint"] = job_fp
+            else:
+                st.session_state["pdf_bytes"] = payload
+                st.session_state["pdf_name"] = out_name
+                st.session_state["pdf_pages"] = page_labels
+                st.session_state["pdf_fingerprint"] = job_fp
             try:
                 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-                (OUTPUT_DIR / out_name).write_bytes(pdf_bytes)
+                (OUTPUT_DIR / out_name).write_bytes(payload)
             except OSError as exc:
                 print(f"[vm] pdf disk write skipped: {exc}", flush=True)
             logger.log(
@@ -742,19 +764,24 @@ def _run_app() -> None:
                     "logo_color": job.logo_color_name,
                     "placement": panel_config,
                     "file": out_name,
-                    "bytes": len(pdf_bytes),
+                    "bytes": len(payload),
                     "mode": "customer" if customer_mode else "ops",
                 },
             )
-            # Fresh run so Download is not tied to the Generate click context
-            # (otherwise customer-mode download clicks can no-op).
+            # Show Download on a clean run (not the Generate click).
             st.rerun()
 
-        # Download outside Generate so the button is stable across clicks.
-        pdf_bytes = st.session_state.get("pdf_bytes")
-        pdf_name = st.session_state.get("pdf_name")
-        pdf_pages = st.session_state.get("pdf_pages") or []
-        pdf_fp = st.session_state.get("pdf_fingerprint")
+        # Read the mode-specific buffer so Download persists across reruns.
+        if customer_mode:
+            pdf_bytes = st.session_state.get("customer_pdf_bytes")
+            pdf_name = st.session_state.get("customer_pdf_name")
+            pdf_pages = st.session_state.get("customer_pdf_pages") or []
+            pdf_fp = st.session_state.get("customer_pdf_fingerprint")
+        else:
+            pdf_bytes = st.session_state.get("pdf_bytes")
+            pdf_name = st.session_state.get("pdf_name")
+            pdf_pages = st.session_state.get("pdf_pages") or []
+            pdf_fp = st.session_state.get("pdf_fingerprint")
         if pdf_bytes and pdf_name:
             if pdf_fp and pdf_fp != job_fp:
                 st.warning("Job ticket changed since the last PDF. Generate again to include the current styles.")
@@ -763,13 +790,10 @@ def _run_app() -> None:
             st.download_button(
                 "Download PDF",
                 data=pdf_bytes,
-                file_name=pdf_name,
+                file_name=str(pdf_name),
                 mime="application/pdf",
                 icon=":material/download:",
                 width="stretch",
-                # ignore → serve file without a fragile full rerun path (customer mode
-                # previously lost the download when the post-click rerun skipped the widget).
-                on_click="ignore",
                 key=f"download_worksheet_pdf_{'cust' if customer_mode else 'ops'}",
             )
             if customer_mode:
