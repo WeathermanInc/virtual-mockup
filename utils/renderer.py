@@ -169,8 +169,9 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 # ``box`` = Proper badge footprint; ``cover`` = heal zone; ``rotate`` = PIL CCW
 # degrees matching Paula's baked Proper baseline (down-right on the lifestyle
 # photo → negative CCW). Measured from Proper ink: upper ≈ −15°, center ≈ −14.5°,
-# lower-right ≈ −6…−9°. Proper's min-area rect is ~1:1 top/bottom (no keystone),
-# so rotation alone matches the panel tilt — same path for uploaded vectors.
+# lower-right black ≈ −9°, steel/sage ≈ −15°. Proper's min-area rect is ~1:1
+# top/bottom (no keystone), so rotation alone matches the panel tilt — same
+# path for uploaded vectors.
 # ``rotate_after_fit``: fit into the badge first, then tilt — avoids the shrink
 # that rotate-before-fit caused on wide client marks.
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
@@ -231,7 +232,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (640.0, 1168.0, 155.0, 52.0),
             "cover": (600.0, 1148.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": -6.5,
+            "rotate": -9.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -239,7 +240,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": -9.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },
@@ -247,7 +248,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": -8.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.0,
         },

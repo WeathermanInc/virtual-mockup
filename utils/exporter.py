@@ -2032,6 +2032,12 @@ class WorksheetExporter:
         # Clear baked Proper; stamp client logo on Front View + Graphic Sample.
         self._pdf_overlay_backpack_client_logos(page, job, mark)
 
+        # Placement-aware callouts — Paula pages bake stale Option #N / "upper center".
+        place = resolve_backpack_placement(job.panel_config)
+        place_key = str(place.get("key") or "upper_center")
+        self._pdf_overlay_option_number(page, place_key)
+        self._pdf_overlay_place_callout(page, place)
+
         # Artwork preview box — fabric plate always; stamp only when mark exists.
         art_slot = next(
             (s for s in spec.get("logos") or [] if str(s.get("erase") or "") == "artwork"),
@@ -2676,27 +2682,20 @@ class WorksheetExporter:
         )
 
     def _pdf_overlay_option_number(self, page, place_key: str) -> None:
-        """Force Graphic Sample Option #1 / #4 / #7 from Artwork placement.
+        """Strip Paula's baked ``#N`` after Graphic Sample Option.
 
-        Fabric colorways still use Paula pages #2/#3/… for Front View photos, but
-        the Option label always tracks placement (Upper center → #1, etc.).
+        Leaves the word ``Option`` (and ``Graphic Sample``) intact — worksheets
+        no longer show Option #1 / #4 / #7. ``place_key`` kept for call-site parity.
         """
         import fitz
 
-        tag = backpack_option_label(place_key)
-        label = f"Option {tag}" if str(tag).startswith("#") else f"Option #{tag}"
-        # Measured on Options #1–#9 ("Option #N" under Graphic Sample).
-        option_box = (1660.0, 1725.0, 420.0, 110.0)
-        page.add_redact_annot(self._pdf_rect(option_box), fill=(1, 1, 1))
+        _ = place_key
+        # Paula lays out ``Option`` then ``#N`` as separate words under Graphic Sample.
+        # Wipe only the number — stay right of ``Option`` and below ``Sample``
+        # (Sample glyph box ends ~y1739 / x2068; #7 starts ~x1967,y1729).
+        number_box = (1960.0, 1740.0, 120.0, 100.0)
+        page.add_redact_annot(self._pdf_rect(number_box), fill=(1, 1, 1))
         page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE)
-        x, y, _w, h = option_box
-        page.insert_text(
-            (x + 8.0, y + h * 0.72),
-            label,
-            fontsize=72,
-            fontname="hebo",
-            color=self._pdf_rgb(NAVY),
-        )
 
     def _pdf_sample_fill(
         self,
