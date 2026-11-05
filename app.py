@@ -9,6 +9,7 @@ in a red error box instead of the generic white crash screen.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import traceback
 from datetime import date
@@ -28,6 +29,9 @@ ROOT = Path(__file__).resolve().parent
 OUTPUT_DIR = ROOT / "output"
 LOGO_DIR = ROOT / "assets" / "logos"
 WM_MARK = ROOT / "assets" / "templates" / "wm_mark.png"
+# Official header wordmark (mark + "weatherman") for the main-page brand lockup.
+WM_HEADER_LOGO = ROOT / "assets" / "weatherman-header-logo.png"
+WM_HEADER_LOGO_SVG = ROOT / "assets" / "weatherman-header-logo.svg"
 PANEL_OPTIONS = [
     "Standard 1 Panel",
     "Standard 2 Panel",
@@ -51,9 +55,9 @@ FAMILY_LABEL_BY_KEY = {v: k for k, v in FAMILY_KEYS.items()}
 FAMILY_ICONS = {
     "Umbrella": ":material/umbrella:",
     "Backpack": ":material/backpack:",
-    "Hat": ":material/apparel:",
-    "Poncho": ":material/checkroom:",
-    "Sun Shirt": ":material/wb_sunny:",
+    "Hat": ":material/child_hat:",
+    "Poncho": ":material/rainy:",
+    "Sun Shirt": ":material/apparel:",
 }
 
 # Weatherman corporate-gifting tokens (match weatherman.com custom / CTA surfaces).
@@ -420,46 +424,61 @@ def _inject_weatherman_styles() -> None:
             fill: #ffffff !important;
         }}
 
-        /* —— Product family pills (card / pill selectors) —— */
-        [data-testid="stSidebar"] [data-testid="stPills"] {{
-            gap: 0.45rem !important;
+        /* —— Header brand lockup —— */
+        img.wm-header-logo {{
+            display: block !important;
+            height: 40px !important;
+            width: auto !important;
+            max-width: 240px !important;
+            margin: 0 0 1rem 0 !important;
+        }}
+
+        /* —— Product family cards (st.pills → stButtonGroup) —— */
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] {{
+            gap: 0.5rem !important;
             flex-wrap: wrap !important;
         }}
-        [data-testid="stSidebar"] [data-testid="stPills"] button,
-        [data-testid="stSidebar"] div[role="radiogroup"] button,
-        [data-testid="stSidebar"] [class*="stPills"] button {{
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [role="group"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] > div {{
+            gap: 0.5rem !important;
+            flex-wrap: wrap !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] button,
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [data-variant="pills"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [role="radio"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [role="checkbox"] {{
             background-color: {WM_BG} !important;
             border: 1px solid {WM_BORDER} !important;
             border-radius: 8px !important;
             color: {WM_TEXT} !important;
             box-shadow: none !important;
-            min-height: 2.55rem !important;
-            padding: 0.45rem 0.85rem !important;
+            outline: none !important;
+            min-height: 2.75rem !important;
+            padding: 0.55rem 0.95rem !important;
             font-weight: 500 !important;
             transition: border-color 0.15s ease, background-color 0.15s ease,
-                        box-shadow 0.15s ease, color 0.15s ease !important;
+                        box-shadow 0.15s ease !important;
         }}
-        [data-testid="stSidebar"] [data-testid="stPills"] button:hover,
-        [data-testid="stSidebar"] div[role="radiogroup"] button:hover,
-        [data-testid="stSidebar"] [class*="stPills"] button:hover {{
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] button:hover,
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [data-variant="pills"]:hover {{
             background-color: #ffffff !important;
             border-color: #cfcbc3 !important;
             box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06) !important;
         }}
-        [data-testid="stSidebar"] [data-testid="stPills"] button[kind="primary"],
-        [data-testid="stSidebar"] [data-testid="stPills"] button[aria-pressed="true"],
-        [data-testid="stSidebar"] [data-testid="stPills"] button[data-selected="true"],
-        [data-testid="stSidebar"] div[role="radiogroup"] button[aria-checked="true"],
-        [data-testid="stSidebar"] [class*="stPills"] button[kind="primary"] {{
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] button[aria-checked="true"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] button[aria-pressed="true"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] button[data-selected="true"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [data-variant="pills"][aria-checked="true"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [data-selected="true"],
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] [aria-checked="true"] {{
             background-color: #ffffff !important;
             border: 2px solid {WM_ORANGE} !important;
             color: {WM_TEXT} !important;
-            box-shadow: 0 0 0 1px rgba(239, 78, 35, 0.12) !important;
+            box-shadow: 0 0 0 1px rgba(239, 78, 35, 0.14) !important;
         }}
-        [data-testid="stSidebar"] [data-testid="stPills"] button[kind="primary"] p,
-        [data-testid="stSidebar"] [data-testid="stPills"] button[aria-pressed="true"] p,
-        [data-testid="stSidebar"] [data-testid="stPills"] button[data-selected="true"] span {{
-            color: {WM_TEXT} !important;
+        [data-testid="stSidebar"] [data-testid="stButtonGroup"] button:focus-visible {{
+            outline: 2px solid {WM_ORANGE} !important;
+            outline-offset: 2px !important;
         }}
 
         /* —— Inputs / selects —— */
@@ -571,9 +590,30 @@ def _customer_mode_from_query() -> tuple[bool, str, str | None]:
     return customer, safe_return, family_key
 
 
+def _render_brand_header() -> None:
+    """Official Weatherman wordmark at the top of the main content column."""
+    logo_path = WM_HEADER_LOGO if WM_HEADER_LOGO.is_file() else None
+    mime = "image/png"
+    if logo_path is None and WM_HEADER_LOGO_SVG.is_file():
+        logo_path = WM_HEADER_LOGO_SVG
+        mime = "image/svg+xml"
+    if logo_path is None and WM_MARK.is_file():
+        logo_path = WM_MARK
+        mime = "image/png"
+    if logo_path is None:
+        return
+    payload = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+    st.markdown(
+        f'<img class="wm-header-logo" alt="weatherman" '
+        f'src="data:{mime};base64,{payload}" width="220" />',
+        unsafe_allow_html=True,
+    )
+
+
 def _run_app() -> None:
+    # Compact mark in the Streamlit chrome; full wordmark lives in the page header.
     if WM_MARK.is_file():
-        st.logo(str(WM_MARK), size="large")
+        st.logo(str(WM_MARK), size="large", link="https://weatherman.com/")
 
     customer_mode, return_url, family_preselect = _customer_mode_from_query()
     # Sticky for the browser session — download clicks must not lose ?mode=customer
@@ -595,6 +635,7 @@ def _run_app() -> None:
 
     memory, logger, exporter = _init(STAMP_VERSION)
 
+    _render_brand_header()
     if customer_mode:
         st.caption("Custom order · Build a proof, then return to your inquiry form")
         st.title("Build your mockup")

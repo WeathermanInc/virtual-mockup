@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 80" width="560" height="80" role="img" aria-label="weatherman">
+  <title>weatherman</title>
+  <!-- Brand mark: 2×2 canopy lobes (black) -->
+  <g fill="#111111" transform="translate(4,10)">
+    <path d="M2 2h24a24 24 0 0 1-24 24V2z"/>
+    <path d="M34 2h24v24A24 24 0 0 1 34 2z"/>
+    <path d="M2 34a24 24 0 0 1 24 24H2V34z"/>
+    <path d="M58 34v24H34a24 24 0 0 1 24-24z"/>
+  </g>
+  <text x="88" y="54" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="42" font-weight="700" fill="#111111" letter-spacing="-0.5">weatherman</text>
+</svg>
