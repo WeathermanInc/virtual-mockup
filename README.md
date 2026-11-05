@@ -73,12 +73,14 @@ assets/
   catalog/catalog.json      # Fabrics, styles, logo colors, placements
   fonts/                    # Liberation Sans for Cloud
   templates/official/       # Official umbrella worksheet page rasters
-  templates/wm_mark.png     # App logo mark
+  templates/wm_mark.png     # Circular mark (collapsed sidebar icon)
+  weatherman-header-logo.png  # Sidebar wordmark (mark + "weatherman")
+  weatherman-header-logo.svg  # Vector sibling of the wordmark
 utils/                      # Export, render, vectors, catalog, project guide
 skills/                     # Lightweight job memory & asset log
 scripts/keepalive.py        # Playwright wake for Community Cloud
 .github/workflows/          # Keep-alive schedule
-.streamlit/config.toml      # Weatherman.com-inspired UI theme
+.streamlit/config.toml      # Weatherman corporate-gifting theme (orange accent)
 ```
 
 Local-only (gitignored): `.venv/`, `data/`, `output/`, `assets/logos/`, screen
@@ -150,7 +152,9 @@ dependency changes or a dashboard reboot.
 ## Operator notes
 
 - Job ticket starts **blank** — no Proper demo defaults.
-- Choose **product family** first (Umbrella / Backpack / Hat / Poncho / Sun Shirt).
+- Choose **product family** first via the sidebar pills (Umbrella / Backpack / Hat / Poncho / Sun Shirt) — no help tooltip on that label.
+- Branding: left sidebar shows the Weatherman wordmark (`assets/weatherman-header-logo.png`); collapsed chrome uses `wm_mark.png`.
+- Theme tokens live in `.streamlit/config.toml` and `_inject_weatherman_styles()` (`#f8f7f2` surface, `#e5e2dc` borders, `#ef4e23` active/CTA).
 - Upload vector logos only (no PNG/JPG).
 - Select products before fabric options appear; fabric change suggests a contrast-safe logo color (overridable).
 - Fill required ticket fields (including worksheet year) before the proof builds.

@@ -9,7 +9,6 @@ in a red error box instead of the generic white crash screen.
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import traceback
 from datetime import date
@@ -424,13 +423,27 @@ def _inject_weatherman_styles() -> None:
             fill: #ffffff !important;
         }}
 
-        /* —— Header brand lockup —— */
-        img.wm-header-logo {{
-            display: block !important;
-            height: 40px !important;
+        /* —— Sidebar brand lockup (st.logo) — left-aligned wordmark —— */
+        [data-testid="stSidebarHeader"],
+        [data-testid="stSidebar"] header {{
+            justify-content: flex-start !important;
+            padding-left: 0.35rem !important;
+        }}
+        [data-testid="stLogo"],
+        [data-testid="stSidebar"] a[data-testid="stLogoLink"],
+        [data-testid="stSidebar"] [data-testid="stLogoLink"] {{
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            margin-left: 0 !important;
+            margin-right: auto !important;
+            width: 100% !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stLogoLink"] img,
+        [data-testid="stLogo"] img {{
+            max-height: 28px !important;
             width: auto !important;
-            max-width: 240px !important;
-            margin: 0 0 1rem 0 !important;
+            object-fit: contain !important;
         }}
 
         /* —— Product family cards (st.pills → stButtonGroup) —— */
@@ -590,30 +603,24 @@ def _customer_mode_from_query() -> tuple[bool, str, str | None]:
     return customer, safe_return, family_key
 
 
-def _render_brand_header() -> None:
-    """Official Weatherman wordmark at the top of the main content column."""
-    logo_path = WM_HEADER_LOGO if WM_HEADER_LOGO.is_file() else None
-    mime = "image/png"
-    if logo_path is None and WM_HEADER_LOGO_SVG.is_file():
-        logo_path = WM_HEADER_LOGO_SVG
-        mime = "image/svg+xml"
-    if logo_path is None and WM_MARK.is_file():
-        logo_path = WM_MARK
-        mime = "image/png"
-    if logo_path is None:
-        return
-    payload = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-    st.markdown(
-        f'<img class="wm-header-logo" alt="weatherman" '
-        f'src="data:{mime};base64,{payload}" width="220" />',
-        unsafe_allow_html=True,
-    )
-
-
 def _run_app() -> None:
-    # Compact mark in the Streamlit chrome; full wordmark lives in the page header.
-    if WM_MARK.is_file():
-        st.logo(str(WM_MARK), size="large", link="https://weatherman.com/")
+    # Official wordmark in the sidebar chrome (left-aligned); circular mark when collapsed.
+    header_logo = (
+        WM_HEADER_LOGO
+        if WM_HEADER_LOGO.is_file()
+        else WM_HEADER_LOGO_SVG
+        if WM_HEADER_LOGO_SVG.is_file()
+        else WM_MARK
+    )
+    if header_logo.is_file():
+        logo_kwargs: dict = {
+            "image": str(header_logo),
+            "size": "large",
+            "link": "https://weatherman.com/",
+        }
+        if WM_MARK.is_file() and header_logo.resolve() != WM_MARK.resolve():
+            logo_kwargs["icon_image"] = str(WM_MARK)
+        st.logo(**logo_kwargs)
 
     customer_mode, return_url, family_preselect = _customer_mode_from_query()
     # Sticky for the browser session — download clicks must not lose ?mode=customer
@@ -635,7 +642,6 @@ def _run_app() -> None:
 
     memory, logger, exporter = _init(STAMP_VERSION)
 
-    _render_brand_header()
     if customer_mode:
         st.caption("Custom order · Build a proof, then return to your inquiry form")
         st.title("Build your mockup")
@@ -694,7 +700,6 @@ def _run_app() -> None:
             selection_mode="single",
             format_func=lambda label: f"{FAMILY_ICONS.get(label, '')}  {label}".strip(),
             key=f"family_{FORM_KEY}",
-            help="Choose a Weatherman product line — Umbrella, Backpack, Hat, Poncho, or Sun Shirt.",
             width="stretch",
         )
         family = FAMILY_KEYS.get(family_label or "")
