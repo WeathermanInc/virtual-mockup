@@ -37,7 +37,7 @@ PANEL_OPTIONS = [
 
 STAMP_VERSION = 128
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
-FORM_KEY = "blank2"
+FORM_KEY = "blank3"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho", "Sun Shirt"]
 FAMILY_KEYS = {
     "Umbrella": "umbrella",
@@ -47,6 +47,21 @@ FAMILY_KEYS = {
     "Sun Shirt": "sun_shirt",
 }
 FAMILY_LABEL_BY_KEY = {v: k for k, v in FAMILY_KEYS.items()}
+# Material icons for Weatherman-style family pills (corporate gifting cards).
+FAMILY_ICONS = {
+    "Umbrella": ":material/umbrella:",
+    "Backpack": ":material/backpack:",
+    "Hat": ":material/apparel:",
+    "Poncho": ":material/checkroom:",
+    "Sun Shirt": ":material/wb_sunny:",
+}
+
+# Weatherman corporate-gifting tokens (match weatherman.com custom / CTA surfaces).
+WM_BG = "#f8f7f2"
+WM_BORDER = "#e5e2dc"
+WM_ORANGE = "#ef4e23"
+WM_NAVY = "#262d65"
+WM_TEXT = "#111111"
 # Shopify / public CTA: ?mode=customer&return=<url>&family=sun_shirt
 CUSTOMER_RETURN_HOST_SUFFIXES = (
     "weatherman.com",
@@ -352,6 +367,170 @@ def _clear_preview_cache() -> None:
         pass
 
 
+def _inject_weatherman_styles() -> None:
+    """Apply Weatherman corporate-gifting CSS (pills, sidebar, buttons, cards)."""
+    st.markdown(
+        f"""
+        <style>
+        /* —— Page shell —— */
+        .stApp {{
+            background-color: {WM_BG};
+        }}
+        [data-testid="stAppViewContainer"] > .main {{
+            background-color: {WM_BG};
+        }}
+        [data-testid="stHeader"] {{
+            background: rgba(248, 247, 242, 0.92);
+            border-bottom: 1px solid {WM_BORDER};
+        }}
+        [data-testid="stMainBlockContainer"] {{
+            padding-top: 1.5rem;
+            padding-bottom: 3rem;
+        }}
+        h1, h2, h3 {{
+            letter-spacing: -0.02em;
+            font-weight: 600 !important;
+            color: {WM_TEXT} !important;
+        }}
+        [data-testid="stCaption"] {{
+            color: #5c5a55 !important;
+        }}
+
+        /* —— Sidebar —— */
+        [data-testid="stSidebar"] {{
+            background-color: #ffffff !important;
+            border-right: 1px solid {WM_BORDER} !important;
+        }}
+        [data-testid="stSidebar"] > div:first-child {{
+            padding-top: 1.25rem;
+            padding-left: 1.15rem;
+            padding-right: 1.15rem;
+        }}
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+            gap: 0.65rem;
+        }}
+        [data-testid="stSidebar"] span[data-baseweb="tag"] {{
+            background-color: {WM_NAVY} !important;
+            color: #ffffff !important;
+            border-radius: 2px !important;
+        }}
+        [data-testid="stSidebar"] span[data-baseweb="tag"] span,
+        [data-testid="stSidebar"] span[data-baseweb="tag"] svg {{
+            color: #ffffff !important;
+            fill: #ffffff !important;
+        }}
+
+        /* —— Product family pills (card / pill selectors) —— */
+        [data-testid="stSidebar"] [data-testid="stPills"] {{
+            gap: 0.45rem !important;
+            flex-wrap: wrap !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stPills"] button,
+        [data-testid="stSidebar"] div[role="radiogroup"] button,
+        [data-testid="stSidebar"] [class*="stPills"] button {{
+            background-color: {WM_BG} !important;
+            border: 1px solid {WM_BORDER} !important;
+            border-radius: 8px !important;
+            color: {WM_TEXT} !important;
+            box-shadow: none !important;
+            min-height: 2.55rem !important;
+            padding: 0.45rem 0.85rem !important;
+            font-weight: 500 !important;
+            transition: border-color 0.15s ease, background-color 0.15s ease,
+                        box-shadow 0.15s ease, color 0.15s ease !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stPills"] button:hover,
+        [data-testid="stSidebar"] div[role="radiogroup"] button:hover,
+        [data-testid="stSidebar"] [class*="stPills"] button:hover {{
+            background-color: #ffffff !important;
+            border-color: #cfcbc3 !important;
+            box-shadow: 0 1px 3px rgba(17, 17, 17, 0.06) !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stPills"] button[kind="primary"],
+        [data-testid="stSidebar"] [data-testid="stPills"] button[aria-pressed="true"],
+        [data-testid="stSidebar"] [data-testid="stPills"] button[data-selected="true"],
+        [data-testid="stSidebar"] div[role="radiogroup"] button[aria-checked="true"],
+        [data-testid="stSidebar"] [class*="stPills"] button[kind="primary"] {{
+            background-color: #ffffff !important;
+            border: 2px solid {WM_ORANGE} !important;
+            color: {WM_TEXT} !important;
+            box-shadow: 0 0 0 1px rgba(239, 78, 35, 0.12) !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stPills"] button[kind="primary"] p,
+        [data-testid="stSidebar"] [data-testid="stPills"] button[aria-pressed="true"] p,
+        [data-testid="stSidebar"] [data-testid="stPills"] button[data-selected="true"] span {{
+            color: {WM_TEXT} !important;
+        }}
+
+        /* —— Inputs / selects —— */
+        [data-testid="stSidebar"] .stTextInput input,
+        [data-testid="stSidebar"] .stSelectbox [data-baseweb="select"] > div,
+        [data-testid="stSidebar"] .stMultiSelect [data-baseweb="select"] > div,
+        [data-testid="stSidebar"] .stNumberInput input {{
+            background-color: {WM_BG} !important;
+            border-color: {WM_BORDER} !important;
+            border-radius: 2px !important;
+        }}
+        [data-testid="stSidebar"] .stTextInput input:focus,
+        [data-testid="stSidebar"] .stNumberInput input:focus {{
+            border-color: {WM_ORANGE} !important;
+            box-shadow: 0 0 0 1px {WM_ORANGE} !important;
+        }}
+
+        /* —— Buttons (2px radius, corporate CTA) —— */
+        .stButton > button,
+        .stDownloadButton > button,
+        .stLinkButton > a {{
+            border-radius: 2px !important;
+            font-weight: 600 !important;
+            letter-spacing: 0.01em !important;
+        }}
+        .stButton > button[kind="primary"],
+        .stDownloadButton > button[kind="primary"] {{
+            background-color: {WM_ORANGE} !important;
+            border-color: {WM_ORANGE} !important;
+            color: #ffffff !important;
+        }}
+        .stButton > button[kind="primary"]:hover,
+        .stDownloadButton > button[kind="primary"]:hover {{
+            background-color: #d9441c !important;
+            border-color: #d9441c !important;
+        }}
+        .stButton > button[kind="secondary"],
+        .stLinkButton > a {{
+            background-color: #ffffff !important;
+            border: 1px solid {WM_BORDER} !important;
+            color: {WM_TEXT} !important;
+        }}
+        .stButton > button[kind="secondary"]:hover,
+        .stLinkButton > a:hover {{
+            border-color: {WM_ORANGE} !important;
+            color: {WM_ORANGE} !important;
+        }}
+
+        /* —— Main content cards / bordered containers —— */
+        [data-testid="stVerticalBlockBorderWrapper"] {{
+            background-color: #ffffff !important;
+            border: 1px solid {WM_BORDER} !important;
+            border-radius: 2px !important;
+            box-shadow: none !important;
+        }}
+        div[data-testid="stExpander"] {{
+            background-color: #ffffff !important;
+            border: 1px solid {WM_BORDER} !important;
+            border-radius: 2px !important;
+        }}
+        [data-testid="stFileUploader"] section {{
+            background-color: {WM_BG} !important;
+            border: 1px dashed {WM_BORDER} !important;
+            border-radius: 2px !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _customer_mode_from_query() -> tuple[bool, str, str | None]:
     """Return (customer_mode, safe_return_url, family_key) from ``st.query_params``."""
     from urllib.parse import urlparse
@@ -412,24 +591,7 @@ def _run_app() -> None:
         if label and fam_widget_key not in st.session_state:
             st.session_state[fam_widget_key] = label
 
-    # Selected multiselect/segmented chips use theme.primaryColor (Weatherman coral).
-    # Soften those to navy so they don't read as Streamlit validation errors.
-    st.markdown(
-        """
-        <style>
-        [data-testid="stSidebar"] span[data-baseweb="tag"] {
-            background-color: #262D65 !important;
-            color: #ffffff !important;
-        }
-        [data-testid="stSidebar"] span[data-baseweb="tag"] span,
-        [data-testid="stSidebar"] span[data-baseweb="tag"] svg {
-            color: #ffffff !important;
-            fill: #ffffff !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    _inject_weatherman_styles()
 
     memory, logger, exporter = _init(STAMP_VERSION)
 
@@ -485,10 +647,14 @@ def _run_app() -> None:
                 key=f"upd_{FORM_KEY}",
             ) or ""
 
-        family_label = st.segmented_control(
+        family_label = st.pills(
             "Product family",
             FAMILY_OPTIONS,
+            selection_mode="single",
+            format_func=lambda label: f"{FAMILY_ICONS.get(label, '')}  {label}".strip(),
             key=f"family_{FORM_KEY}",
+            help="Choose a Weatherman product line — Umbrella, Backpack, Hat, Poncho, or Sun Shirt.",
+            width="stretch",
         )
         family = FAMILY_KEYS.get(family_label or "")
 

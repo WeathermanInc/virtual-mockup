@@ -4,10 +4,19 @@ primaryColor = "#EF4E23"
 backgroundColor = "#F8F7F2"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#111111"
+linkColor = "#EF4E23"
+borderColor = "#E5E2DC"
 font = "sans serif"
+baseFontSize = 15
+baseRadius = "2px"
+buttonRadius = "2px"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
 
 [theme.sidebar]
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F1EFED"
+secondaryBackgroundColor = "#F8F7F2"
 primaryColor = "#EF4E23"
 textColor = "#111111"
+borderColor = "#E5E2DC"
