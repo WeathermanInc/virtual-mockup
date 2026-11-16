@@ -484,14 +484,29 @@ class MockupRenderer:
             return img
 
         fill = fill_rgb or (PANTONE_WHITE_C if mode == "white" else PANTONE_BLACK_C)
-        # Explicit fill_rgb always wins over knockout mode (e.g. Black C on white fabric).
-        if fill_rgb is not None:
-            want_white = (
-                int(fill[0]) >= 250 and int(fill[1]) >= 250 and int(fill[2]) >= 250
-            )
-        else:
-            want_white = mode == "white"
 
+        # Explicit print-color choice (White / Black / Pantone C): force every
+        # opaque pixel to that ink via alpha. Luminance ink-picking left mid-tone
+        # PDFs / already-white SVGs looking unchanged when users picked Black.
+        if fill_rgb is not None:
+            ink = self._drop_border_background(opaque)
+            out = np.zeros_like(arr)
+            out[:, :, 0] = int(fill[0])
+            out[:, :, 1] = int(fill[1])
+            out[:, :, 2] = int(fill[2])
+            if hard_edge:
+                out[:, :, 3] = np.where(ink & (alpha >= 0.40), 255, 0).astype(np.uint8)
+            else:
+                hard = np.where(ink & (alpha >= 0.28), 255.0, 0.0)
+                soft = np.where(
+                    ink & (alpha >= 0.08) & (alpha < 0.28), alpha * 255.0, 0.0
+                )
+                out[:, :, 3] = np.clip(np.maximum(hard, soft), 0, 255).astype(np.uint8)
+            prepared = Image.fromarray(out)
+            bbox = prepared.getchannel("A").getbbox()
+            return prepared.crop(bbox) if bbox else prepared
+
+        want_white = mode == "white"
         if want_white:
             # Pure white ink from alpha — preserve crisp white client art as-is.
             # Harden soft SVG anti-alias so edges do not read as a gray ghost on dark fabric.

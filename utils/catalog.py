@@ -86,6 +86,10 @@ def style_family(key: str) -> str:
 
 
 def style_labels(family: str | None = None) -> dict[str, str]:
+    """Sidebar product labels — friendly names only (no canopy size / Manual).
+
+    Travel is the sole umbrella that keeps an opening cue (``Automatic``).
+    """
     labels: dict[str, str] = {}
     for key, spec in product_specs().items():
         if family and style_family(key) != family:
@@ -93,10 +97,12 @@ def style_labels(family: str | None = None) -> dict[str, str]:
         if style_family(key) in {"backpack", "hat", "poncho", "sun_shirt"}:
             labels[key] = f"{spec['display_name']} · Style #: {spec.get('style_number')}"
             continue
-        cov = spec.get("frame_coverage_in")
-        opening = spec.get("opening") or spec.get("subtitle")
-        extra = f"{cov}\" · {opening}" if cov else str(opening)
-        labels[key] = f"{spec['display_name']} · {extra}"
+        name = str(spec.get("display_name") or key)
+        # Marketing: drop canopy inches + Manual/collapsible; Travel alone shows Automatic.
+        if key == "travel":
+            labels[key] = f"{name} · Automatic"
+        else:
+            labels[key] = name
     return labels
 
 
@@ -116,15 +122,19 @@ def fabrics_for_styles(keys: list[str], core_only: bool = False) -> list[str]:
     return ordered
 
 
+def fabric_display_name(name: str) -> str:
+    """Friendly fabric name for UI — strip trailing ``(NRF ###)`` codes."""
+    import re
+
+    token = " ".join(str(name or "").split())
+    bare = re.sub(r"\s*\(NRF\s*\d+\)\s*$", "", token, flags=re.IGNORECASE).strip()
+    return bare or token or "—"
+
+
 def fabric_caption(name: str) -> str:
+    """Sidebar / summary fabric label — color name only (no NRF / Pantone / TCX)."""
+    bits = [fabric_display_name(name)]
     rec = fabric_record(name)
-    bits = [name]
-    if rec.get("pantone"):
-        bits.append(str(rec["pantone"]))
-    if rec.get("nrf") and f"(NRF {rec['nrf']})" not in name:
-        bits.append(f"NRF {rec['nrf']}")
-    if rec.get("inner_color"):
-        bits.append(f"inner {rec['inner_color']}")
     if rec.get("kind") == "pattern":
         bits.append("pattern")
     return " · ".join(bits)

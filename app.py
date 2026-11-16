@@ -38,7 +38,7 @@ PANEL_OPTIONS = [
     "All-over 8 Panel",
 ]
 
-STAMP_VERSION = 128
+STAMP_VERSION = 129
 # Widget key namespace — bump to force a blank ticket on existing Cloud sessions.
 FORM_KEY = "blank3"
 FAMILY_OPTIONS = ["Umbrella", "Backpack", "Hat", "Poncho", "Sun Shirt"]
@@ -82,6 +82,7 @@ try:
         fabric_caption,
         fabrics_for_styles,
         hat_placement_labels,
+        is_light_fabric,
         logo_color_names,
         logo_knockout_mode,
         poncho_placement_labels,
@@ -830,23 +831,43 @@ def _run_app() -> None:
 
         logo_options = logo_color_names(family) if family else logo_color_names()
         logo_key = f"logo_color_{FORM_KEY}_{family or 'none'}"
-        # When fabric changes, pair a contrast-safe default logo ink (user can override).
+        # Contrast-safe default when fabric is first chosen or lightness class flips
+        # (dark↔light). Keep the widget keyed to a real option — index=None races on
+        # fabric change were blanking logo_color and wiping the poncho proof.
         if fabric and family in {"umbrella", "backpack", "hat", "poncho", "sun_shirt"}:
             suggested = default_logo_color_for_fabric(fabric, family)
             pair_key = f"_logo_fabric_pair_{FORM_KEY}"
-            if (
-                suggested in logo_options
-                and st.session_state.get(pair_key) != (family, fabric)
-            ):
+            prev_pair = st.session_state.get(pair_key)
+            if suggested in logo_options and prev_pair != (family, fabric):
+                prev_fabric = (
+                    prev_pair[1]
+                    if isinstance(prev_pair, tuple)
+                    and len(prev_pair) == 2
+                    and prev_pair[0] == family
+                    else None
+                )
+                flip = prev_fabric is None or (
+                    is_light_fabric(prev_fabric) != is_light_fabric(fabric)
+                )
+                if flip or st.session_state.get(logo_key) not in logo_options:
+                    st.session_state[logo_key] = suggested
                 st.session_state[pair_key] = (family, fabric)
-                st.session_state[logo_key] = suggested
-        logo_color = st.selectbox(
-            "Logo / graphic color",
-            logo_options,
-            index=None,
-            placeholder="Choose logo color",
-            key=logo_key,
-        )
+        if logo_options and st.session_state.get(logo_key) in logo_options:
+            logo_color = st.selectbox(
+                "Logo / graphic color",
+                logo_options,
+                key=logo_key,
+            )
+        elif logo_options:
+            logo_color = st.selectbox(
+                "Logo / graphic color",
+                logo_options,
+                index=None,
+                placeholder="Choose logo color",
+                key=logo_key,
+            )
+        else:
+            logo_color = None
         knockout_mode = logo_knockout_mode(logo_color) if logo_color else "none"
         if logo_color and knockout_mode == "none":
             st.caption("Uploaded artwork colors are kept as-is.")

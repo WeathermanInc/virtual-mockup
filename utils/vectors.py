@@ -271,9 +271,45 @@ def load_artwork(
     if suffix == ".svg":
         if color_override:
             raw = recolor_svg_bytes(raw, color_override)
-        return _rasterize_svg(raw, target_width)
-    if suffix == ".cdr":
-        return _rasterize_cdr(raw, dpi)
-    if suffix in {".ai", ".eps", ".pdf"}:
-        return _rasterize_pdf_family(raw, suffix, dpi)
-    raise VectorLoadError(f"Unsupported artwork format: {suffix}")
+        img = _rasterize_svg(raw, target_width)
+    elif suffix == ".cdr":
+        img = _rasterize_cdr(raw, dpi)
+    elif suffix in {".ai", ".eps", ".pdf"}:
+        img = _rasterize_pdf_family(raw, suffix, dpi)
+    else:
+        raise VectorLoadError(f"Unsupported artwork format: {suffix}")
+    # PDF/AI/EPS/CDR ignore SVG CSS recolor — force opaque ink to the chosen
+    # print color so White/Black selections always change the raster.
+    if color_override is not None:
+        img = _force_ink_rgb(img, color_override)
+    return img
+
+
+def _force_ink_rgb(
+    img: Image.Image,
+    hex_or_rgb: str | tuple[int, int, int],
+) -> Image.Image:
+    """Paint every near-opaque pixel with the selected logo/print color."""
+    import numpy as np
+
+    if isinstance(hex_or_rgb, (tuple, list)):
+        fill = (int(hex_or_rgb[0]), int(hex_or_rgb[1]), int(hex_or_rgb[2]))
+    else:
+        token = str(hex_or_rgb).lstrip("#")
+        if len(token) != 6:
+            return img
+        fill = (int(token[0:2], 16), int(token[2:4], 16), int(token[4:6], 16))
+    rgba = img.convert("RGBA")
+    arr = np.array(rgba)
+    alpha = arr[:, :, 3]
+    opaque = alpha >= 40
+    if not opaque.any():
+        return rgba
+    out = np.zeros_like(arr)
+    out[:, :, 0] = fill[0]
+    out[:, :, 1] = fill[1]
+    out[:, :, 2] = fill[2]
+    out[:, :, 3] = np.where(opaque, 255, 0).astype(np.uint8)
+    prepared = Image.fromarray(out, "RGBA")
+    bbox = prepared.getchannel("A").getbbox()
+    return prepared.crop(bbox) if bbox else prepared
