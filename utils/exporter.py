@@ -2429,22 +2429,18 @@ class WorksheetExporter:
                 page, clear_zone, fabric, force_full=mark is None
             )
         if mark is not None and box:
-            # Same Proper panel tilt for every uploaded mark (SVG/PNG/AI): PIL CCW
-            # degrees from BACKPACK_PDF_FRONT_OVERLAYS. Fit into a Graphic Sample
-            # artwork-aspect box (13.3×3.7 cm ratio) with the same fit_pad, then
-            # tilt and shrink-to-box so Front View does not read wider/stretched.
-            angle = float(front.get("rotate") if front.get("rotate") is not None else 0.0)
+            # Match Graphic Sample: upright mark in an artwork-aspect box with the
+            # same fit_pad (no panel tilt — rotate_after_fit was shrinking wide logos).
             stamp_box = _aspect_fit_box(box, art_aspect)
+            fit_pad = float(front.get("fit_pad") if front.get("fit_pad") is not None else 0.08)
             self._pdf_insert_mark(
                 page,
                 stamp_box,
                 mark,
-                rotate=angle,
-                fit_pad=0.08,
+                rotate=0.0,
+                fit_pad=fit_pad,
                 crisp=True,
                 crisp_threshold=128,
-                rotate_after_fit=True,
-                fit_inside_box=True,
             )
 
         # Lower placements: also clear leftover upper-center Proper (no restamp).
