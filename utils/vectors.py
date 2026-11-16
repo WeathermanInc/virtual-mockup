@@ -93,26 +93,48 @@ def _rasterize_svg(raw: bytes, width_px: int) -> Image.Image:
     )
 
 
-def _ghostscript_png(src: Path, dst: Path, dpi: int) -> bool:
+def _ghostscript_png(src: Path, dst: Path, dpi: int, *, eps_crop: bool = False) -> bool:
     gs = _which("gs")
     if not gs:
         return False
-    result = _run(
-        [
-            gs,
-            "-dSAFER",
-            "-dBATCH",
-            "-dNOPAUSE",
-            "-dQUIET",
-            "-sDEVICE=pngalpha",
-            f"-r{dpi}",
-            "-dFirstPage=1",
-            "-dLastPage=1",
-            f"-sOutputFile={dst}",
-            str(src),
-        ]
-    )
+    cmd = [
+        gs,
+        "-dSAFER",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-sDEVICE=pngalpha",
+        f"-r{dpi}",
+        "-dFirstPage=1",
+        "-dLastPage=1",
+    ]
+    if eps_crop:
+        # Honor %%BoundingBox so logos are not letterboxed on a full page.
+        cmd.append("-dEPSCrop")
+    cmd.extend([f"-sOutputFile={dst}", str(src)])
+    result = _run(cmd)
     return result.returncode == 0 and dst.exists() and dst.stat().st_size > 0
+
+
+def _ghostscript_pdf(src: Path, dst: Path, *, eps_crop: bool = False) -> bool:
+    """Convert PostScript/EPS/AI to PDF so PyMuPDF can rasterize on Cloud."""
+    gs = _which("gs")
+    if not gs:
+        return False
+    cmd = [
+        gs,
+        "-dSAFER",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-sDEVICE=pdfwrite",
+        "-dCompatibilityLevel=1.4",
+    ]
+    if eps_crop:
+        cmd.append("-dEPSCrop")
+    cmd.extend([f"-sOutputFile={dst}", str(src)])
+    result = _run(cmd, timeout=60)
+    return result.returncode == 0 and dst.exists() and dst.stat().st_size > 64
 
 
 def _pdftocairo_png(src: Path, dst_prefix: Path, dpi: int) -> Path | None:
@@ -137,7 +159,35 @@ def _imagemagick_png(src: Path, dst: Path, dpi: int) -> bool:
     return result.returncode == 0 and dst.exists() and dst.stat().st_size > 0
 
 
+def _rasterize_eps(raw: bytes, dpi: int) -> Image.Image:
+    """Rasterize Encapsulated PostScript.
+
+    PyMuPDF cannot open EPS streams. Ghostscript (``packages.txt`` on Streamlit
+    Cloud, or a local ``gs``) converts to PNG/PDF first.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "art.eps"
+        png = Path(tmp) / "art.png"
+        pdf = Path(tmp) / "art.pdf"
+        src.write_bytes(raw)
+        if _ghostscript_png(src, png, dpi, eps_crop=True):
+            return Image.open(png).convert("RGBA")
+        if _ghostscript_pdf(src, pdf, eps_crop=True):
+            image = _fitz_raster(pdf.read_bytes(), "pdf", dpi=dpi)
+            if image is not None:
+                return image
+        if _imagemagick_png(src, png, dpi):
+            return Image.open(png).convert("RGBA")
+    raise VectorLoadError(
+        "Could not rasterize .eps artwork. Ghostscript is required for EPS "
+        "(Cloud: packages.txt → ghostscript). Prefer SVG or PDF if this persists."
+    )
+
+
 def _rasterize_pdf_family(raw: bytes, suffix: str, dpi: int) -> Image.Image:
+    if suffix == ".eps":
+        return _rasterize_eps(raw, dpi)
+
     # Many .ai files are PDF-compatible; try PDF first for both.
     for filetype in ("pdf", "svg") if suffix == ".pdf" else ("pdf",):
         image = _fitz_raster(raw, filetype, dpi=dpi)
@@ -151,10 +201,20 @@ def _rasterize_pdf_family(raw: bytes, suffix: str, dpi: int) -> Image.Image:
     with tempfile.TemporaryDirectory() as tmp:
         src = Path(tmp) / f"art{suffix}"
         dst = Path(tmp) / "art.png"
+        pdf = Path(tmp) / "art.pdf"
         src.write_bytes(raw)
-        if suffix in {".pdf", ".ai", ".eps"} and _ghostscript_png(src, dst, dpi):
+        if suffix in {".pdf", ".ai"} and _ghostscript_png(src, dst, dpi):
             return Image.open(dst).convert("RGBA")
-        cairo_out = _pdftocairo_png(src, Path(tmp) / "page", dpi) if suffix in {".pdf", ".ai"} else None
+        # AI that is not PDF-compatible: distill via Ghostscript, then PyMuPDF.
+        if suffix == ".ai" and _ghostscript_pdf(src, pdf):
+            image = _fitz_raster(pdf.read_bytes(), "pdf", dpi=dpi)
+            if image is not None:
+                return image
+        cairo_out = (
+            _pdftocairo_png(src, Path(tmp) / "page", dpi)
+            if suffix in {".pdf", ".ai"}
+            else None
+        )
         if cairo_out is not None:
             return Image.open(cairo_out).convert("RGBA")
         if _imagemagick_png(src, dst, dpi):

@@ -50,7 +50,7 @@ Artwork bounds follow Weatherman production standards (e.g. 21.6 cm × 10 cm Wal
 |--------|--------|
 | UI | Streamlit (`app.py`) |
 | Imaging | Pillow, OpenCV (headless) |
-| Vectors | PyMuPDF on Cloud; optional local `rsvg` / Ghostscript / Poppler / ImageMagick |
+| Vectors | PyMuPDF on Cloud; Ghostscript via `packages.txt` for EPS; optional local `rsvg` / Poppler / ImageMagick |
 | PDF export | ReportLab (umbrella rasters) · PyMuPDF `insert_pdf` (backpack / hat / poncho / sun shirt static pages) |
 | Fonts | Vendored Liberation Sans under `assets/fonts/` |
 
@@ -102,11 +102,12 @@ streamlit run app.py
 Optional system tools (improves some vector edge cases locally):
 
 - `rsvg-convert` (librsvg)
-- Ghostscript (`gs`)
+- Ghostscript (`gs`) — **required for `.eps`** (and some Illustrator `.ai` files)
 - Poppler (`pdftocairo`)
 - ImageMagick (`magick`)
 
-Cloud does **not** require these; it uses PyMuPDF from `requirements.txt`.
+Cloud installs Ghostscript from root `packages.txt` (apt). SVG/PDF still use
+PyMuPDF from `requirements.txt` with no system tools.
 
 ---
 
