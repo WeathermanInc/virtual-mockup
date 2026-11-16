@@ -166,86 +166,81 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 )
 
 # Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
-# ``box`` = badge footprint on the lifestyle photo; ``cover`` = heal zone.
-# ``rotate`` = Proper panel tilt (PIL CCW°). Fit into GS artwork-aspect box first,
-# then tilt with expand — do NOT fit_inside_box after (that shrunk wide marks ~2.5×).
+# ``box`` = GS artwork-aspect badge on the lifestyle photo (13.3×3.7 → ~3.595:1);
+# sized to Proper's letter width so Front reads like Graphic Sample, not a tiny
+# tilted inset. ``rotate`` 0 — same upright stamp as GS (panel tilt fought GS).
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
+    # ``box`` = upright GS-aspect stamp (13.3×3.7). ``cover`` = tilted Proper AABB
+    # so the full baked wordmark is healed (short covers left "Pr" ghosts). Keep
+    # cover.right ≲ bag face (~869) to avoid fabric plates on studio gray.
     "upper_center": {
+        # Stamp centered on bag face (~x614), not Proper's right-biased tilt AABB.
         "black": {
-            "box": (555.0, 895.0, 260.0, 85.0),
-            "cover": (535.0, 875.0, 300.0, 120.0),
+            "box": (470.0, 885.0, 290.0, 81.0),
+            "cover": (455.0, 835.0, 360.0, 200.0),
             "erase": "photo",
-            "rotate": -15.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
         "steel": {
-            "box": (565.0, 897.0, 260.0, 85.0),
-            "cover": (545.0, 877.0, 300.0, 120.0),
+            "box": (480.0, 890.0, 290.0, 81.0),
+            "cover": (465.0, 840.0, 360.0, 200.0),
             "erase": "photo",
-            "rotate": -15.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
         "sage": {
-            "box": (560.0, 888.0, 270.0, 90.0),
-            "cover": (540.0, 868.0, 310.0, 125.0),
+            "box": (475.0, 880.0, 295.0, 82.0),
+            "cover": (460.0, 830.0, 360.0, 205.0),
             "erase": "photo",
-            "rotate": -15.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
     },
     "center": {
         "black": {
-            "box": (540.0, 965.0, 260.0, 85.0),
-            "cover": (520.0, 945.0, 300.0, 120.0),
+            "box": (470.0, 955.0, 290.0, 81.0),
+            "cover": (455.0, 900.0, 360.0, 220.0),
             "erase": "photo",
-            "rotate": -14.5,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
         "steel": {
-            "box": (560.0, 975.0, 260.0, 85.0),
-            "cover": (540.0, 955.0, 300.0, 120.0),
+            "box": (480.0, 960.0, 290.0, 81.0),
+            "cover": (465.0, 910.0, 360.0, 215.0),
             "erase": "photo",
-            "rotate": -14.5,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
         "sage": {
-            "box": (555.0, 960.0, 270.0, 90.0),
-            "cover": (535.0, 940.0, 310.0, 125.0),
+            "box": (475.0, 950.0, 295.0, 82.0),
+            "cover": (460.0, 900.0, 360.0, 220.0),
             "erase": "photo",
-            "rotate": -14.5,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
     },
     "lower_right_center": {
         "black": {
-            "box": (640.0, 1168.0, 155.0, 52.0),
-            "cover": (600.0, 1148.0, 220.0, 85.0),
+            "box": (640.0, 1168.0, 175.0, 49.0),
+            "cover": (615.0, 1135.0, 220.0, 100.0),
             "erase": "photo",
-            "rotate": -9.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
         "steel": {
-            "box": (625.0, 1163.0, 155.0, 52.0),
-            "cover": (590.0, 1143.0, 220.0, 85.0),
+            "box": (625.0, 1163.0, 175.0, 49.0),
+            "cover": (600.0, 1130.0, 220.0, 100.0),
             "erase": "photo",
-            "rotate": -15.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
         "sage": {
-            "box": (625.0, 1163.0, 155.0, 52.0),
-            "cover": (590.0, 1143.0, 220.0, 85.0),
+            "box": (625.0, 1163.0, 175.0, 49.0),
+            "cover": (600.0, 1130.0, 220.0, 100.0),
             "erase": "photo",
-            "rotate": -15.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "rotate": 0.0,
+            "fit_pad": 0.04,
         },
     },
 }
