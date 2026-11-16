@@ -331,8 +331,10 @@ def load_artwork(
     if suffix == ".svg":
         if color_override:
             raw = recolor_svg_bytes(raw, color_override)
-        img = _rasterize_svg(raw, target_width)
-    elif suffix == ".cdr":
+        # SVG ink is already recolored in XML; prepare_logo finishes the print fill.
+        # Do not run _force_ink_rgb here — a tight crop + border drop ate thin glyphs.
+        return _rasterize_svg(raw, target_width)
+    if suffix == ".cdr":
         img = _rasterize_cdr(raw, dpi)
     elif suffix in {".ai", ".eps", ".pdf"}:
         img = _rasterize_pdf_family(raw, suffix, dpi)
@@ -349,7 +351,12 @@ def _force_ink_rgb(
     img: Image.Image,
     hex_or_rgb: str | tuple[int, int, int],
 ) -> Image.Image:
-    """Paint every near-opaque pixel with the selected logo/print color."""
+    """Paint near-opaque pixels with the selected logo/print color.
+
+    Keeps the original canvas size (no bbox crop). Cropping here made letter
+    silhouettes touch the image edge so ``prepare_logo``'s border-plate cleaner
+    dropped every glyph except the largest — e.g. missing ``y`` in Dynamic.
+    """
     import numpy as np
 
     if isinstance(hex_or_rgb, (tuple, list)):
@@ -365,11 +372,9 @@ def _force_ink_rgb(
     opaque = alpha >= 40
     if not opaque.any():
         return rgba
-    out = np.zeros_like(arr)
-    out[:, :, 0] = fill[0]
-    out[:, :, 1] = fill[1]
-    out[:, :, 2] = fill[2]
-    out[:, :, 3] = np.where(opaque, 255, 0).astype(np.uint8)
-    prepared = Image.fromarray(out, "RGBA")
-    bbox = prepared.getchannel("A").getbbox()
-    return prepared.crop(bbox) if bbox else prepared
+    out = arr.copy()
+    out[opaque, 0] = fill[0]
+    out[opaque, 1] = fill[1]
+    out[opaque, 2] = fill[2]
+    # Preserve source alpha so soft stems survive prepare_logo thresholds.
+    return Image.fromarray(out, "RGBA")

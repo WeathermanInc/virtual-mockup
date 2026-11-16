@@ -167,30 +167,32 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 
 # Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
 # ``box`` = badge footprint on the lifestyle photo; ``cover`` = heal zone.
-# Stamp upright (rotate 0) with the same fit_pad / aspect path as Graphic Sample
-# so Front View matches GS orientation and scale — panel tilt was shrinking wide
-# client marks ~2.5× after rotate_after_fit + fit_inside_box.
+# ``rotate`` = Proper panel tilt (PIL CCW°). Fit into GS artwork-aspect box first,
+# then tilt with expand — do NOT fit_inside_box after (that shrunk wide marks ~2.5×).
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     "upper_center": {
         "black": {
             "box": (555.0, 895.0, 260.0, 85.0),
             "cover": (535.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
             "box": (565.0, 897.0, 260.0, 85.0),
             "cover": (545.0, 877.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
             "box": (560.0, 888.0, 270.0, 90.0),
             "cover": (540.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
     },
@@ -199,21 +201,24 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (540.0, 965.0, 260.0, 85.0),
             "cover": (520.0, 945.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -14.5,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
             "box": (560.0, 975.0, 260.0, 85.0),
             "cover": (540.0, 955.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -14.5,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
             "box": (555.0, 960.0, 270.0, 90.0),
             "cover": (535.0, 940.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -14.5,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
     },
@@ -222,21 +227,24 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (640.0, 1168.0, 155.0, 52.0),
             "cover": (600.0, 1148.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -9.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
     },
@@ -553,7 +561,12 @@ class MockupRenderer:
 
     @staticmethod
     def _drop_border_background(ink: np.ndarray) -> np.ndarray:
-        """Drop opaque regions that touch the canvas edge (uploaded background plates)."""
+        """Drop large edge-touching plates (uploaded backdrops), keep letterforms.
+
+        Perimeter glyphs often touch the canvas after a tight alpha crop. Older
+        logic dropped every edge-touching CC and kept only the largest — that
+        erased thin letters (e.g. the ``y`` in Dynamic) from client wordmarks.
+        """
         mask = ink.astype(np.uint8) * 255
         if mask.max() == 0:
             return ink
@@ -561,13 +574,23 @@ class MockupRenderer:
         if n <= 1:
             return ink
         height, width = mask.shape
+        total_area = max(int(stats[1:, cv2.CC_STAT_AREA].sum()), 1)
         keep = np.zeros(n, dtype=bool)
         for idx in range(1, n):
             x = int(stats[idx, cv2.CC_STAT_LEFT])
             y = int(stats[idx, cv2.CC_STAT_TOP])
             w = int(stats[idx, cv2.CC_STAT_WIDTH])
             h = int(stats[idx, cv2.CC_STAT_HEIGHT])
-            if x > 0 and y > 0 and x + w < width and y + h < height:
+            area = int(stats[idx, cv2.CC_STAT_AREA])
+            touches_edge = x <= 0 or y <= 0 or x + w >= width or y + h >= height
+            if not touches_edge:
+                keep[idx] = True
+                continue
+            # Large full-bleed plate vs small glyph that merely kisses the crop.
+            plate = area >= max(int(total_area * 0.22), 2500) and (
+                w >= int(width * 0.55) or h >= int(height * 0.55)
+            )
+            if not plate:
                 keep[idx] = True
         if not keep[1:].any():
             largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))

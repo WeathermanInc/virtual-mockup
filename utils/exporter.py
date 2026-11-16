@@ -2429,18 +2429,26 @@ class WorksheetExporter:
                 page, clear_zone, fabric, force_full=mark is None
             )
         if mark is not None and box:
-            # Match Graphic Sample: upright mark in an artwork-aspect box with the
-            # same fit_pad (no panel tilt — rotate_after_fit was shrinking wide logos).
+            # Same GS artwork-aspect + fit_pad, then Proper panel tilt. Fit first,
+            # rotate with expand, but do not fit_inside_box after — that shrink
+            # made wide client marks tiny vs Graphic Sample.
             stamp_box = _aspect_fit_box(box, art_aspect)
-            fit_pad = float(front.get("fit_pad") if front.get("fit_pad") is not None else 0.08)
+            fit_pad = float(
+                front.get("fit_pad") if front.get("fit_pad") is not None else 0.08
+            )
+            angle = float(
+                front.get("rotate") if front.get("rotate") is not None else 0.0
+            )
             self._pdf_insert_mark(
                 page,
                 stamp_box,
                 mark,
-                rotate=0.0,
+                rotate=angle,
                 fit_pad=fit_pad,
                 crisp=True,
                 crisp_threshold=128,
+                rotate_after_fit=bool(front.get("rotate_after_fit")) or abs(angle) > 0.1,
+                fit_inside_box=False,
             )
 
         # Lower placements: also clear leftover upper-center Proper (no restamp).
