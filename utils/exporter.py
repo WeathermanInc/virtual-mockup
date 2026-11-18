@@ -42,10 +42,12 @@ from .renderer import (
     backpack_logo_fill_rgb,
     backpack_pdf_baked_gs_cover,
     backpack_pdf_draw_center,
+    backpack_pdf_gs_draw_box,
     backpack_v2_pdf_path,
     fit_logo_uniform,
     get_backpack_front_slot,
     get_backpack_pdf_front_slot,
+    map_backpack_gs_box_to_front,
     hat_fabric_swatch_layout,
     hat_logo_fill_rgb,
     hat_logo_swatch_layout,
@@ -2410,21 +2412,29 @@ class WorksheetExporter:
         job: JobSpec,
         mark: PILImage.Image | None,
     ) -> None:
-        """Wipe baked Proper on Front + GS, then stamp the client mark when present."""
+        """Wipe baked Proper on Front + GS, then stamp the client mark when present.
+
+        Graphic Sample draw boxes are the single source of truth. Front View
+        photo stamps use the same GS bounding box mapped through the fabric
+        Proper-badge transform so Upper / Center / Lower-right stay aligned.
+        """
         place = resolve_backpack_placement(job.panel_config)
         place_key = str(place.get("key") or "upper_center")
         fabric = tuple(int(v) for v in job.fabric_rgb)
 
-        front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
-        cover = front.get("cover") or front.get("box")
-        # Proper badge footprint — heal zone; stamp box is aspect-matched to GS below.
-        box = front.get("box") or cover
+        # 1) GS artwork box (canonical placement).
+        draw_box = backpack_pdf_gs_draw_box(place_key)
         art_w, art_h = backpack_artwork_cm(place_key)
         art_aspect = (art_w / art_h) if art_h > 1e-6 else 1.0
-        # Shared fit for Front View + Graphic Sample so placement options do not drift.
+
+        # 2) Front photo box derived from that same GS box.
+        front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
+        box = front.get("box") or map_backpack_gs_box_to_front(draw_box, job.fabric_name)
+        cover = front.get("cover") or box
         fit_pad = float(
             front.get("fit_pad") if front.get("fit_pad") is not None else 0.08
         )
+
         if cover or box:
             # Heal only Proper ink (not a full-cover force wipe — that left a
             # flat rectangular plate behind the client mark).
@@ -2433,9 +2443,8 @@ class WorksheetExporter:
                 page, clear_zone, fabric, force_full=mark is None
             )
         if mark is not None and box:
-            # Same GS artwork-aspect + fit_pad, then Proper panel tilt. Fit first,
-            # rotate with expand, but do not fit_inside_box after — that shrink
-            # made wide client marks tiny vs Graphic Sample.
+            # Shared GS aspect + fit_pad, then Proper panel tilt. Fit first,
+            # rotate with expand; never fit_inside_box after (shrinks wide marks).
             stamp_box = _aspect_fit_box(box, art_aspect)
             angle = float(
                 front.get("rotate") if front.get("rotate") is not None else 0.0
@@ -2463,8 +2472,6 @@ class WorksheetExporter:
             if u_cover:
                 self._pdf_clear_backpack_front_photo(page, u_cover, fabric)
 
-        center = backpack_pdf_draw_center(place_key)
-        draw_box = _cm_box(*center, art_w, art_h)
         self._pdf_clear_backpack_gs_vector(page, place_key, draw_box, fabric)
         if mark is not None:
             self._pdf_insert_mark(

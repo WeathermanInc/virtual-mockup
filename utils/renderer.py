@@ -127,15 +127,16 @@ BACKPACK_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     },
 }
 
-# Graphic Sample line-art stamp anchors (PDF points) — centers of Paula v2 marks.
-# Track the same slight rightward panel-midline bias as Front View overlays.
+# Graphic Sample line-art stamp anchors (PDF points) — single source of truth
+# for Venture Dry Pack logo placement. Front View photo stamps are derived from
+# these boxes via ``map_backpack_gs_box_to_front``.
 BACKPACK_DRAW_CENTERS: dict[str, tuple[float, float]] = {
     # Upper body panel below top zipper (clear of handle / zipper seam).
-    "upper_center": (1049.5, 2220.0),
+    "upper_center": (1041.5, 2220.0),
     # Dead-center of the front panel (Paula Options #4–#6).
-    "center": (1049.5, 2430.0),
+    "center": (1041.5, 2430.0),
     # Lower-right pocket center (Paula Options #7–#9 measured Proper).
-    "lower_right_center": (1143.5, 2809.0),
+    "lower_right_center": (1137.5, 2809.0),
 }
 
 # Paula v2 PDF vector path — stamp anchors (72 DPI PDF points).
@@ -143,18 +144,18 @@ BACKPACK_DRAW_CENTERS: dict[str, tuple[float, float]] = {
 # baked Option #1 mark (~y2283) is wiped separately before stamping.
 BACKPACK_PDF_DRAW_CENTERS: dict[str, tuple[float, float]] = {
     # Upper body panel — clear of handle and zipper seam.
-    "upper_center": (1049.5, 2220.0),
-    "center": (1049.5, 2430.0),
+    "upper_center": (1041.5, 2220.0),
+    "center": (1041.5, 2430.0),
     # Lower-right pocket — Paula Options #7–#9 Proper letter bbox center.
-    "lower_right_center": (1143.5, 2809.0),
+    "lower_right_center": (1137.5, 2809.0),
 }
 
 # Paula's baked Graphic Sample marks to wipe before stamping (x, y, w, h).
 # Measured from white letter path unions on Options #1 / #4 / #7 (+ pad).
 BACKPACK_PDF_BAKED_GS_COVERS: dict[str, tuple[float, float, float, float]] = {
-    "upper_center": (876.0, 2228.0, 352.0, 110.0),
-    "center": (876.0, 2375.0, 352.0, 110.0),
-    "lower_right_center": (1046.0, 2775.0, 196.0, 68.0),
+    "upper_center": (868.0, 2228.0, 352.0, 110.0),
+    "center": (868.0, 2375.0, 352.0, 110.0),
+    "lower_right_center": (1040.0, 2775.0, 196.0, 68.0),
 }
 
 # Weatherman brand mark on the flat vector (bottom-left) — cleared as a ghost.
@@ -166,12 +167,14 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
     50.0,
 )
 
-# Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
-# ``box`` = badge footprint on the lifestyle photo; ``cover`` = heal zone.
-# ``rotate`` = Proper panel tilt (PIL CCW°). Fit into GS artwork-aspect box first,
-# then tilt with expand — do NOT fit_inside_box after (that shrunk wide marks ~2.5×).
-# X values sit slightly right of the zipper seam so the tilted mark reads on the
-# panel midline (same relative offset for every fabric × placement).
+# Front photo transform anchors (PDF pts). Graphic Sample draw boxes are the
+# placement source of truth; these upper-center Proper badges calibrate how that
+# GS artwork maps onto each lifestyle photo (origin + size). Other placements
+# inherit identical relative offsets via ``_BACKPACK_GS_TO_FRONT_POS_SCALE``.
+# ``rotate`` = Proper panel tilt (PIL CCW°). Fit GS-aspect first, then tilt with
+# expand — do NOT fit_inside_box after (that shrunk wide marks ~2.5×).
+_BACKPACK_GS_TO_FRONT_POS_SCALE = (0.26, 0.343)
+
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     "upper_center": {
         "black": {
@@ -199,57 +202,16 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "fit_pad": 0.08,
         },
     },
+    # Rotate-only overrides for lower placements (box/cover derived from GS).
     "center": {
-        "black": {
-            "box": (552.0, 965.0, 260.0, 85.0),
-            "cover": (532.0, 945.0, 300.0, 120.0),
-            "erase": "photo",
-            "rotate": -14.5,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
-        },
-        "steel": {
-            "box": (572.0, 975.0, 260.0, 85.0),
-            "cover": (552.0, 955.0, 300.0, 120.0),
-            "erase": "photo",
-            "rotate": -14.5,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
-        },
-        "sage": {
-            "box": (567.0, 960.0, 270.0, 90.0),
-            "cover": (547.0, 940.0, 310.0, 125.0),
-            "erase": "photo",
-            "rotate": -14.5,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
-        },
+        "black": {"rotate": -14.5},
+        "steel": {"rotate": -14.5},
+        "sage": {"rotate": -14.5},
     },
     "lower_right_center": {
-        "black": {
-            "box": (648.0, 1168.0, 155.0, 52.0),
-            "cover": (608.0, 1148.0, 220.0, 85.0),
-            "erase": "photo",
-            "rotate": -9.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
-        },
-        "steel": {
-            "box": (633.0, 1163.0, 155.0, 52.0),
-            "cover": (598.0, 1143.0, 220.0, 85.0),
-            "erase": "photo",
-            "rotate": -15.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
-        },
-        "sage": {
-            "box": (633.0, 1163.0, 155.0, 52.0),
-            "cover": (598.0, 1143.0, 220.0, 85.0),
-            "erase": "photo",
-            "rotate": -15.0,
-            "rotate_after_fit": True,
-            "fit_pad": 0.08,
-        },
+        "black": {"rotate": -9.0},
+        "steel": {"rotate": -15.0},
+        "sage": {"rotate": -15.0},
     },
 }
 
@@ -1290,24 +1252,132 @@ def _normalize_fabric_key(name: str | None) -> str:
     return " ".join(str(name or "").lower().replace("—", " ").replace("-", " ").split())
 
 
+def _backpack_fabric_slot_key(fabric_name: str | None) -> str:
+    color_key = _normalize_fabric_key(fabric_name)
+    if "steel" in color_key:
+        return "steel"
+    if "sage" in color_key:
+        return "sage"
+    return "black"
+
+
+def _pdf_cm_box(
+    center_x: float,
+    center_y: float,
+    width_cm: float,
+    height_cm: float,
+) -> tuple[float, float, float, float]:
+    """PDF-point box centered on a worksheet anchor (72 pt/in)."""
+    w = float(width_cm) / 2.54 * 72.0
+    h = float(height_cm) / 2.54 * 72.0
+    return (float(center_x) - w / 2.0, float(center_y) - h / 2.0, w, h)
+
+
+def backpack_pdf_gs_draw_box(placement: str | None = None) -> tuple[float, float, float, float]:
+    """Graphic Sample artwork bounding box — source of truth for logo placement."""
+    art_w, art_h = backpack_artwork_cm(placement)
+    cx, cy = backpack_pdf_draw_center(placement)
+    return _pdf_cm_box(cx, cy, art_w, art_h)
+
+
+def map_backpack_gs_box_to_front(
+    gs_box: tuple[float, float, float, float],
+    fabric_name: str | None = None,
+) -> tuple[float, float, float, float]:
+    """Map a Graphic Sample artwork box onto the Front View lifestyle photo.
+
+    Upper-center Proper badge per fabric calibrates origin + size scale. Placement
+    offsets (Center / Lower-right) keep the same relative GS deltas, compressed by
+    ``_BACKPACK_GS_TO_FRONT_POS_SCALE`` for photo foreshortening.
+    """
+    anchor = get_backpack_pdf_front_anchor(fabric_name)
+    ref_box = tuple(float(v) for v in (anchor.get("box") or (0.0, 0.0, 1.0, 1.0)))
+    gs_ref = backpack_pdf_gs_draw_box("upper_center")
+    gx, gy, gw, gh = (float(v) for v in gs_box)
+    rx, ry, rw, rh = gs_ref
+    ax, ay, aw, ah = ref_box
+    if rw < 1e-6 or rh < 1e-6:
+        return ref_box
+    gcx, gcy = gx + gw / 2.0, gy + gh / 2.0
+    rcx, rcy = rx + rw / 2.0, ry + rh / 2.0
+    acx, acy = ax + aw / 2.0, ay + ah / 2.0
+    sx, sy = _BACKPACK_GS_TO_FRONT_POS_SCALE
+    size_sx = aw / rw
+    size_sy = ah / rh
+    fcx = acx + (gcx - rcx) * sx
+    fcy = acy + (gcy - rcy) * sy
+    fw = gw * size_sx
+    fh = gh * size_sy
+    return (fcx - fw / 2.0, fcy - fh / 2.0, fw, fh)
+
+
+def _front_cover_from_box(
+    box: tuple[float, float, float, float],
+    anchor: dict[str, Any],
+) -> tuple[float, float, float, float]:
+    """Heal zone around a mapped Front box, matching the upper-center cover pad."""
+    bx, by, bw, bh = (float(v) for v in box)
+    ref_box = anchor.get("box")
+    ref_cover = anchor.get("cover")
+    if ref_box and ref_cover:
+        rx, ry, rw, rh = (float(v) for v in ref_box)
+        cx, cy, cw, ch = (float(v) for v in ref_cover)
+        pad_l, pad_t = rx - cx, ry - cy
+        pad_r, pad_b = (cx + cw) - (rx + rw), (cy + ch) - (ry + rh)
+    else:
+        pad_l = pad_t = pad_r = 20.0
+        pad_b = 15.0
+    return (
+        bx - pad_l,
+        by - pad_t,
+        bw + pad_l + pad_r,
+        bh + pad_t + pad_b,
+    )
+
+
+def get_backpack_pdf_front_anchor(fabric_name: str | None = None) -> dict[str, Any]:
+    """Upper-center Proper badge that calibrates GS→Front mapping for a fabric."""
+    by_color = BACKPACK_PDF_FRONT_OVERLAYS["upper_center"]
+    slot = by_color.get(_backpack_fabric_slot_key(fabric_name)) or by_color["black"]
+    return dict(slot)
+
+
 def get_backpack_pdf_front_slot(
     fabric_name: str | None = None,
     placement: str | None = None,
 ) -> dict[str, Any]:
-    """Front photo logo slot for the Paula v2 PDF vector overlay path."""
+    """Front photo logo slot derived from the Graphic Sample draw box.
+
+    Box/cover come from ``map_backpack_gs_box_to_front``; rotate / fit_pad come
+    from the fabric anchor with per-placement tilt overrides.
+    """
     from utils.catalog import resolve_backpack_placement
 
     place = resolve_backpack_placement(placement)
     place_key = str(place.get("key") or "upper_center")
-    by_color = BACKPACK_PDF_FRONT_OVERLAYS.get(place_key) or BACKPACK_PDF_FRONT_OVERLAYS["upper_center"]
-    color_key = _normalize_fabric_key(fabric_name)
-    if "steel" in color_key:
-        slot = by_color.get("steel")
-    elif "sage" in color_key:
-        slot = by_color.get("sage")
-    else:
-        slot = by_color.get("black")
-    return dict(slot or by_color["black"])
+    fabric_key = _backpack_fabric_slot_key(fabric_name)
+    anchor = get_backpack_pdf_front_anchor(fabric_name)
+    slot = {
+        "erase": "photo",
+        "rotate_after_fit": True,
+        "fit_pad": float(anchor.get("fit_pad") if anchor.get("fit_pad") is not None else 0.08),
+        "rotate": float(anchor.get("rotate") or 0.0),
+    }
+    place_overlay = BACKPACK_PDF_FRONT_OVERLAYS.get(place_key) or {}
+    place_slot = place_overlay.get(fabric_key) or place_overlay.get("black") or {}
+    if place_slot.get("rotate") is not None:
+        slot["rotate"] = float(place_slot["rotate"])
+    if place_slot.get("rotate_after_fit") is not None:
+        slot["rotate_after_fit"] = bool(place_slot["rotate_after_fit"])
+    if place_slot.get("fit_pad") is not None:
+        slot["fit_pad"] = float(place_slot["fit_pad"])
+
+    gs_box = backpack_pdf_gs_draw_box(place_key)
+    front_box = map_backpack_gs_box_to_front(gs_box, fabric_name)
+    slot["box"] = front_box
+    slot["cover"] = _front_cover_from_box(front_box, anchor)
+    slot["gs_box"] = gs_box
+    return slot
 
 
 def backpack_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | None:
