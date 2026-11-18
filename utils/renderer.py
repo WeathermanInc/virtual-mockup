@@ -167,30 +167,32 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 
 # Front photo slots on the v2 PDF (72 DPI points), measured per Options #1–#9.
 # ``box`` = badge footprint on the lifestyle photo; ``cover`` = heal zone.
-# Stamp upright (rotate 0) with the same fit_pad / aspect path as Graphic Sample
-# so Front View matches GS orientation and scale — panel tilt was shrinking wide
-# client marks ~2.5× after rotate_after_fit + fit_inside_box.
+# ``rotate`` = Proper panel tilt (PIL CCW°). Fit into GS artwork-aspect box first,
+# then tilt with expand — do NOT fit_inside_box after (that shrunk wide marks ~2.5×).
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     "upper_center": {
         "black": {
             "box": (555.0, 895.0, 260.0, 85.0),
             "cover": (535.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
             "box": (565.0, 897.0, 260.0, 85.0),
             "cover": (545.0, 877.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
             "box": (560.0, 888.0, 270.0, 90.0),
             "cover": (540.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
     },
@@ -199,21 +201,24 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (540.0, 965.0, 260.0, 85.0),
             "cover": (520.0, 945.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -14.5,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
             "box": (560.0, 975.0, 260.0, 85.0),
             "cover": (540.0, 955.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -14.5,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
             "box": (555.0, 960.0, 270.0, 90.0),
             "cover": (535.0, 940.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -14.5,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
     },
@@ -222,21 +227,24 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (640.0, 1168.0, 155.0, 52.0),
             "cover": (600.0, 1148.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -9.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
             "box": (625.0, 1163.0, 155.0, 52.0),
             "cover": (590.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
-            "rotate": 0.0,
+            "rotate": -15.0,
+            "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
     },
