@@ -188,8 +188,9 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "fit_pad": 0.08,
         },
         "sage": {
-            "box": (560.0, 888.0, 270.0, 90.0),
-            "cover": (540.0, 868.0, 310.0, 125.0),
+            # Nudged ~20 pts left so the tilted mark sits on the panel midline.
+            "box": (540.0, 888.0, 270.0, 90.0),
+            "cover": (520.0, 868.0, 310.0, 125.0),
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
