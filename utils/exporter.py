@@ -2422,19 +2422,17 @@ class WorksheetExporter:
         art_w, art_h = backpack_artwork_cm(place_key)
         art_aspect = (art_w / art_h) if art_h > 1e-6 else 1.0
         if cover or box:
-            # Always fully heal the (tight, on-bag) badge zone so Paula Proper
-            # cannot ghost under the client mark. Oversized covers used to leave
-            # a fabric plate on studio gray — covers are now bag-bounded.
+            # Heal only Proper ink (not a full-cover force wipe — that left a
+            # flat rectangular plate behind the client mark).
             clear_zone = cover or box
             self._pdf_clear_backpack_front_photo(
-                page, clear_zone, fabric, force_full=True
+                page, clear_zone, fabric, force_full=mark is None
             )
         if mark is not None and box:
-            # Same path as Graphic Sample: upright mark in a 13.3×3.7 aspect box.
+            # Match Graphic Sample: upright mark in an artwork-aspect box with the
+            # same fit_pad (no panel tilt — rotate_after_fit was shrinking wide logos).
             stamp_box = _aspect_fit_box(box, art_aspect)
-            fit_pad = float(
-                front.get("fit_pad") if front.get("fit_pad") is not None else 0.04
-            )
+            fit_pad = float(front.get("fit_pad") if front.get("fit_pad") is not None else 0.08)
             self._pdf_insert_mark(
                 page,
                 stamp_box,
@@ -2445,15 +2443,16 @@ class WorksheetExporter:
                 crisp_threshold=128,
             )
 
-        # Lower / center tech-pack: wipe leftover upper-center GS sample (vector).
-        # Do NOT heal an upper-center Front photo slot on these Paula pages —
-        # Options #4–#9 do not bake upper Proper there; healing invented flat
-        # fabric plates beside the bag.
+        # Lower placements: also clear leftover upper-center Proper (no restamp).
         if place_key != "upper_center":
             upper = backpack_pdf_baked_gs_cover("upper_center")
             if upper:
                 fill = self._pdf_sample_fill(page, upper, fallback=fabric)
                 self._pdf_opaque_wipe(page, upper, fill)
+            upper_front = get_backpack_pdf_front_slot(job.fabric_name, "upper_center")
+            u_cover = upper_front.get("cover") or upper_front.get("box")
+            if u_cover:
+                self._pdf_clear_backpack_front_photo(page, u_cover, fabric)
 
         center = backpack_pdf_draw_center(place_key)
         draw_box = _cm_box(*center, art_w, art_h)
@@ -2486,10 +2485,8 @@ class WorksheetExporter:
         client mark will be stamped — otherwise ink-only heal avoids a flat
         rectangular badge behind the logo.
         """
-        # Modest pad only — large pads spilled past the bag silhouette onto studio
-        # gray and inpainted a flat fabric plate beside the pack.
         fx, fy, fw, fh = (float(v) for v in cover)
-        padded = (fx - 4.0, fy - 4.0, fw + 8.0, fh + 8.0)
+        padded = (fx - 12.0, fy - 10.0, fw + 24.0, fh + 20.0)
         if self._pdf_heal_backpack_front_photo_bitmap(
             page, padded, force_full=force_full
         ):
@@ -2564,43 +2561,26 @@ class WorksheetExporter:
         # Black bag: slightly lower threshold so pale bevels are caught too.
         pale = (lum >= max(110.0, med_lum + 35.0)) & (chroma < 70.0) & (med_lum < 90.0)
         mask = (bright | pale).astype(np.uint8) * 255
-        # Fabric sample from rim, excluding Proper ink (bright rim skews the fill).
-        fabric_rim = rim & ~(bright | pale)
-        if fabric_rim.any():
-            local = np.median(crop[fabric_rim].astype(np.float32), axis=0)
-        else:
-            local = np.median(crop[rim].astype(np.float32), axis=0)
-
-        if force_full:
-            # Seed Proper pixels with weave RGB, then Telea so the patch picks up
-            # local texture (flat fill alone read as a blotch; Telea alone left ghosts).
-            out_rgb = crop.copy()
-            fill = np.clip(local, 0, 255).astype(np.uint8)
-            ink = (bright | pale).astype(np.uint8) * 255
-            if int(ink.sum()) < 255 * 30:
-                ink[:, :] = 255
-            else:
-                ink = cv2.dilate(ink, np.ones((7, 7), np.uint8), iterations=2)
-            out_rgb[ink > 0] = fill
-            bgr = cv2.cvtColor(out_rgb, cv2.COLOR_RGB2BGR)
-            healed = cv2.inpaint(bgr, ink, 4, cv2.INPAINT_TELEA)
-            out_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
-        else:
-            if int(mask.sum()) < 255 * 20:
+        if int(mask.sum()) < 255 * 20:
+            if not force_full:
                 return False
-            mask = cv2.dilate(mask, np.ones((5, 5), np.uint8), iterations=2)
-            bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
-            healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
-            out_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
-            olum = (
-                0.2126 * out_rgb[:, :, 0].astype(np.float32)
-                + 0.7152 * out_rgb[:, :, 1].astype(np.float32)
-                + 0.0722 * out_rgb[:, :, 2].astype(np.float32)
-            )
-            ochroma = out_rgb.max(axis=2) - out_rgb.min(axis=2)
-            crumb = (olum >= max(170.0, med_lum + 30.0)) & (ochroma < 50)
-            if crumb.any():
-                out_rgb[crumb] = np.clip(local, 0, 255).astype(np.uint8)
+            # No client stamp — wipe the whole zone so Proper cannot remain.
+            mask[:, :] = 255
+        mask = cv2.dilate(mask, np.ones((5, 5), np.uint8), iterations=2)
+        bgr = cv2.cvtColor(crop, cv2.COLOR_RGB2BGR)
+        healed = cv2.inpaint(bgr, mask, 5, cv2.INPAINT_TELEA)
+        out_rgb = cv2.cvtColor(healed, cv2.COLOR_BGR2RGB)
+        # Second pass: any leftover bright crumbs → rim fabric.
+        olum = (
+            0.2126 * out_rgb[:, :, 0].astype(np.float32)
+            + 0.7152 * out_rgb[:, :, 1].astype(np.float32)
+            + 0.0722 * out_rgb[:, :, 2].astype(np.float32)
+        )
+        ochroma = out_rgb.max(axis=2) - out_rgb.min(axis=2)
+        crumb = (olum >= max(170.0, med_lum + 30.0)) & (ochroma < 50)
+        if crumb.any():
+            local = np.median(crop[rim].astype(np.float32), axis=0)
+            out_rgb[crumb] = np.clip(local, 0, 255).astype(np.uint8)
 
         arr[y0:y1, x0:x1] = out_rgb
         buf = BytesIO()
