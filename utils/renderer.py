@@ -128,13 +128,14 @@ BACKPACK_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
 }
 
 # Graphic Sample line-art stamp anchors (PDF points) — centers of Paula v2 marks.
+# Track the same slight rightward panel-midline bias as Front View overlays.
 BACKPACK_DRAW_CENTERS: dict[str, tuple[float, float]] = {
     # Upper body panel below top zipper (clear of handle / zipper seam).
-    "upper_center": (1041.5, 2220.0),
+    "upper_center": (1049.5, 2220.0),
     # Dead-center of the front panel (Paula Options #4–#6).
-    "center": (1041.5, 2430.0),
+    "center": (1049.5, 2430.0),
     # Lower-right pocket center (Paula Options #7–#9 measured Proper).
-    "lower_right_center": (1137.5, 2809.0),
+    "lower_right_center": (1143.5, 2809.0),
 }
 
 # Paula v2 PDF vector path — stamp anchors (72 DPI PDF points).
@@ -142,18 +143,18 @@ BACKPACK_DRAW_CENTERS: dict[str, tuple[float, float]] = {
 # baked Option #1 mark (~y2283) is wiped separately before stamping.
 BACKPACK_PDF_DRAW_CENTERS: dict[str, tuple[float, float]] = {
     # Upper body panel — clear of handle and zipper seam.
-    "upper_center": (1041.5, 2220.0),
-    "center": (1041.5, 2430.0),
+    "upper_center": (1049.5, 2220.0),
+    "center": (1049.5, 2430.0),
     # Lower-right pocket — Paula Options #7–#9 Proper letter bbox center.
-    "lower_right_center": (1137.5, 2809.0),
+    "lower_right_center": (1143.5, 2809.0),
 }
 
 # Paula's baked Graphic Sample marks to wipe before stamping (x, y, w, h).
 # Measured from white letter path unions on Options #1 / #4 / #7 (+ pad).
 BACKPACK_PDF_BAKED_GS_COVERS: dict[str, tuple[float, float, float, float]] = {
-    "upper_center": (868.0, 2228.0, 352.0, 110.0),
-    "center": (868.0, 2375.0, 352.0, 110.0),
-    "lower_right_center": (1040.0, 2775.0, 196.0, 68.0),
+    "upper_center": (876.0, 2228.0, 352.0, 110.0),
+    "center": (876.0, 2375.0, 352.0, 110.0),
+    "lower_right_center": (1046.0, 2775.0, 196.0, 68.0),
 }
 
 # Weatherman brand mark on the flat vector (bottom-left) — cleared as a ghost.
@@ -169,28 +170,29 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 # ``box`` = badge footprint on the lifestyle photo; ``cover`` = heal zone.
 # ``rotate`` = Proper panel tilt (PIL CCW°). Fit into GS artwork-aspect box first,
 # then tilt with expand — do NOT fit_inside_box after (that shrunk wide marks ~2.5×).
+# X values sit slightly right of the zipper seam so the tilted mark reads on the
+# panel midline (same relative offset for every fabric × placement).
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     "upper_center": {
         "black": {
-            "box": (555.0, 895.0, 260.0, 85.0),
-            "cover": (535.0, 875.0, 300.0, 120.0),
+            "box": (567.0, 895.0, 260.0, 85.0),
+            "cover": (547.0, 875.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
-            "box": (565.0, 897.0, 260.0, 85.0),
-            "cover": (545.0, 877.0, 300.0, 120.0),
+            "box": (577.0, 897.0, 260.0, 85.0),
+            "cover": (557.0, 877.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
-            # Nudged ~20 pts left so the tilted mark sits on the panel midline.
-            "box": (540.0, 888.0, 270.0, 90.0),
-            "cover": (520.0, 868.0, 310.0, 125.0),
+            "box": (552.0, 888.0, 270.0, 90.0),
+            "cover": (532.0, 868.0, 310.0, 125.0),
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
@@ -199,24 +201,24 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     },
     "center": {
         "black": {
-            "box": (540.0, 965.0, 260.0, 85.0),
-            "cover": (520.0, 945.0, 300.0, 120.0),
+            "box": (552.0, 965.0, 260.0, 85.0),
+            "cover": (532.0, 945.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": -14.5,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
-            "box": (560.0, 975.0, 260.0, 85.0),
-            "cover": (540.0, 955.0, 300.0, 120.0),
+            "box": (572.0, 975.0, 260.0, 85.0),
+            "cover": (552.0, 955.0, 300.0, 120.0),
             "erase": "photo",
             "rotate": -14.5,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
-            "box": (555.0, 960.0, 270.0, 90.0),
-            "cover": (535.0, 940.0, 310.0, 125.0),
+            "box": (567.0, 960.0, 270.0, 90.0),
+            "cover": (547.0, 940.0, 310.0, 125.0),
             "erase": "photo",
             "rotate": -14.5,
             "rotate_after_fit": True,
@@ -225,24 +227,24 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
     },
     "lower_right_center": {
         "black": {
-            "box": (640.0, 1168.0, 155.0, 52.0),
-            "cover": (600.0, 1148.0, 220.0, 85.0),
+            "box": (648.0, 1168.0, 155.0, 52.0),
+            "cover": (608.0, 1148.0, 220.0, 85.0),
             "erase": "photo",
             "rotate": -9.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "steel": {
-            "box": (625.0, 1163.0, 155.0, 52.0),
-            "cover": (590.0, 1143.0, 220.0, 85.0),
+            "box": (633.0, 1163.0, 155.0, 52.0),
+            "cover": (598.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
         },
         "sage": {
-            "box": (625.0, 1163.0, 155.0, 52.0),
-            "cover": (590.0, 1143.0, 220.0, 85.0),
+            "box": (633.0, 1163.0, 155.0, 52.0),
+            "cover": (598.0, 1143.0, 220.0, 85.0),
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,

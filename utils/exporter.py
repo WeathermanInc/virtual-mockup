@@ -2421,6 +2421,10 @@ class WorksheetExporter:
         box = front.get("box") or cover
         art_w, art_h = backpack_artwork_cm(place_key)
         art_aspect = (art_w / art_h) if art_h > 1e-6 else 1.0
+        # Shared fit for Front View + Graphic Sample so placement options do not drift.
+        fit_pad = float(
+            front.get("fit_pad") if front.get("fit_pad") is not None else 0.08
+        )
         if cover or box:
             # Heal only Proper ink (not a full-cover force wipe — that left a
             # flat rectangular plate behind the client mark).
@@ -2433,9 +2437,6 @@ class WorksheetExporter:
             # rotate with expand, but do not fit_inside_box after — that shrink
             # made wide client marks tiny vs Graphic Sample.
             stamp_box = _aspect_fit_box(box, art_aspect)
-            fit_pad = float(
-                front.get("fit_pad") if front.get("fit_pad") is not None else 0.08
-            )
             angle = float(
                 front.get("rotate") if front.get("rotate") is not None else 0.0
             )
@@ -2470,7 +2471,7 @@ class WorksheetExporter:
                 page,
                 draw_box,
                 mark,
-                fit_pad=0.08,
+                fit_pad=fit_pad,
                 crisp=True,
                 crisp_threshold=128,
             )
