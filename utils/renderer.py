@@ -173,6 +173,8 @@ BACKPACK_PDF_WEATHERMAN_COVER: tuple[float, float, float, float] = (
 # inherit identical relative offsets via ``_BACKPACK_GS_TO_FRONT_POS_SCALE``.
 # ``rotate`` = Proper panel tilt (PIL CCW°). Fit GS-aspect first, then tilt with
 # expand — do NOT fit_inside_box after (that shrunk wide marks ~2.5×).
+# ``x_nudge`` = extra left (−) / right (+) shift after center-anchoring so the
+# tilted mark sits on the visible panel midline (photo is foreshortened vs GS).
 _BACKPACK_GS_TO_FRONT_POS_SCALE = (0.26, 0.343)
 
 BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
@@ -184,6 +186,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
+            "x_nudge": -36.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
@@ -192,6 +195,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
+            "x_nudge": -28.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
@@ -200,6 +204,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
+            "x_nudge": -22.0,
         },
     },
     # Rotate-only overrides for lower placements (box/cover derived from GS).
@@ -1304,7 +1309,9 @@ def map_backpack_gs_box_to_front(
     sx, sy = _BACKPACK_GS_TO_FRONT_POS_SCALE
     size_sx = aw / rw
     size_sy = ah / rh
-    fcx = acx + (gcx - rcx) * sx
+    # Center-anchor the mapped box, then apply fabric x_nudge (perspective midline).
+    x_nudge = float(anchor.get("x_nudge") or 0.0)
+    fcx = acx + (gcx - rcx) * sx + x_nudge
     fcy = acy + (gcy - rcy) * sy
     fw = gw * size_sx
     fh = gh * size_sy
