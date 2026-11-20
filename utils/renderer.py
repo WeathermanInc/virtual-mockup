@@ -185,7 +185,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "fit_pad": 0.14,
+            "stamp_scale": 0.82,
             "x_nudge": -36.0,
         },
         "steel": {
@@ -194,7 +195,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "fit_pad": 0.14,
+            "stamp_scale": 0.82,
             "x_nudge": -28.0,
         },
         "sage": {
@@ -203,20 +205,44 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
-            "fit_pad": 0.08,
+            "fit_pad": 0.14,
+            "stamp_scale": 0.82,
             "x_nudge": -22.0,
         },
     },
-    # Rotate-only overrides for lower placements (box/cover derived from GS).
+    # Center reuses upper-center GS→Front map + tilt; size from stamp_scale above.
     "center": {
         "black": {"rotate": -14.5},
         "steel": {"rotate": -14.5},
         "sage": {"rotate": -14.5},
     },
+    # Lower-right uses measured Proper pocket boxes (not GS pos-scale) so the
+    # client stamp lands on the pocket and replaces Paula's baked mark once.
     "lower_right_center": {
-        "black": {"rotate": -9.0},
-        "steel": {"rotate": -15.0},
-        "sage": {"rotate": -15.0},
+        "black": {
+            "box": (640.0, 1168.0, 155.0, 52.0),
+            "cover": (600.0, 1148.0, 220.0, 85.0),
+            "erase": "photo",
+            "rotate": -9.0,
+            "rotate_after_fit": True,
+            "fit_pad": 0.08,
+        },
+        "steel": {
+            "box": (625.0, 1163.0, 155.0, 52.0),
+            "cover": (590.0, 1143.0, 220.0, 85.0),
+            "erase": "photo",
+            "rotate": -15.0,
+            "rotate_after_fit": True,
+            "fit_pad": 0.08,
+        },
+        "sage": {
+            "box": (625.0, 1163.0, 155.0, 52.0),
+            "cover": (590.0, 1143.0, 220.0, 85.0),
+            "erase": "photo",
+            "rotate": -15.0,
+            "rotate_after_fit": True,
+            "fit_pad": 0.08,
+        },
     },
 }
 
@@ -1311,10 +1337,12 @@ def map_backpack_gs_box_to_front(
     size_sy = ah / rh
     # Center-anchor the mapped box, then apply fabric x_nudge (perspective midline).
     x_nudge = float(anchor.get("x_nudge") or 0.0)
+    stamp_scale = float(anchor.get("stamp_scale") or 1.0)
+    stamp_scale = max(0.45, min(1.25, stamp_scale))
     fcx = acx + (gcx - rcx) * sx + x_nudge
     fcy = acy + (gcy - rcy) * sy
-    fw = gw * size_sx
-    fh = gh * size_sy
+    fw = gw * size_sx * stamp_scale
+    fh = gh * size_sy * stamp_scale
     return (fcx - fw / 2.0, fcy - fh / 2.0, fw, fh)
 
 
@@ -1353,10 +1381,11 @@ def get_backpack_pdf_front_slot(
     fabric_name: str | None = None,
     placement: str | None = None,
 ) -> dict[str, Any]:
-    """Front photo logo slot derived from the Graphic Sample draw box.
+    """Front photo logo slot for the active placement.
 
-    Box/cover come from ``map_backpack_gs_box_to_front``; rotate / fit_pad come
-    from the fabric anchor with per-placement tilt overrides.
+    Upper / Center: box from Graphic Sample via ``map_backpack_gs_box_to_front``.
+    Lower-right: measured Proper pocket box (avoids GS pos-scale landing above
+    the baked mark and leaving a duplicate).
     """
     from utils.catalog import resolve_backpack_placement
 
@@ -1380,11 +1409,31 @@ def get_backpack_pdf_front_slot(
         slot["fit_pad"] = float(place_slot["fit_pad"])
 
     gs_box = backpack_pdf_gs_draw_box(place_key)
+    slot["gs_box"] = gs_box
+    # Explicit photo box (lower-right pocket) wins over GS→Front mapping.
+    if place_slot.get("box"):
+        front_box = tuple(float(v) for v in place_slot["box"])
+        slot["box"] = front_box
+        if place_slot.get("cover"):
+            slot["cover"] = tuple(float(v) for v in place_slot["cover"])
+        else:
+            slot["cover"] = _front_cover_from_box(front_box, anchor)
+        return slot
+
     front_box = map_backpack_gs_box_to_front(gs_box, fabric_name)
     slot["box"] = front_box
     slot["cover"] = _front_cover_from_box(front_box, anchor)
-    slot["gs_box"] = gs_box
     return slot
+
+
+def backpack_pdf_front_heal_slots(
+    fabric_name: str | None = None,
+) -> list[dict[str, Any]]:
+    """Front photo heal slots for every placement — wipe all baked Proper ghosts."""
+    return [
+        get_backpack_pdf_front_slot(fabric_name, key)
+        for key in ("upper_center", "center", "lower_right_center")
+    ]
 
 
 def backpack_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | None:

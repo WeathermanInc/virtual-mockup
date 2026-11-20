@@ -42,6 +42,7 @@ from .renderer import (
     backpack_logo_fill_rgb,
     backpack_pdf_baked_gs_cover,
     backpack_pdf_draw_center,
+    backpack_pdf_front_heal_slots,
     backpack_pdf_gs_draw_box,
     backpack_v2_pdf_path,
     fit_logo_uniform,
@@ -2422,26 +2423,30 @@ class WorksheetExporter:
         place_key = str(place.get("key") or "upper_center")
         fabric = tuple(int(v) for v in job.fabric_rgb)
 
-        # 1) GS artwork box (canonical placement).
+        # 1) GS artwork box (canonical for the technical drawing).
         draw_box = backpack_pdf_gs_draw_box(place_key)
         art_w, art_h = backpack_artwork_cm(place_key)
         art_aspect = (art_w / art_h) if art_h > 1e-6 else 1.0
 
-        # 2) Front photo box derived from that same GS box.
+        # 2) Front photo slot — GS-mapped for upper/center; measured pocket for LRC.
         front = get_backpack_pdf_front_slot(job.fabric_name, place_key)
         box = front.get("box") or map_backpack_gs_box_to_front(draw_box, job.fabric_name)
-        cover = front.get("cover") or box
         fit_pad = float(
             front.get("fit_pad") if front.get("fit_pad") is not None else 0.08
         )
 
-        if cover or box:
-            # Heal only Proper ink (not a full-cover force wipe — that left a
-            # flat rectangular plate behind the client mark).
-            clear_zone = cover or box
-            self._pdf_clear_backpack_front_photo(
-                page, clear_zone, fabric, force_full=mark is None
-            )
+        # Wipe every Front placement heal zone first so Paula baked Proper
+        # (and any prior mismapped stamp) cannot remain as a duplicate.
+        for heal in backpack_pdf_front_heal_slots(job.fabric_name):
+            clear_zone = heal.get("cover") or heal.get("box")
+            if clear_zone:
+                self._pdf_clear_backpack_front_photo(
+                    page,
+                    clear_zone,
+                    fabric,
+                    force_full=mark is None,
+                )
+
         if mark is not None and box:
             # Shared GS aspect + fit_pad, then Proper panel tilt. Fit first,
             # rotate with expand; never fit_inside_box after (shrinks wide marks).
@@ -2461,24 +2466,22 @@ class WorksheetExporter:
                 fit_inside_box=False,
             )
 
-        # Lower placements: also clear leftover upper-center Proper (no restamp).
+        # Lower placements: also clear leftover upper-center GS Proper (no restamp).
         if place_key != "upper_center":
             upper = backpack_pdf_baked_gs_cover("upper_center")
             if upper:
                 fill = self._pdf_sample_fill(page, upper, fallback=fabric)
                 self._pdf_opaque_wipe(page, upper, fill)
-            upper_front = get_backpack_pdf_front_slot(job.fabric_name, "upper_center")
-            u_cover = upper_front.get("cover") or upper_front.get("box")
-            if u_cover:
-                self._pdf_clear_backpack_front_photo(page, u_cover, fabric)
 
         self._pdf_clear_backpack_gs_vector(page, place_key, draw_box, fabric)
         if mark is not None:
+            # GS keeps the artwork-cm box fit; Front-only fit_pad/stamp_scale
+            # must not shrink the technical drawing mark.
             self._pdf_insert_mark(
                 page,
                 draw_box,
                 mark,
-                fit_pad=fit_pad,
+                fit_pad=0.08,
                 crisp=True,
                 crisp_threshold=128,
             )
