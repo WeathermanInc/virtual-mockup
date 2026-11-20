@@ -187,7 +187,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.18,
             "stamp_scale": 0.72,
-            "x_nudge": -48.0,
+            # Slightly left of Center so the mark sits on the upper panel midline.
+            "x_nudge": -58.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
@@ -197,7 +198,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.18,
             "stamp_scale": 0.72,
-            "x_nudge": -48.0,
+            "x_nudge": -58.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
@@ -207,17 +208,18 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.18,
             "stamp_scale": 0.72,
-            "x_nudge": -36.0,
+            "x_nudge": -46.0,
         },
     },
-    # Center reuses upper-center GS→Front map + tilt; size from stamp_scale above.
+    # Center freezes the prior good midline; scale still from upper_center anchor.
     "center": {
-        "black": {"rotate": -14.5},
-        "steel": {"rotate": -14.5},
-        "sage": {"rotate": -14.5},
+        "black": {"rotate": -14.5, "x_nudge": -48.0},
+        "steel": {"rotate": -14.5, "x_nudge": -48.0},
+        "sage": {"rotate": -14.5, "x_nudge": -36.0},
     },
     # Lower-right uses measured Proper pocket boxes (not GS pos-scale) so the
     # client stamp lands on the pocket and replaces Paula's baked mark once.
+    # x_nudge shifts the pocket stamp left, clear of the right seam.
     "lower_right_center": {
         "black": {
             "box": (640.0, 1168.0, 155.0, 52.0),
@@ -226,6 +228,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate": -9.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
+            "x_nudge": -36.0,
         },
         "steel": {
             "box": (625.0, 1163.0, 155.0, 52.0),
@@ -234,6 +237,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
+            "x_nudge": -36.0,
         },
         "sage": {
             "box": (625.0, 1163.0, 155.0, 52.0),
@@ -242,6 +246,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.08,
+            "x_nudge": -32.0,
         },
     },
 }
@@ -1314,12 +1319,15 @@ def backpack_pdf_gs_draw_box(placement: str | None = None) -> tuple[float, float
 def map_backpack_gs_box_to_front(
     gs_box: tuple[float, float, float, float],
     fabric_name: str | None = None,
+    *,
+    x_nudge: float | None = None,
 ) -> tuple[float, float, float, float]:
     """Map a Graphic Sample artwork box onto the Front View lifestyle photo.
 
     Upper-center Proper badge per fabric calibrates origin + size scale. Placement
-    offsets (Center / Lower-right) keep the same relative GS deltas, compressed by
+    offsets keep the same relative GS deltas, compressed by
     ``_BACKPACK_GS_TO_FRONT_POS_SCALE`` for photo foreshortening.
+    ``x_nudge`` overrides the fabric anchor when a placement freezes its own midline.
     """
     anchor = get_backpack_pdf_front_anchor(fabric_name)
     ref_box = tuple(float(v) for v in (anchor.get("box") or (0.0, 0.0, 1.0, 1.0)))
@@ -1335,15 +1343,34 @@ def map_backpack_gs_box_to_front(
     sx, sy = _BACKPACK_GS_TO_FRONT_POS_SCALE
     size_sx = aw / rw
     size_sy = ah / rh
-    # Center-anchor the mapped box, then apply fabric x_nudge (perspective midline).
-    x_nudge = float(anchor.get("x_nudge") or 0.0)
+    # Center-anchor the mapped box, then apply placement/fabric x_nudge.
+    nudge = float(anchor.get("x_nudge") or 0.0) if x_nudge is None else float(x_nudge)
     stamp_scale = float(anchor.get("stamp_scale") or 1.0)
     stamp_scale = max(0.45, min(1.25, stamp_scale))
-    fcx = acx + (gcx - rcx) * sx + x_nudge
+    fcx = acx + (gcx - rcx) * sx + nudge
     fcy = acy + (gcy - rcy) * sy
     fw = gw * size_sx * stamp_scale
     fh = gh * size_sy * stamp_scale
     return (fcx - fw / 2.0, fcy - fh / 2.0, fw, fh)
+
+
+def _shift_box_x(
+    box: tuple[float, float, float, float],
+    dx: float,
+) -> tuple[float, float, float, float]:
+    x, y, w, h = (float(v) for v in box)
+    return (x + float(dx), y, w, h)
+
+
+def _union_box(
+    a: tuple[float, float, float, float],
+    b: tuple[float, float, float, float],
+) -> tuple[float, float, float, float]:
+    ax, ay, aw, ah = (float(v) for v in a)
+    bx, by, bw, bh = (float(v) for v in b)
+    x0, y0 = min(ax, bx), min(ay, by)
+    x1, y1 = max(ax + aw, bx + bw), max(ay + ah, by + bh)
+    return (x0, y0, x1 - x0, y1 - y0)
 
 
 def _front_cover_from_box(
@@ -1410,17 +1437,32 @@ def get_backpack_pdf_front_slot(
 
     gs_box = backpack_pdf_gs_draw_box(place_key)
     slot["gs_box"] = gs_box
+    place_nudge = (
+        float(place_slot["x_nudge"])
+        if place_slot.get("x_nudge") is not None
+        else None
+    )
     # Explicit photo box (lower-right pocket) wins over GS→Front mapping.
     if place_slot.get("box"):
-        front_box = tuple(float(v) for v in place_slot["box"])
+        dx = float(place_nudge or 0.0)
+        base_box = tuple(float(v) for v in place_slot["box"])
+        front_box = _shift_box_x(base_box, dx)
         slot["box"] = front_box
         if place_slot.get("cover"):
-            slot["cover"] = tuple(float(v) for v in place_slot["cover"])
+            base_cover = tuple(float(v) for v in place_slot["cover"])
+            # Union base + shifted covers so baked Proper is wiped when we nudge left.
+            slot["cover"] = (
+                _union_box(base_cover, _shift_box_x(base_cover, dx))
+                if abs(dx) > 0.1
+                else base_cover
+            )
         else:
             slot["cover"] = _front_cover_from_box(front_box, anchor)
         return slot
 
-    front_box = map_backpack_gs_box_to_front(gs_box, fabric_name)
+    front_box = map_backpack_gs_box_to_front(
+        gs_box, fabric_name, x_nudge=place_nudge
+    )
     slot["box"] = front_box
     slot["cover"] = _front_cover_from_box(front_box, anchor)
     return slot
