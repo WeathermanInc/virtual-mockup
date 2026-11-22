@@ -189,8 +189,10 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             # Compact GS 3.7 cm weight on the lifestyle photo (leave scale as-is).
             "stamp_scale": 0.48,
             # Keep panel midline; lift toward the upper zipper/seam (PDF −Y is up).
+            # NOTE: upper_center uses the explicit-box path — y_nudge must be
+            # applied there (not only in map_backpack_gs_box_to_front).
             "x_nudge": -60.0,
-            "y_nudge": -24.0,
+            "y_nudge": -56.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
@@ -201,7 +203,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
             "x_nudge": -60.0,
-            "y_nudge": -24.0,
+            "y_nudge": -56.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
@@ -212,7 +214,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
             "x_nudge": -50.0,
-            "y_nudge": -24.0,
+            "y_nudge": -56.0,
         },
     },
     # Center freezes the prior good midline + scale.
@@ -1388,6 +1390,15 @@ def _shift_box_x(
     return (x + float(dx), y, w, h)
 
 
+def _shift_box(
+    box: tuple[float, float, float, float],
+    dx: float = 0.0,
+    dy: float = 0.0,
+) -> tuple[float, float, float, float]:
+    x, y, w, h = (float(v) for v in box)
+    return (x + float(dx), y + float(dy), w, h)
+
+
 def _union_box(
     a: tuple[float, float, float, float],
     b: tuple[float, float, float, float],
@@ -1478,21 +1489,24 @@ def get_backpack_pdf_front_slot(
         if place_slot.get("stamp_scale") is not None
         else None
     )
-    # Explicit photo box (lower-right pocket) wins over GS→Front mapping.
+    # Explicit photo box (upper_center anchor / lower-right pocket) wins over
+    # pure GS→Front mapping — apply x_nudge AND y_nudge on this path.
     if place_slot.get("box"):
         dx = float(place_nudge or 0.0)
+        dy = float(place_y_nudge or 0.0)
         base_box = tuple(float(v) for v in place_slot["box"])
-        front_box = _shift_box_x(base_box, dx)
+        front_box = _shift_box(base_box, dx, dy)
         if place_scale is not None:
             front_box = _scale_box_about_center(front_box, place_scale)
         slot["box"] = front_box
         if place_slot.get("cover"):
             base_cover = tuple(float(v) for v in place_slot["cover"])
-            # Union base + shifted covers so baked Proper is wiped when we nudge.
-            shifted_cover = _shift_box_x(base_cover, dx)
+            # Union base + shifted covers so baked Proper is wiped when we nudge
+            # (critical when lifting Upper center — otherwise Paula's mark stays).
+            shifted_cover = _shift_box(base_cover, dx, dy)
             slot["cover"] = (
                 _union_box(base_cover, shifted_cover)
-                if abs(dx) > 0.1
+                if abs(dx) > 0.1 or abs(dy) > 0.1
                 else base_cover
             )
         else:
