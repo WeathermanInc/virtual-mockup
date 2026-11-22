@@ -192,7 +192,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             # Keep panel midline; lift toward the upper zipper/seam (PDF −Y is up).
             # NOTE: upper_center uses the explicit-box path — y_nudge must be
             # applied there (not only in map_backpack_gs_box_to_front).
-            "x_nudge": -60.0,
+            # Slight right of prior seat so the mark sits on the upper panel midline.
+            "x_nudge": -52.0,
             "y_nudge": -56.0,
         },
         "steel": {
@@ -203,7 +204,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -60.0,
+            "x_nudge": -52.0,
             "y_nudge": -56.0,
         },
         "sage": {
@@ -214,7 +215,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -50.0,
+            "x_nudge": -42.0,
             "y_nudge": -56.0,
         },
     },
