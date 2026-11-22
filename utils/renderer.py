@@ -183,14 +183,14 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (567.0, 895.0, 260.0, 85.0),
             "cover": (547.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            # Slightly less clockwise so the baseline tracks the upper seam slope.
-            "rotate": -17.0,
+            # Micro CCW ease so the baseline tracks the upper seam slope.
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             # Compact GS 3.7 cm weight on the lifestyle photo.
             "stamp_scale": 0.48,
             # NOTE: upper_center uses the explicit-box path — x/y_nudge apply there.
-            "x_nudge": -16.0,
+            "x_nudge": -12.0,
             "y_nudge": -62.0,
         },
         "steel": {
@@ -198,22 +198,22 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             # Tighter cover — oversized heal plates spilled past the Steel bag edge.
             "cover": (565.0, 885.0, 280.0, 100.0),
             "erase": "photo",
-            "rotate": -17.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -16.0,
+            "x_nudge": -12.0,
             "y_nudge": -62.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
             "cover": (532.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": -17.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -6.0,
+            "x_nudge": -2.0,
             "y_nudge": -62.0,
         },
     },
