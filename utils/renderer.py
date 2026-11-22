@@ -186,11 +186,11 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
-            # Another step toward GS 3.7 cm compact weight on the lifestyle photo.
+            # Compact GS 3.7 cm weight on the lifestyle photo (leave scale as-is).
             "stamp_scale": 0.48,
-            # Further left + up to track the GS upper-center seat.
+            # Keep panel midline; lift toward the upper zipper/seam (PDF −Y is up).
             "x_nudge": -60.0,
-            "y_nudge": -2.0,
+            "y_nudge": -24.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
@@ -201,7 +201,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
             "x_nudge": -60.0,
-            "y_nudge": -2.0,
+            "y_nudge": -24.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
@@ -212,7 +212,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
             "x_nudge": -50.0,
-            "y_nudge": -2.0,
+            "y_nudge": -24.0,
         },
     },
     # Center freezes the prior good midline + scale.
