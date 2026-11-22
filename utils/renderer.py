@@ -183,7 +183,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (567.0, 895.0, 260.0, 85.0),
             "cover": (547.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": -15.0,
+            # Steeper panel tilt near the lifted zipper-band seat (−15 → −18).
+            "rotate": -18.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             # Compact GS 3.7 cm weight on the lifestyle photo (leave scale as-is).
@@ -198,7 +199,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (577.0, 897.0, 260.0, 85.0),
             "cover": (557.0, 877.0, 300.0, 120.0),
             "erase": "photo",
-            "rotate": -15.0,
+            "rotate": -18.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
@@ -209,7 +210,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (552.0, 888.0, 270.0, 90.0),
             "cover": (532.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": -15.0,
+            "rotate": -18.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
