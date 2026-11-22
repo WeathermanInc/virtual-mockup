@@ -185,12 +185,12 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
-            "fit_pad": 0.20,
-            # Trimmed toward GS 3.7 cm height without crowding zipper/seams.
-            "stamp_scale": 0.60,
-            "x_nudge": -50.0,
-            # Drop a hair into the upper panel band (PDF +Y is down).
-            "y_nudge": 8.0,
+            "fit_pad": 0.22,
+            # Final trim toward GS 3.7 cm height without crowding zipper/seams.
+            "stamp_scale": 0.56,
+            "x_nudge": -48.0,
+            # Seat dead-center in the upper panel band (PDF +Y is down).
+            "y_nudge": 10.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
@@ -198,10 +198,10 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
-            "fit_pad": 0.20,
-            "stamp_scale": 0.60,
-            "x_nudge": -50.0,
-            "y_nudge": 8.0,
+            "fit_pad": 0.22,
+            "stamp_scale": 0.56,
+            "x_nudge": -48.0,
+            "y_nudge": 10.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
@@ -209,10 +209,10 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "erase": "photo",
             "rotate": -15.0,
             "rotate_after_fit": True,
-            "fit_pad": 0.20,
-            "stamp_scale": 0.60,
-            "x_nudge": -40.0,
-            "y_nudge": 8.0,
+            "fit_pad": 0.22,
+            "stamp_scale": 0.56,
+            "x_nudge": -38.0,
+            "y_nudge": 10.0,
         },
     },
     # Center freezes the prior good midline + scale.
