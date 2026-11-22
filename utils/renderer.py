@@ -191,7 +191,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "stamp_scale": 0.48,
             # NOTE: upper_center uses the explicit-box path — x/y_nudge apply there.
             # Right + up into the zipper-band center of the upper panel.
-            "x_nudge": -32.0,
+            "x_nudge": -24.0,
             "y_nudge": -68.0,
         },
         "steel": {
@@ -203,7 +203,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -32.0,
+            "x_nudge": -24.0,
             "y_nudge": -68.0,
         },
         "sage": {
@@ -214,7 +214,7 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -22.0,
+            "x_nudge": -14.0,
             "y_nudge": -68.0,
         },
     },
