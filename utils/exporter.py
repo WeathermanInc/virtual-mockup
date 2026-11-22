@@ -42,6 +42,7 @@ from .renderer import (
     backpack_logo_fill_rgb,
     backpack_pdf_baked_gs_cover,
     backpack_pdf_draw_center,
+    backpack_pdf_front_heal_boxes,
     backpack_pdf_front_heal_slots,
     backpack_pdf_gs_draw_box,
     backpack_v2_pdf_path,
@@ -2435,11 +2436,11 @@ class WorksheetExporter:
             front.get("fit_pad") if front.get("fit_pad") is not None else 0.08
         )
 
-        # Wipe every Front placement heal zone first so Paula baked Proper
-        # (and any prior mismapped stamp) cannot remain as a duplicate.
-        for heal in backpack_pdf_front_heal_slots(job.fabric_name):
-            clear_zone = heal.get("cover") or heal.get("box")
-            if clear_zone:
+        # Wipe Front heal zones for this Paula page only. Use tight per-zone
+        # boxes (not AABB unions) so Steel Blue inpaint cannot spill past the
+        # bag edge as a fabric-colored square.
+        for heal in backpack_pdf_front_heal_slots(job.fabric_name, place_key):
+            for clear_zone in backpack_pdf_front_heal_boxes(heal):
                 self._pdf_clear_backpack_front_photo(
                     page,
                     clear_zone,
@@ -2505,7 +2506,8 @@ class WorksheetExporter:
         rectangular badge behind the logo.
         """
         fx, fy, fw, fh = (float(v) for v in cover)
-        padded = (fx - 12.0, fy - 10.0, fw + 24.0, fh + 20.0)
+        # Modest pad only — large pads + AABB unions painted past the bag seam.
+        padded = (fx - 6.0, fy - 5.0, fw + 12.0, fh + 10.0)
         if self._pdf_heal_backpack_front_photo_bitmap(
             page, padded, force_full=force_full
         ):
@@ -2516,8 +2518,10 @@ class WorksheetExporter:
                 return
             except Exception:
                 pass
-            fill = self._pdf_sample_fill(page, padded, fallback=fabric)
-            self._pdf_opaque_wipe(page, padded, fill)
+            # Last resort: never opaque-wipe a zone larger than the cover itself
+            # (opaque fabric plates are what read as blue/black squares).
+            fill = self._pdf_sample_fill(page, cover, fallback=fabric)
+            self._pdf_opaque_wipe(page, cover, fill)
 
     def _pdf_heal_backpack_front_photo_bitmap(
         self,

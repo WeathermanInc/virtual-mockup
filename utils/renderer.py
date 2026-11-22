@@ -183,8 +183,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (567.0, 895.0, 260.0, 85.0),
             "cover": (547.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            # Steeper panel tilt near the lifted zipper-band seat (−15 → −18).
-            "rotate": -18.0,
+            # Panel tilt near the lifted zipper-band seat.
+            "rotate": -17.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             # Compact GS 3.7 cm weight on the lifestyle photo (leave scale as-is).
@@ -192,31 +192,32 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             # Keep panel midline; lift toward the upper zipper/seam (PDF −Y is up).
             # NOTE: upper_center uses the explicit-box path — y_nudge must be
             # applied there (not only in map_backpack_gs_box_to_front).
-            # Slight right of prior seat so the mark sits on the upper panel midline.
-            "x_nudge": -52.0,
-            "y_nudge": -56.0,
+            # Slight right so the mark sits cleanly in the upper panel.
+            "x_nudge": -44.0,
+            "y_nudge": -52.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
-            "cover": (557.0, 877.0, 300.0, 120.0),
+            # Tighter cover — oversized heal plates spilled past the Steel bag edge.
+            "cover": (565.0, 885.0, 280.0, 100.0),
             "erase": "photo",
-            "rotate": -18.0,
+            "rotate": -17.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -52.0,
-            "y_nudge": -56.0,
+            "x_nudge": -44.0,
+            "y_nudge": -52.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
             "cover": (532.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": -18.0,
+            "rotate": -17.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -42.0,
-            "y_nudge": -56.0,
+            "x_nudge": -34.0,
+            "y_nudge": -52.0,
         },
     },
     # Center freezes the prior good midline + scale.
@@ -1503,16 +1504,18 @@ def get_backpack_pdf_front_slot(
         slot["box"] = front_box
         if place_slot.get("cover"):
             base_cover = tuple(float(v) for v in place_slot["cover"])
-            # Union base + shifted covers so baked Proper is wiped when we nudge
-            # (critical when lifting Upper center — otherwise Paula's mark stays).
             shifted_cover = _shift_box(base_cover, dx, dy)
-            slot["cover"] = (
-                _union_box(base_cover, shifted_cover)
-                if abs(dx) > 0.1 or abs(dy) > 0.1
-                else base_cover
-            )
+            # Stamp-local cover stays tight (AABB union of base+shift spills past
+            # the bag edge as a fabric-colored plate on Steel Blue). Heal both
+            # zones separately via heal_covers so baked Proper is still wiped.
+            slot["cover"] = shifted_cover
+            if abs(dx) > 0.1 or abs(dy) > 0.1:
+                slot["heal_covers"] = [base_cover, shifted_cover]
+            else:
+                slot["heal_covers"] = [base_cover]
         else:
             slot["cover"] = _front_cover_from_box(front_box, anchor)
+            slot["heal_covers"] = [slot["cover"]]
         return slot
 
     # Center must not inherit upper_center y_nudge from the fabric anchor.
@@ -1538,12 +1541,40 @@ def get_backpack_pdf_front_slot(
 
 def backpack_pdf_front_heal_slots(
     fabric_name: str | None = None,
+    placement: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Front photo heal slots for every placement — wipe all baked Proper ghosts."""
-    return [
-        get_backpack_pdf_front_slot(fabric_name, key)
-        for key in ("upper_center", "center", "lower_right_center")
-    ]
+    """Front photo heal slots for the active Paula page.
+
+    Only clear placements that can leave baked Proper on this page — healing
+    every zone on Upper-center pages painted fabric plates past the bag edge.
+    """
+    from utils.catalog import resolve_backpack_placement
+
+    place = resolve_backpack_placement(placement)
+    place_key = str(place.get("key") or "upper_center")
+    if place_key == "upper_center":
+        keys = ("upper_center",)
+    elif place_key == "center":
+        keys = ("upper_center", "center")
+    else:
+        keys = ("upper_center", "center", "lower_right_center")
+    return [get_backpack_pdf_front_slot(fabric_name, key) for key in keys]
+
+
+def backpack_pdf_front_heal_boxes(slot: dict[str, Any]) -> list[tuple[float, float, float, float]]:
+    """Tight heal rectangles for a Front slot (avoids oversized AABB unions)."""
+    covers = slot.get("heal_covers")
+    if covers:
+        out: list[tuple[float, float, float, float]] = []
+        for c in covers:
+            if c:
+                out.append(tuple(float(v) for v in c))
+        if out:
+            return out
+    single = slot.get("cover") or slot.get("box")
+    if single:
+        return [tuple(float(v) for v in single)]
+    return []
 
 
 def backpack_logo_fill_rgb(logo_color_name: str | None) -> tuple[int, int, int] | None:
