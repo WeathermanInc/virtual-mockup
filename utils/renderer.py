@@ -191,8 +191,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "stamp_scale": 0.48,
             # NOTE: upper_center uses the explicit-box path — x/y_nudge apply there.
             # Right + up into the zipper-band center of the upper panel.
-            "x_nudge": -24.0,
-            "y_nudge": -68.0,
+            "x_nudge": -20.0,
+            "y_nudge": -62.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
@@ -203,8 +203,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -24.0,
-            "y_nudge": -68.0,
+            "x_nudge": -20.0,
+            "y_nudge": -62.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
@@ -214,8 +214,8 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -14.0,
-            "y_nudge": -68.0,
+            "x_nudge": -10.0,
+            "y_nudge": -62.0,
         },
     },
     # Center freezes the prior good midline + scale.
