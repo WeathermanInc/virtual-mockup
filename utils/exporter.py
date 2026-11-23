@@ -312,6 +312,10 @@ PAGE_SPEC: dict[int, dict] = {
             "title": (321.2, 33.8, 420.0, 83.5),
             "subtitle": (321.2, 116.0, 400.0, 57.5),
             "style": (321.2, 165.4, 320.0, 57.5),
+            # Match baked Paula plate: Lexend title, Barlow body.
+            "title_font": "Lexend-Regular.ttf",
+            "subtitle_font": "Barlow-Regular.ttf",
+            "style_font": "Barlow-Regular.ttf",
             "title_pt": 63.0,
             "subtitle_pt": 44.5,
             "style_pt": 44.5,
@@ -392,6 +396,18 @@ def _font(bold: bool, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont
         return ImageFont.truetype(str(path), size)
     except OSError:
         return ImageFont.load_default()
+
+
+def _named_font(filename: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Load a vendored face from ``assets/fonts/``, falling back to Liberation Sans."""
+    for folder in (ROOT / "assets" / "fonts", _FONT_DIR):
+        path = folder / filename
+        if path.exists():
+            try:
+                return ImageFont.truetype(str(path), size)
+            except OSError:
+                continue
+    return _font(False, size)
 
 
 def _pts(box: tuple[float, ...]) -> tuple[int, ...]:
@@ -3751,11 +3767,26 @@ class WorksheetExporter:
 
         draw = ImageDraw.Draw(page)
         entries = (
-            ("title", title, float(boxes.get("title_pt") or 63.0)),
-            ("subtitle", subtitle, float(boxes.get("subtitle_pt") or 44.5)),
-            ("style", style_line, float(boxes.get("style_pt") or 44.5)),
+            (
+                "title",
+                title,
+                float(boxes.get("title_pt") or 63.0),
+                str(boxes.get("title_font") or "Lexend-Regular.ttf"),
+            ),
+            (
+                "subtitle",
+                subtitle,
+                float(boxes.get("subtitle_pt") or 44.5),
+                str(boxes.get("subtitle_font") or "Barlow-Regular.ttf"),
+            ),
+            (
+                "style",
+                style_line,
+                float(boxes.get("style_pt") or 44.5),
+                str(boxes.get("style_font") or "Barlow-Regular.ttf"),
+            ),
         )
-        for field, text, pt in entries:
+        for field, text, pt, font_name in entries:
             box = boxes.get(field)
             if not box or not text:
                 continue
@@ -3770,7 +3801,7 @@ class WorksheetExporter:
                 ),
                 fill=(255, 255, 255, 255),
             )
-            font = _font(False, int(pt * SCALE))
+            font = _named_font(font_name, int(pt * SCALE))
             draw.text(
                 (x, y + h * 0.82),
                 text,
