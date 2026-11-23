@@ -204,17 +204,17 @@
     },
     "Navy Blue (NRF 600)": {
       "rgb": [
-        57,
-        63,
-        72
+        40,
+        53,
+        78
       ],
       "nrf": "600",
       "pantone": "19-4010 TPG",
       "family": "Blue",
       "category": "Core",
       "kind": "solid",
-      "hex": "#393F48",
-      "notes": "Legacy SKU NRF 600 (Shopify); wholesale Navy solid maps to NRF 411 on line sheets"
+      "hex": "#28344E",
+      "notes": "Legacy SKU NRF 600 (Shopify); visual fill calibrated to weatherman.com Travel/Walk/Trek Navy Blue canopy photos (was charcoal #393F48)"
     },
     "White (NRF 100)": {
       "rgb": [
@@ -311,29 +311,31 @@
     },
     "Blush (NRF 680)": {
       "rgb": [
-        206,
-        140,
-        146
+        242,
+        176,
+        198
       ],
       "nrf": "680",
       "pantone": "7430 C",
       "family": "Blush",
       "category": "Fashion",
       "kind": "solid",
-      "hex": "#FFC0CB"
+      "hex": "#F2B0C6",
+      "notes": "Visual fill calibrated to weatherman.com Travel/Trek Blush canopy photos (was muted dusty rose rgb; NRF sheet photo hex #FFC0CB)"
     },
     "Steel Blue": {
       "rgb": [
-        90,
-        122,
-        144
+        79,
+        108,
+        159
       ],
       "nrf": "421",
       "pantone": "2374 C / 18-3921 TCX",
       "family": "Steel Blue",
       "category": "Fashion",
       "kind": "solid",
-      "hex": "#4F6C9F"
+      "hex": "#4F6C9F",
+      "notes": "RGB synced to NRF photo hex #4F6C9F / weatherman.com Travel/Trek Steel Blue canopy (was greyed 90,122,144)"
     },
     "Dusty Lavender": {
       "rgb": [
