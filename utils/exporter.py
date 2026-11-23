@@ -306,6 +306,16 @@ PAGE_SPEC: dict[int, dict] = {
             "project_owner": (1105, 140, 190, 36),
             "print_order": (1105, 187, 190, 36),
         },
+        # Baked Paula page-1 header is Walk / Automatic Umbrella / 11005.
+        # Stick-layout peers (Trek, Travel, …) share this plate — wipe & rewrite.
+        "product_identity": {
+            "title": (321.2, 33.8, 420.0, 83.5),
+            "subtitle": (321.2, 116.0, 400.0, 57.5),
+            "style": (321.2, 165.4, 320.0, 57.5),
+            "title_pt": 63.0,
+            "subtitle_pt": 44.5,
+            "style_pt": 44.5,
+        },
         # No white_wipes here — side gutters hold 26.5 cm / artwork-height callouts.
         "colors": {
             "logo_swatch": (59, 1877, 100, 44),
@@ -514,6 +524,20 @@ class WorksheetExporter:
             )
         return PAGE_TITLES.get(page_no, f"Page {page_no}")
 
+    def _umbrella_page_title(self, product_key: str, page_no: int) -> str:
+        """Page tab / export label from the selected style, not the baked Walk plate."""
+        if page_no == 1:
+            spec = product_specs().get(product_key) or {}
+            name = str(spec.get("display_name") or "").strip()
+            if name:
+                return name
+        if page_no == 2:
+            spec = product_specs().get(product_key) or {}
+            name = str(spec.get("display_name") or "").strip()
+            if name:
+                return name
+        return PAGE_TITLES.get(page_no, f"Page {page_no}")
+
     def _sun_shirt_page_title(self, product_key: str) -> str:
         return SUN_SHIRT_TITLES.get(product_key) or (
             str((product_specs().get(product_key) or {}).get("display_name") or "Sun Shirt")
@@ -555,7 +579,12 @@ class WorksheetExporter:
                 if page_no in seen:
                     continue
                 seen.add(page_no)
-                plan.append((page_no, self._page_title(family, page_no)))
+                title = (
+                    self._umbrella_page_title(key, page_no)
+                    if family == "umbrella"
+                    else self._page_title(family, page_no)
+                )
+                plan.append((page_no, title))
         return plan
 
     def iter_job_pages(
@@ -580,7 +609,12 @@ class WorksheetExporter:
                 if page_no in seen:
                     continue
                 seen.add(page_no)
-                yield page_no, self._page_title(family, page_no), self._compose_page(
+                title = (
+                    self._umbrella_page_title(key, page_no)
+                    if family == "umbrella"
+                    else self._page_title(family, page_no)
+                )
+                yield page_no, title, self._compose_page(
                     page_no, job, mark, family=family
                 )
 
@@ -3668,6 +3702,8 @@ class WorksheetExporter:
                 # Uniform vertical padding — center on field midline.
                 draw.text((x + int(4 * SCALE), y + h * 0.5), text, font=font_meta, fill=NAVY + (255,), anchor="lm")
 
+        self._stamp_product_identity(page, spec, job)
+
         chip_box = spec.get("chip")
         if chip_box:
             cx, cy, cw, ch = _pts(chip_box)
@@ -3689,6 +3725,59 @@ class WorksheetExporter:
                     fill=NAVY + (255,),
                     anchor="ls",
                 )
+
+    def _stamp_product_identity(
+        self, page: PILImage.Image, spec: dict, job: JobSpec
+    ) -> None:
+        """Rewrite baked Walk title / subtitle / style # for the selected stick style."""
+        boxes = spec.get("product_identity")
+        if not boxes:
+            return
+        product_key = next(
+            (
+                key
+                for key in job.product_keys
+                if 1 in STYLE_PAGES.get(key, []) and style_family(key) == "umbrella"
+            ),
+            None,
+        )
+        if not product_key:
+            return
+        pspec = product_specs().get(product_key) or {}
+        title = str(pspec.get("display_name") or product_key).strip()
+        subtitle = str(pspec.get("subtitle") or "").strip()
+        style_no = str(pspec.get("style_number") or "").strip()
+        style_line = f"Style #: {style_no}" if style_no else "Style #:"
+
+        draw = ImageDraw.Draw(page)
+        entries = (
+            ("title", title, float(boxes.get("title_pt") or 63.0)),
+            ("subtitle", subtitle, float(boxes.get("subtitle_pt") or 44.5)),
+            ("style", style_line, float(boxes.get("style_pt") or 44.5)),
+        )
+        for field, text, pt in entries:
+            box = boxes.get(field)
+            if not box or not text:
+                continue
+            x, y, w, h = _pts(box)
+            # Slight pad clears Lexend AA fringe from the Walk plate.
+            draw.rectangle(
+                (
+                    x - int(4 * SCALE),
+                    y - int(2 * SCALE),
+                    x + w + int(8 * SCALE),
+                    y + h + int(3 * SCALE),
+                ),
+                fill=(255, 255, 255, 255),
+            )
+            font = _font(False, int(pt * SCALE))
+            draw.text(
+                (x, y + h * 0.82),
+                text,
+                font=font,
+                fill=NAVY + (255,),
+                anchor="ls",
+            )
 
     def _paste_rotated_label(
         self,
