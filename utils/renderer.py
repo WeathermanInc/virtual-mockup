@@ -183,41 +183,38 @@ BACKPACK_PDF_FRONT_OVERLAYS: dict[str, dict[str, dict[str, Any]]] = {
             "box": (567.0, 895.0, 260.0, 85.0),
             "cover": (547.0, 875.0, 300.0, 120.0),
             "erase": "photo",
-            # Panel tilt near the lifted zipper-band seat.
-            "rotate": -17.0,
+            # Micro CCW ease so the baseline tracks the upper seam slope.
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
-            # Compact GS 3.7 cm weight on the lifestyle photo (leave scale as-is).
+            # Compact GS 3.7 cm weight on the lifestyle photo.
             "stamp_scale": 0.48,
-            # Keep panel midline; lift toward the upper zipper/seam (PDF −Y is up).
-            # NOTE: upper_center uses the explicit-box path — y_nudge must be
-            # applied there (not only in map_backpack_gs_box_to_front).
-            # Slight right so the mark sits cleanly in the upper panel.
-            "x_nudge": -44.0,
-            "y_nudge": -52.0,
+            # NOTE: upper_center uses the explicit-box path — x/y_nudge apply there.
+            "x_nudge": -12.0,
+            "y_nudge": -62.0,
         },
         "steel": {
             "box": (577.0, 897.0, 260.0, 85.0),
             # Tighter cover — oversized heal plates spilled past the Steel bag edge.
             "cover": (565.0, 885.0, 280.0, 100.0),
             "erase": "photo",
-            "rotate": -17.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -44.0,
-            "y_nudge": -52.0,
+            "x_nudge": -12.0,
+            "y_nudge": -62.0,
         },
         "sage": {
             "box": (552.0, 888.0, 270.0, 90.0),
             "cover": (532.0, 868.0, 310.0, 125.0),
             "erase": "photo",
-            "rotate": -17.0,
+            "rotate": -15.0,
             "rotate_after_fit": True,
             "fit_pad": 0.26,
             "stamp_scale": 0.48,
-            "x_nudge": -34.0,
-            "y_nudge": -52.0,
+            "x_nudge": -2.0,
+            "y_nudge": -62.0,
         },
     },
     # Center freezes the prior good midline + scale.
@@ -979,13 +976,14 @@ class MockupRenderer:
         r = min(w, h) * 0.32
         n = int(PRODUCT_CATALOG[product_key]["canopy_panels"])
         layout = PRODUCT_CATALOG[product_key].get("worksheet_layout") or "stick"
+        double_canopy = bool(PRODUCT_CATALOG[product_key].get("double_canopy"))
         logo_idx = panel_indices[0] if panel_indices else 0
 
-        def vertex(i: int) -> tuple[float, float]:
+        def vertex(i: int, radius: float = r) -> tuple[float, float]:
             # Panel 0 is east (3 o'clock), as on the official Walk / Golf top diagrams.
             span = 360.0 / n
             ang = math.radians(-span / 2 + i * span)
-            return (cx + r * math.cos(ang), cy + r * math.sin(ang))
+            return (cx + radius * math.cos(ang), cy + radius * math.sin(ang))
 
         verts = [vertex(i) for i in range(n)]
         line = (168, 168, 172, 255)
@@ -995,6 +993,14 @@ class MockupRenderer:
         for i in range(n):
             poly = [(cx, cy), verts[i], verts[(i + 1) % n]]
             draw.polygon(poly, fill=fill_logo if i == logo_idx else fill_idle, outline=line)
+
+        # Trek double-canopy vent ring (Highland / production top-view callout).
+        if double_canopy:
+            inner_r = r * 0.70
+            inner = [vertex(i, inner_r) for i in range(n)]
+            draw.polygon(inner, outline=line)
+            for i in range(n):
+                draw.line((*verts[i], *inner[i]), fill=line, width=1)
 
         if logo is not None:
             # Official top diagrams keep the company mark upright and horizontal
@@ -1060,6 +1066,12 @@ class MockupRenderer:
             leader((lx, ly), (cx + r + 36, cy - 8), "Logo")
             leader(strap_pts[1], (cx - 40, cy - r - 36), "SELF FABRIC Closing Strap", align="right")
             leader((wx, wy), (cx - 20, cy + r + 40), "WM Logo", align="right")
+        elif double_canopy:
+            # Highland Trek top view: Closing Strap + Bottom Canopy on vented canopy.
+            leader((lx, ly), (cx + r + 28, cy - 10), "Company Logo")
+            leader(strap_pts[1], (cx - 24, cy - r - 52), "Closing Strap", align="right")
+            leader(strap_pts[0], (cx - 24, cy - r - 24), "Bottom Canopy", align="right")
+            leader((wx, wy), (cx + 12, cy + r + 36), "New WM Canopy Logo")
         else:
             leader((lx, ly), (cx + r + 28, cy - 10), "Company Logo")
             leader(strap_pts[1], (cx - 24, cy - r - 40), "Closing Straps", align="right")
@@ -1099,6 +1111,19 @@ class MockupRenderer:
                 (w / 2 - top_w, cy_pad - 12, w / 2 + top_w, cy_pad + 18),
                 fill=shade_color(fabric_rgb, 1.15) + (255,),
             )
+            # Travel / Trek production sleeves carry 360° reflective trim at the mouth.
+            if PRODUCT_CATALOG[product_key].get("reflective_trim"):
+                trim = (214, 214, 210, 255)
+                band = max(3, int(h * 0.012))
+                draw.rectangle(
+                    (
+                        int(w / 2 - top_w),
+                        int(cy_pad),
+                        int(w / 2 + top_w),
+                        int(cy_pad + band),
+                    ),
+                    fill=trim,
+                )
             handle_w = w * 0.10
             draw.rounded_rectangle(
                 (w / 2 - handle_w, h * 0.90, w / 2 + handle_w, h * 0.98),

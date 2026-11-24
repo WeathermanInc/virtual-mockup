@@ -47,6 +47,19 @@
       ]
     },
     {
+      "name": "Pantone Cool Gray 4 C",
+      "rgb": [
+        185,
+        185,
+        183
+      ],
+      "pantone": "Cool Gray 4 C",
+      "knockout": "none",
+      "families": [
+        "umbrella"
+      ]
+    },
+    {
       "name": "White",
       "rgb": [
         255,
@@ -103,18 +116,18 @@
     },
     "Navy (NRF 411)": {
       "rgb": [
-        26,
-        39,
-        68
+        40,
+        53,
+        78
       ],
       "nrf": "411",
       "pantone": "19-4010 TCX",
       "family": "Blue",
       "category": "Core",
       "kind": "solid",
-      "hex": "#1A2744",
+      "hex": "#28344E",
       "inner_color": "Steel Blue",
-      "notes": "Trek All-Weather Hat outer; Steel Blue inner"
+      "notes": "Wholesale/hat NRF 411 label; visual fill unified with Navy Blue (NRF 600) / weatherman.com deep navy (not charcoal)"
     },
     "Sage (NRF 311)": {
       "rgb": [
@@ -204,17 +217,17 @@
     },
     "Navy Blue (NRF 600)": {
       "rgb": [
-        57,
-        63,
-        72
+        40,
+        53,
+        78
       ],
       "nrf": "600",
       "pantone": "19-4010 TPG",
       "family": "Blue",
       "category": "Core",
       "kind": "solid",
-      "hex": "#393F48",
-      "notes": "Legacy SKU NRF 600 (Shopify); wholesale Navy solid maps to NRF 411 on line sheets"
+      "hex": "#28344E",
+      "notes": "Shopify/SKU NRF 600 label; visual fill unified with Navy (NRF 411) at #28344E (weatherman.com / Highland deep navy, not charcoal)"
     },
     "White (NRF 100)": {
       "rgb": [
@@ -311,29 +324,31 @@
     },
     "Blush (NRF 680)": {
       "rgb": [
-        206,
-        140,
-        146
+        242,
+        176,
+        198
       ],
       "nrf": "680",
       "pantone": "7430 C",
       "family": "Blush",
       "category": "Fashion",
       "kind": "solid",
-      "hex": "#FFC0CB"
+      "hex": "#F2B0C6",
+      "notes": "Visual fill calibrated to weatherman.com Travel/Trek Blush canopy photos (was muted dusty rose rgb; NRF sheet photo hex #FFC0CB)"
     },
     "Steel Blue": {
       "rgb": [
-        90,
-        122,
-        144
+        79,
+        108,
+        159
       ],
       "nrf": "421",
       "pantone": "2374 C / 18-3921 TCX",
       "family": "Steel Blue",
       "category": "Fashion",
       "kind": "solid",
-      "hex": "#4F6C9F"
+      "hex": "#4F6C9F",
+      "notes": "RGB synced to NRF photo hex #4F6C9F / weatherman.com Travel/Trek Steel Blue canopy (was greyed 90,122,144)"
     },
     "Dusty Lavender": {
       "rgb": [
@@ -995,27 +1010,29 @@
     },
     "trek": {
       "display_name": "Trek",
-      "subtitle": "Collapsible",
-      "style_number": "12006",
+      "subtitle": "Double Canopy Umbrella",
+      "style_number": "12005",
       "shopify_type": "Trek",
       "worksheet_layout": "stick",
+      "double_canopy": true,
+      "reflective_trim": true,
       "canopy_panels": 8,
       "frame_coverage_in": 42,
       "packed_length_in": 19.49,
-      "opening": "Manual collapsible",
+      "opening": "Automatic open / Manual close",
       "page_size_pts": [
         2125.98,
         3259.84
       ],
       "panel": {
         "shape": "trapezoid",
-        "height_cm": 22.0,
-        "top_cm": 18.0,
-        "bottom_cm": 36.0,
-        "artwork_width_cm": 18.0,
-        "artwork_height_cm": 9.0,
-        "logo_height_cm": 5.5,
-        "logo_bottom_offset_cm": 8.5
+        "height_cm": 20.5,
+        "top_cm": 18.6,
+        "bottom_cm": 42.0,
+        "artwork_width_cm": 18.6,
+        "artwork_height_cm": 2.8,
+        "logo_height_cm": 2.8,
+        "logo_bottom_offset_cm": 8.0
       },
       "sleeve": {
         "logo_height_cm": 9.0,
@@ -1024,13 +1041,17 @@
         "client_logo_on_sleeve": true
       },
       "features": [
-        "Collapsible canopy",
+        "Double canopy",
+        "360° reflective trim",
         "42\" frame coverage",
+        "Automatic open / Manual close",
         "Compact 19.5\" packed length"
       ],
+      "notes": "Highland Strategy Group x WM worksheet: Style #: 12005, panel 18.6×20.5×42.0 cm, artwork height 2.8 cm. Shopify trek-umbrella lists Auto-open / Manual close + reflective trim.",
       "core_colors": [
         "Black (NRF 001)",
         "Navy Blue (NRF 600)",
+        "Steel Blue",
         "Sage",
         "Red (NRF 200)",
         "White (NRF 100)"
@@ -1038,6 +1059,7 @@
       "all_colors": [
         "Black (NRF 001)",
         "Navy Blue (NRF 600)",
+        "Navy (NRF 411)",
         "Sage",
         "Red (NRF 200)",
         "White (NRF 100)",
@@ -1060,14 +1082,16 @@
     },
     "travel": {
       "display_name": "Travel",
-      "subtitle": "Collapsible",
-      "style_number": "Travel",
+      "subtitle": "Automatic Umbrella",
+      "style_number": "10001",
       "shopify_type": "Travel",
       "worksheet_layout": "stick",
+      "double_canopy": false,
+      "reflective_trim": true,
       "canopy_panels": 8,
       "frame_coverage_in": 38,
       "packed_length_in": 11.81,
-      "opening": "Manual collapsible",
+      "opening": "Automatic",
       "page_size_pts": [
         2125.98,
         3259.84
@@ -1075,12 +1099,12 @@
       "panel": {
         "shape": "trapezoid",
         "height_cm": 20.0,
-        "top_cm": 16.5,
-        "bottom_cm": 33.0,
-        "artwork_width_cm": 16.5,
-        "artwork_height_cm": 8.0,
-        "logo_height_cm": 5.0,
-        "logo_bottom_offset_cm": 8.0
+        "top_cm": 18.6,
+        "bottom_cm": 37.0,
+        "artwork_width_cm": 18.6,
+        "artwork_height_cm": 2.8,
+        "logo_height_cm": 2.8,
+        "logo_bottom_offset_cm": 7.5
       },
       "sleeve": {
         "logo_height_cm": 8.0,
@@ -1089,12 +1113,16 @@
         "client_logo_on_sleeve": true
       },
       "features": [
-        "Collapsible canopy",
+        "Single canopy",
+        "Automatic open/close",
+        "360° reflective trim",
         "38\" frame coverage",
         "Compact 11.8\" packed length"
       ],
+      "notes": "Highland Strategy Group x WM worksheet: Style #: 10001 Automatic Umbrella, panel 18.6×20.0×37.0 cm, artwork height 2.8 cm, fabric callout Navy (NRF 411). Shopify travel-umbrella SKUs use NRF 600 for Navy Blue.",
       "core_colors": [
         "Black (NRF 001)",
+        "Navy (NRF 411)",
         "Navy Blue (NRF 600)",
         "White (NRF 100)",
         "Sage",
@@ -1103,6 +1131,7 @@
       ],
       "all_colors": [
         "Black (NRF 001)",
+        "Navy (NRF 411)",
         "Navy Blue (NRF 600)",
         "White (NRF 100)",
         "Sage",
@@ -1121,7 +1150,8 @@
         "Deep Ocean",
         "River Mist",
         "Canyon Glow",
-        "Sunlit Butter"
+        "Sunlit Butter",
+        "Shaved Chocolate"
       ]
     },
     "collapsible": {

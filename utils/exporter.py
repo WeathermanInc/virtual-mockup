@@ -306,7 +306,49 @@ PAGE_SPEC: dict[int, dict] = {
             "project_owner": (1105, 140, 190, 36),
             "print_order": (1105, 187, 190, 36),
         },
-        # No white_wipes here — side gutters hold 26.5 cm / artwork-height callouts.
+        # Baked Paula page-1 header is Walk / Automatic Umbrella / 11005.
+        # Stick-layout peers (Trek, Travel, …) share this plate — wipe & rewrite.
+        "product_identity": {
+            "title": (321.2, 33.8, 420.0, 83.5),
+            # Wide enough for "Double Canopy Umbrella" (Trek Style #: 12005).
+            "subtitle": (321.2, 116.0, 490.0, 57.5),
+            "style": (321.2, 165.4, 320.0, 57.5),
+            # Match baked Paula plate: Lexend title, Barlow body.
+            "title_font": "Lexend-Regular.ttf",
+            "subtitle_font": "Barlow-Regular.ttf",
+            "style_font": "Barlow-Regular.ttf",
+            "title_pt": 63.0,
+            "subtitle_pt": 44.5,
+            "style_pt": 44.5,
+        },
+        # Baked Walk Panel Sample callouts (26.5 / 21.6 / 6 / 10 / 43.5).
+        # Stick peers rewrite these from catalog panel dims; geometry stays put.
+        "panel_dim_callouts": {
+            "font_pt": 34.0,
+            "font": "Barlow-Regular.ttf",
+            # x, y, w, h in PDF pts; rotate 90 = vertical gutter labels.
+            "height": {"box": (336.7, 2523.1, 44.2, 116.2), "rotate": 90, "field": "height_cm"},
+            "top_width": {
+                "box": (1008.0, 2082.5, 110.0, 44.1),
+                "rotate": 0,
+                "field": "artwork_width_cm",
+            },
+            "logo_height": {
+                "box": (1697.1, 2552.5, 44.1, 70.5),
+                "rotate": 90,
+                "field": "logo_height_cm",
+            },
+            "logo_offset": {
+                "box": (1697.1, 2772.7, 44.1, 84.0),
+                "rotate": 90,
+                "field": "logo_bottom_offset_cm",
+            },
+            "bottom_width": {
+                "box": (1004.4, 3011.0, 117.1, 44.1),
+                "rotate": 0,
+                "field": "bottom_cm",
+            },
+        },
         "colors": {
             "logo_swatch": (59, 1877, 100, 44),
             "logo_label": (164, 1873, 270, 45),
@@ -382,6 +424,18 @@ def _font(bold: bool, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont
         return ImageFont.truetype(str(path), size)
     except OSError:
         return ImageFont.load_default()
+
+
+def _named_font(filename: str, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Load a vendored face from ``assets/fonts/``, falling back to Liberation Sans."""
+    for folder in (ROOT / "assets" / "fonts", _FONT_DIR):
+        path = folder / filename
+        if path.exists():
+            try:
+                return ImageFont.truetype(str(path), size)
+            except OSError:
+                continue
+    return _font(False, size)
 
 
 def _pts(box: tuple[float, ...]) -> tuple[int, ...]:
@@ -514,6 +568,20 @@ class WorksheetExporter:
             )
         return PAGE_TITLES.get(page_no, f"Page {page_no}")
 
+    def _umbrella_page_title(self, product_key: str, page_no: int) -> str:
+        """Page tab / export label from the selected style, not the baked Walk plate."""
+        if page_no == 1:
+            spec = product_specs().get(product_key) or {}
+            name = str(spec.get("display_name") or "").strip()
+            if name:
+                return name
+        if page_no == 2:
+            spec = product_specs().get(product_key) or {}
+            name = str(spec.get("display_name") or "").strip()
+            if name:
+                return name
+        return PAGE_TITLES.get(page_no, f"Page {page_no}")
+
     def _sun_shirt_page_title(self, product_key: str) -> str:
         return SUN_SHIRT_TITLES.get(product_key) or (
             str((product_specs().get(product_key) or {}).get("display_name") or "Sun Shirt")
@@ -555,7 +623,12 @@ class WorksheetExporter:
                 if page_no in seen:
                     continue
                 seen.add(page_no)
-                plan.append((page_no, self._page_title(family, page_no)))
+                title = (
+                    self._umbrella_page_title(key, page_no)
+                    if family == "umbrella"
+                    else self._page_title(family, page_no)
+                )
+                plan.append((page_no, title))
         return plan
 
     def iter_job_pages(
@@ -580,7 +653,12 @@ class WorksheetExporter:
                 if page_no in seen:
                     continue
                 seen.add(page_no)
-                yield page_no, self._page_title(family, page_no), self._compose_page(
+                title = (
+                    self._umbrella_page_title(key, page_no)
+                    if family == "umbrella"
+                    else self._page_title(family, page_no)
+                )
+                yield page_no, title, self._compose_page(
                     page_no, job, mark, family=family
                 )
 
@@ -3017,6 +3095,8 @@ class WorksheetExporter:
                     self._stamp_logo(page, slot, mark, fabric, erase=False)
             self._stamp_colors(page, spec, job)
             self._stamp_header(page, spec, job)
+            if family == "umbrella":
+                self._stamp_umbrella_panel_dims(page, spec, job)
             # Wipe residual ghost text/lines beside white page ground (umbrella panel).
             for wipe in spec.get("white_wipes") or []:
                 self._fill_cover(page, wipe, (255, 255, 255))
@@ -3668,6 +3748,8 @@ class WorksheetExporter:
                 # Uniform vertical padding — center on field midline.
                 draw.text((x + int(4 * SCALE), y + h * 0.5), text, font=font_meta, fill=NAVY + (255,), anchor="lm")
 
+        self._stamp_product_identity(page, spec, job)
+
         chip_box = spec.get("chip")
         if chip_box:
             cx, cy, cw, ch = _pts(chip_box)
@@ -3689,6 +3771,74 @@ class WorksheetExporter:
                     fill=NAVY + (255,),
                     anchor="ls",
                 )
+
+    def _stamp_product_identity(
+        self, page: PILImage.Image, spec: dict, job: JobSpec
+    ) -> None:
+        """Rewrite baked Walk title / subtitle / style # for the selected stick style."""
+        boxes = spec.get("product_identity")
+        if not boxes:
+            return
+        product_key = next(
+            (
+                key
+                for key in job.product_keys
+                if 1 in STYLE_PAGES.get(key, []) and style_family(key) == "umbrella"
+            ),
+            None,
+        )
+        if not product_key:
+            return
+        pspec = product_specs().get(product_key) or {}
+        title = str(pspec.get("display_name") or product_key).strip()
+        subtitle = str(pspec.get("subtitle") or "").strip()
+        style_no = str(pspec.get("style_number") or "").strip()
+        style_line = f"Style #: {style_no}" if style_no else "Style #:"
+
+        draw = ImageDraw.Draw(page)
+        entries = (
+            (
+                "title",
+                title,
+                float(boxes.get("title_pt") or 63.0),
+                str(boxes.get("title_font") or "Lexend-Regular.ttf"),
+            ),
+            (
+                "subtitle",
+                subtitle,
+                float(boxes.get("subtitle_pt") or 44.5),
+                str(boxes.get("subtitle_font") or "Barlow-Regular.ttf"),
+            ),
+            (
+                "style",
+                style_line,
+                float(boxes.get("style_pt") or 44.5),
+                str(boxes.get("style_font") or "Barlow-Regular.ttf"),
+            ),
+        )
+        for field, text, pt, font_name in entries:
+            box = boxes.get(field)
+            if not box or not text:
+                continue
+            x, y, w, h = _pts(box)
+            # Slight pad clears Lexend AA fringe from the Walk plate.
+            draw.rectangle(
+                (
+                    x - int(4 * SCALE),
+                    y - int(2 * SCALE),
+                    x + w + int(8 * SCALE),
+                    y + h + int(3 * SCALE),
+                ),
+                fill=(255, 255, 255, 255),
+            )
+            font = _named_font(font_name, int(pt * SCALE))
+            draw.text(
+                (x, y + h * 0.82),
+                text,
+                font=font,
+                fill=NAVY + (255,),
+                anchor="ls",
+            )
 
     def _paste_rotated_label(
         self,
@@ -3728,6 +3878,65 @@ class WorksheetExporter:
         if abs(float(value) - round(float(value))) < 0.05:
             return f"{int(round(float(value)))} cm"
         return f"{float(value):.1f} cm"
+
+    def _stamp_umbrella_panel_dims(
+        self, page: PILImage.Image, spec: dict, job: JobSpec
+    ) -> None:
+        """Rewrite baked Walk Panel Sample cm callouts from the active style catalog."""
+        callouts = spec.get("panel_dim_callouts")
+        if not callouts:
+            return
+        product_key = next(
+            (
+                key
+                for key in job.product_keys
+                if 1 in STYLE_PAGES.get(key, []) and style_family(key) == "umbrella"
+            ),
+            None,
+        )
+        if not product_key:
+            return
+        panel = (product_specs().get(product_key) or {}).get("panel") or {}
+        if not panel:
+            return
+
+        font_name = str(callouts.get("font") or "Barlow-Regular.ttf")
+        font_pt = float(callouts.get("font_pt") or 34.0)
+        font = _named_font(font_name, int(font_pt * SCALE))
+        fill = NAVY + (255,)
+
+        for key, meta in callouts.items():
+            if key in {"font", "font_pt"} or not isinstance(meta, dict):
+                continue
+            field = str(meta.get("field") or "")
+            box = meta.get("box")
+            if not field or not box or field not in panel:
+                continue
+            try:
+                value = float(panel[field])
+            except (TypeError, ValueError):
+                continue
+            text = self._fmt_cm(value)
+            rotate = float(meta.get("rotate") or 0.0)
+            if abs(rotate) > 1.0:
+                self._paste_rotated_label(
+                    page, box, text, font, fill, angle=rotate, wipe=True
+                )
+            else:
+                x, y, w, h = _pts(box)
+                draw = ImageDraw.Draw(page)
+                pad = int(3 * SCALE)
+                draw.rectangle(
+                    (x - pad, y - pad, x + w + pad, y + h + pad),
+                    fill=(255, 255, 255, 255),
+                )
+                draw.text(
+                    (x + w * 0.5, y + h * 0.5),
+                    text,
+                    font=font,
+                    fill=fill,
+                    anchor="mm",
+                )
 
     def _draw_hairline_arrow(
         self,
