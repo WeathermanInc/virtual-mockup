@@ -326,25 +326,26 @@ PAGE_SPEC: dict[int, dict] = {
         "panel_dim_callouts": {
             "font_pt": 34.0,
             "font": "Barlow-Regular.ttf",
+            # Boxes padded past baked Walk AA (26.5 / 21.6 / 6 / 10 / 43.5).
             # x, y, w, h in PDF pts; rotate 90 = vertical gutter labels.
-            "height": {"box": (336.7, 2523.1, 44.2, 116.2), "rotate": 90, "field": "height_cm"},
+            "height": {"box": (328.0, 2515.0, 60.0, 132.0), "rotate": 90, "field": "height_cm"},
             "top_width": {
-                "box": (1008.0, 2082.5, 110.0, 44.1),
+                "box": (998.0, 2075.0, 130.0, 58.0),
                 "rotate": 0,
                 "field": "artwork_width_cm",
             },
             "logo_height": {
-                "box": (1697.1, 2552.5, 44.1, 70.5),
+                "box": (1688.0, 2544.0, 60.0, 86.0),
                 "rotate": 90,
                 "field": "logo_height_cm",
             },
             "logo_offset": {
-                "box": (1697.1, 2772.7, 44.1, 84.0),
+                "box": (1688.0, 2764.0, 60.0, 100.0),
                 "rotate": 90,
                 "field": "logo_bottom_offset_cm",
             },
             "bottom_width": {
-                "box": (1004.4, 3011.0, 117.1, 44.1),
+                "box": (994.0, 3003.0, 140.0, 58.0),
                 "rotate": 0,
                 "field": "bottom_cm",
             },
@@ -3879,10 +3880,15 @@ class WorksheetExporter:
             return f"{int(round(float(value)))} cm"
         return f"{float(value):.1f} cm"
 
+    @staticmethod
+    def _fmt_panel_cm(value: float) -> str:
+        """Highland-style panel callouts always keep one decimal (``20.0 cm``)."""
+        return f"{float(value):.1f} cm"
+
     def _stamp_umbrella_panel_dims(
         self, page: PILImage.Image, spec: dict, job: JobSpec
     ) -> None:
-        """Rewrite baked Walk Panel Sample cm callouts from the active style catalog."""
+        """Wipe baked Walk Panel Sample cm callouts; stamp active style catalog dims."""
         callouts = spec.get("panel_dim_callouts")
         if not callouts:
             return
@@ -3904,6 +3910,7 @@ class WorksheetExporter:
         font_pt = float(callouts.get("font_pt") or 34.0)
         font = _named_font(font_name, int(font_pt * SCALE))
         fill = NAVY + (255,)
+        draw = ImageDraw.Draw(page)
 
         for key, meta in callouts.items():
             if key in {"font", "font_pt"} or not isinstance(meta, dict):
@@ -3916,20 +3923,20 @@ class WorksheetExporter:
                 value = float(panel[field])
             except (TypeError, ValueError):
                 continue
-            text = self._fmt_cm(value)
+            text = self._fmt_panel_cm(value)
             rotate = float(meta.get("rotate") or 0.0)
+            x, y, w, h = _pts(box)
+            # Extra pad kills Walk AA fringe (21.6 / 26.5 / 43.5 / 6 / 10).
+            pad = int(4 * SCALE)
+            draw.rectangle(
+                (x - pad, y - pad, x + w + pad, y + h + pad),
+                fill=(255, 255, 255, 255),
+            )
             if abs(rotate) > 1.0:
                 self._paste_rotated_label(
-                    page, box, text, font, fill, angle=rotate, wipe=True
+                    page, box, text, font, fill, angle=rotate, wipe=False
                 )
             else:
-                x, y, w, h = _pts(box)
-                draw = ImageDraw.Draw(page)
-                pad = int(3 * SCALE)
-                draw.rectangle(
-                    (x - pad, y - pad, x + w + pad, y + h + pad),
-                    fill=(255, 255, 255, 255),
-                )
                 draw.text(
                     (x + w * 0.5, y + h * 0.5),
                     text,
