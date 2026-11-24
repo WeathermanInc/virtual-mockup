@@ -976,13 +976,14 @@ class MockupRenderer:
         r = min(w, h) * 0.32
         n = int(PRODUCT_CATALOG[product_key]["canopy_panels"])
         layout = PRODUCT_CATALOG[product_key].get("worksheet_layout") or "stick"
+        double_canopy = bool(PRODUCT_CATALOG[product_key].get("double_canopy"))
         logo_idx = panel_indices[0] if panel_indices else 0
 
-        def vertex(i: int) -> tuple[float, float]:
+        def vertex(i: int, radius: float = r) -> tuple[float, float]:
             # Panel 0 is east (3 o'clock), as on the official Walk / Golf top diagrams.
             span = 360.0 / n
             ang = math.radians(-span / 2 + i * span)
-            return (cx + r * math.cos(ang), cy + r * math.sin(ang))
+            return (cx + radius * math.cos(ang), cy + radius * math.sin(ang))
 
         verts = [vertex(i) for i in range(n)]
         line = (168, 168, 172, 255)
@@ -992,6 +993,14 @@ class MockupRenderer:
         for i in range(n):
             poly = [(cx, cy), verts[i], verts[(i + 1) % n]]
             draw.polygon(poly, fill=fill_logo if i == logo_idx else fill_idle, outline=line)
+
+        # Trek double-canopy vent ring (Highland / production top-view callout).
+        if double_canopy:
+            inner_r = r * 0.70
+            inner = [vertex(i, inner_r) for i in range(n)]
+            draw.polygon(inner, outline=line)
+            for i in range(n):
+                draw.line((*verts[i], *inner[i]), fill=line, width=1)
 
         if logo is not None:
             # Official top diagrams keep the company mark upright and horizontal
@@ -1057,6 +1066,12 @@ class MockupRenderer:
             leader((lx, ly), (cx + r + 36, cy - 8), "Logo")
             leader(strap_pts[1], (cx - 40, cy - r - 36), "SELF FABRIC Closing Strap", align="right")
             leader((wx, wy), (cx - 20, cy + r + 40), "WM Logo", align="right")
+        elif double_canopy:
+            # Highland Trek top view: Closing Strap + Bottom Canopy on vented canopy.
+            leader((lx, ly), (cx + r + 28, cy - 10), "Company Logo")
+            leader(strap_pts[1], (cx - 24, cy - r - 52), "Closing Strap", align="right")
+            leader(strap_pts[0], (cx - 24, cy - r - 24), "Bottom Canopy", align="right")
+            leader((wx, wy), (cx + 12, cy + r + 36), "New WM Canopy Logo")
         else:
             leader((lx, ly), (cx + r + 28, cy - 10), "Company Logo")
             leader(strap_pts[1], (cx - 24, cy - r - 40), "Closing Straps", align="right")
@@ -1096,6 +1111,19 @@ class MockupRenderer:
                 (w / 2 - top_w, cy_pad - 12, w / 2 + top_w, cy_pad + 18),
                 fill=shade_color(fabric_rgb, 1.15) + (255,),
             )
+            # Travel / Trek production sleeves carry 360° reflective trim at the mouth.
+            if PRODUCT_CATALOG[product_key].get("reflective_trim"):
+                trim = (214, 214, 210, 255)
+                band = max(3, int(h * 0.012))
+                draw.rectangle(
+                    (
+                        int(w / 2 - top_w),
+                        int(cy_pad),
+                        int(w / 2 + top_w),
+                        int(cy_pad + band),
+                    ),
+                    fill=trim,
+                )
             handle_w = w * 0.10
             draw.rounded_rectangle(
                 (w / 2 - handle_w, h * 0.90, w / 2 + handle_w, h * 0.98),

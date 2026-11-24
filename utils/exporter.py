@@ -310,7 +310,8 @@ PAGE_SPEC: dict[int, dict] = {
         # Stick-layout peers (Trek, Travel, …) share this plate — wipe & rewrite.
         "product_identity": {
             "title": (321.2, 33.8, 420.0, 83.5),
-            "subtitle": (321.2, 116.0, 400.0, 57.5),
+            # Wide enough for "Double Canopy Umbrella" (Trek Style #: 12005).
+            "subtitle": (321.2, 116.0, 490.0, 57.5),
             "style": (321.2, 165.4, 320.0, 57.5),
             # Match baked Paula plate: Lexend title, Barlow body.
             "title_font": "Lexend-Regular.ttf",
@@ -320,7 +321,35 @@ PAGE_SPEC: dict[int, dict] = {
             "subtitle_pt": 44.5,
             "style_pt": 44.5,
         },
-        # No white_wipes here — side gutters hold 26.5 cm / artwork-height callouts.
+        # Baked Walk Panel Sample callouts (26.5 / 21.6 / 6 / 10 / 43.5).
+        # Stick peers rewrite these from catalog panel dims; geometry stays put.
+        "panel_dim_callouts": {
+            "font_pt": 34.0,
+            "font": "Barlow-Regular.ttf",
+            # Boxes padded past baked Walk AA (26.5 / 21.6 / 6 / 10 / 43.5).
+            # x, y, w, h in PDF pts; rotate 90 = vertical gutter labels.
+            "height": {"box": (328.0, 2515.0, 60.0, 132.0), "rotate": 90, "field": "height_cm"},
+            "top_width": {
+                "box": (998.0, 2075.0, 130.0, 58.0),
+                "rotate": 0,
+                "field": "artwork_width_cm",
+            },
+            "logo_height": {
+                "box": (1688.0, 2544.0, 60.0, 86.0),
+                "rotate": 90,
+                "field": "logo_height_cm",
+            },
+            "logo_offset": {
+                "box": (1688.0, 2764.0, 60.0, 100.0),
+                "rotate": 90,
+                "field": "logo_bottom_offset_cm",
+            },
+            "bottom_width": {
+                "box": (994.0, 3003.0, 140.0, 58.0),
+                "rotate": 0,
+                "field": "bottom_cm",
+            },
+        },
         "colors": {
             "logo_swatch": (59, 1877, 100, 44),
             "logo_label": (164, 1873, 270, 45),
@@ -3067,6 +3096,8 @@ class WorksheetExporter:
                     self._stamp_logo(page, slot, mark, fabric, erase=False)
             self._stamp_colors(page, spec, job)
             self._stamp_header(page, spec, job)
+            if family == "umbrella":
+                self._stamp_umbrella_panel_dims(page, spec, job)
             # Wipe residual ghost text/lines beside white page ground (umbrella panel).
             for wipe in spec.get("white_wipes") or []:
                 self._fill_cover(page, wipe, (255, 255, 255))
@@ -3848,6 +3879,71 @@ class WorksheetExporter:
         if abs(float(value) - round(float(value))) < 0.05:
             return f"{int(round(float(value)))} cm"
         return f"{float(value):.1f} cm"
+
+    @staticmethod
+    def _fmt_panel_cm(value: float) -> str:
+        """Highland-style panel callouts always keep one decimal (``20.0 cm``)."""
+        return f"{float(value):.1f} cm"
+
+    def _stamp_umbrella_panel_dims(
+        self, page: PILImage.Image, spec: dict, job: JobSpec
+    ) -> None:
+        """Wipe baked Walk Panel Sample cm callouts; stamp active style catalog dims."""
+        callouts = spec.get("panel_dim_callouts")
+        if not callouts:
+            return
+        product_key = next(
+            (
+                key
+                for key in job.product_keys
+                if 1 in STYLE_PAGES.get(key, []) and style_family(key) == "umbrella"
+            ),
+            None,
+        )
+        if not product_key:
+            return
+        panel = (product_specs().get(product_key) or {}).get("panel") or {}
+        if not panel:
+            return
+
+        font_name = str(callouts.get("font") or "Barlow-Regular.ttf")
+        font_pt = float(callouts.get("font_pt") or 34.0)
+        font = _named_font(font_name, int(font_pt * SCALE))
+        fill = NAVY + (255,)
+        draw = ImageDraw.Draw(page)
+
+        for key, meta in callouts.items():
+            if key in {"font", "font_pt"} or not isinstance(meta, dict):
+                continue
+            field = str(meta.get("field") or "")
+            box = meta.get("box")
+            if not field or not box or field not in panel:
+                continue
+            try:
+                value = float(panel[field])
+            except (TypeError, ValueError):
+                continue
+            text = self._fmt_panel_cm(value)
+            rotate = float(meta.get("rotate") or 0.0)
+            x, y, w, h = _pts(box)
+            # Extra pad kills Walk AA fringe (21.6 / 26.5 / 43.5 / 6 / 10).
+            pad = int(4 * SCALE)
+            draw.rectangle(
+                (x - pad, y - pad, x + w + pad, y + h + pad),
+                fill=(255, 255, 255, 255),
+            )
+            if abs(rotate) > 1.0:
+                self._paste_rotated_label(
+                    page, box, text, font, fill, angle=rotate, wipe=False
+                )
+            else:
+                draw.text(
+                    (x + w * 0.5, y + h * 0.5),
+                    text,
+                    font=font,
+                    fill=fill,
+                    anchor="mm",
+                )
 
     def _draw_hairline_arrow(
         self,
